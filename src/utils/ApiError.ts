@@ -1,11 +1,20 @@
 export class ApiError extends Error {
   public readonly statusCode: number;
   public readonly isOperational: boolean;
+  public readonly errors?: any[];
 
-  constructor(statusCode: number, message: string, isOperational = true) {
+  constructor(statusCode: number, message: string, isOperational: boolean | any[] = true, errors?: any[]) {
     super(message);
     this.statusCode = statusCode;
-    this.isOperational = isOperational;
+    
+    // Handle overloaded constructor
+    if (Array.isArray(isOperational)) {
+      this.isOperational = true;
+      this.errors = isOperational;
+    } else {
+      this.isOperational = isOperational;
+      this.errors = errors;
+    }
 
     // Maintains proper stack trace for where error was thrown
     Error.captureStackTrace(this, this.constructor);
