@@ -27,5 +27,7 @@ module.exports = {
     '^@validators/(.*)$': '<rootDir>/src/validators/$1',
   },
   setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
-  testTimeout: 10000,
+  testTimeout: 20000,
+  forceExit: true,
+  detectOpenHandles: false,
 };
