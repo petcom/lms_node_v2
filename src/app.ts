@@ -26,6 +26,12 @@ import exercisesRoutes from './routes/exercises.routes';
 import questionsRoutes from './routes/questions.routes';
 import templatesRoutes from './routes/templates.routes';
 
+// Phase 4 routes
+import enrollmentsRoutes from './routes/enrollments.routes';
+import progressRoutes from './routes/progress.routes';
+import contentAttemptsRoutes from './routes/content-attempts.routes';
+import learningEventsRoutes from './routes/learning-events.routes';
+
 const app: Application = express();
 
 // Security middleware
@@ -69,6 +75,12 @@ app.use('/api/v2/content', contentRoutes);
 app.use('/api/v2/content/exercises', exercisesRoutes);
 app.use('/api/v2/questions', questionsRoutes);
 app.use('/api/v2/templates', templatesRoutes);
+
+// API routes - Phase 4
+app.use('/api/v2/enrollments', enrollmentsRoutes);
+app.use('/api/v2/progress', progressRoutes);
+app.use('/api/v2/content-attempts', contentAttemptsRoutes);
+app.use('/api/v2/learning-events', learningEventsRoutes);
 
 // 404 handler
 app.use(notFoundHandler);

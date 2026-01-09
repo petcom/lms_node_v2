@@ -1,10 +1,13 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
-export type AttemptStatus = 
-  | 'not-started' 
-  | 'in-progress' 
-  | 'completed' 
-  | 'failed' 
+export type AttemptStatus =
+  | 'not-started'
+  | 'started'
+  | 'in-progress'
+  | 'completed'
+  | 'passed'
+  | 'failed'
+  | 'suspended'
   | 'abandoned';
 
 export interface ISCORMAttemptData {
@@ -54,7 +57,7 @@ const contentAttemptSchema = new Schema<IContentAttempt>(
       type: String,
       required: [true, 'Status is required'],
       enum: {
-        values: ['not-started', 'in-progress', 'completed', 'failed', 'abandoned'],
+        values: ['not-started', 'started', 'in-progress', 'completed', 'passed', 'failed', 'suspended', 'abandoned'],
         message: '{VALUE} is not a valid attempt status'
       }
     },
