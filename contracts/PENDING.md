@@ -25,11 +25,11 @@
 | Contract | Status | Backend | Frontend | Priority | Notes |
 |----------|--------|---------|----------|----------|-------|
 | `auth.contract.ts` | ✅ Complete | ✅ | 🔲 | 🔥 Critical | Ready for frontend |
-| `users.contract.ts` | 📝 Defined | 🔲 | 🔲 | 🔥 Critical | 6 endpoints - Unified /users/me + progress |
-| `staff.contract.ts` | 📝 Defined | 🔲 | 🔲 | 🔥 Critical | 6 endpoints - Staff management + dept assignments |
-| `learners.contract.ts` | 📝 Defined | 🔲 | 🔲 | 🔥 Critical | 5 endpoints - Learner CRUD with soft delete |
-| `departments.contract.ts` | 📝 Defined | 🔲 | 🔲 | ⚡ High | 9 endpoints - Hierarchy + programs + stats (NEW) |
-| `academic-years.contract.ts` | 📝 Defined | 🔲 | 🔲 | 🔹 Medium | 15 endpoints - Years/terms/cohorts |
+| `users.contract.ts` | 🔨 In Progress | ✅ | 🔲 | 🔥 Critical | 6 endpoints - Backend implemented |
+| `staff.contract.ts` | 🔨 In Progress | ✅ | 🔲 | 🔥 Critical | 6 endpoints - Backend implemented |
+| `learners.contract.ts` | 🔨 In Progress | ✅ | 🔲 | 🔥 Critical | 5 endpoints - Backend implemented |
+| `departments.contract.ts` | 🔨 In Progress | ✅ | 🔲 | ⚡ High | 9 endpoints - Backend implemented |
+| `academic-years.contract.ts` | 🔨 In Progress | ✅ | 🔲 | 🔹 Medium | 15 endpoints - Backend implemented |
 
 **Backend Models:** ✅ User, Staff, Learner, Department, AcademicYear
 
@@ -132,6 +132,7 @@
 
 | Date | Contract | Change | Team |
 |------|----------|--------|------|
+| 2026-01-08 | Phase 1 Backend | All 5 services implemented (41 endpoints) | Backend |
 | 2026-01-08 | Phase 3 Complete | All 4 contracts defined (39 endpoints) | Backend |
 | 2026-01-08 | `content.contract.ts` | Initial creation - 16 endpoints | Backend |
 | 2026-01-08 | `exercises.contract.ts` | Initial creation - 10 endpoints | Backend |
