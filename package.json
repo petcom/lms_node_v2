@@ -28,7 +28,10 @@
     "seed:mock": "MOCK_DB_URI=mongodb://localhost:27017/lms_v2_mockdata ts-node scripts/seed-mock-data.ts",
     "purge:mock": "MOCK_DB_URI=mongodb://localhost:27017/lms_v2_mockdata ts-node scripts/purge-mock-data.ts",
     "purge:mock:force": "MOCK_DB_URI=mongodb://localhost:27017/lms_v2_mockdata ts-node scripts/purge-mock-data.ts --force",
-    "reset:mock": "npm run purge:mock:force && npm run seed:mock"
+    "reset:mock": "npm run purge:mock:force && npm run seed:mock",
+    "contracts:validate": "ts-node scripts/validate-contracts.ts",
+    "contracts:export": "ts-node scripts/export-contracts.ts",
+    "contracts:docs": "ts-node scripts/generate-openapi.ts"
   },
   "keywords": [
     "lms",
@@ -106,6 +109,7 @@
     "ts-jest": "^29.4.6",
     "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "yaml": "^2.8.2"
   }
 }

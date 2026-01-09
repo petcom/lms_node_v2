@@ -117,7 +117,8 @@
       "exports": {
         "models": "Named exports for User, Learner, Staff, AuditLog, Report; default exports for others",
         "services": "Default export class",
-        "controllers": "Named export functions"
+        "controllers":
+─────────────────────────────────────────────── "Named export functions"
       }
     },
     "tddWorkflow": [
