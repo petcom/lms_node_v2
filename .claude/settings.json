@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "additionalDirectories": [
+      "~/github/lms_node",
+      "~/github/lms_node/1_LMS_Node_V2",
+      "~/github/lms_ui",
+      "~/github/lms_ui/1_lms_ui_v2"
+    ]
+  }
+}
