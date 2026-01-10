@@ -27,6 +27,7 @@
     "format": "prettier --write \"**/*.{ts,js,json,md}\"",
     "format:check": "prettier --check \"**/*.{ts,js,json,md}\"",
     "seed:mock": "MOCK_DB_URI=mongodb://localhost:27017/lms_v2_mockdata ts-node scripts/seed-mock-data.ts",
+    "seed:staff": "ts-node -r tsconfig-paths/register scripts/seed-staff-and-courses.ts",
     "purge:mock": "MOCK_DB_URI=mongodb://localhost:27017/lms_v2_mockdata ts-node scripts/purge-mock-data.ts",
     "purge:mock:force": "MOCK_DB_URI=mongodb://localhost:27017/lms_v2_mockdata ts-node scripts/purge-mock-data.ts --force",
     "reset:mock": "npm run purge:mock:force && npm run seed:mock",
