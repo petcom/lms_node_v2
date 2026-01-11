@@ -1,5 +1,6 @@
 import mongoose, { Schema, Document } from 'mongoose';
-import { STAFF_ROLES } from './role-constants';
+import { RoleRegistry } from '@/services/role-registry.service';
+import { validateDepartmentMembershipsArray } from '@/validators/department-membership.validator';
 
 export interface IDepartmentMembership {
   departmentId: mongoose.Types.ObjectId;
@@ -40,11 +41,22 @@ const departmentMembershipSchema = new Schema<IDepartmentMembership>(
           if (roles.length === 0) {
             return false;
           }
-          // Ensure all roles are valid STAFF_ROLES
-          const validRoles = new Set(STAFF_ROLES as readonly string[]);
-          return roles.every(role => validRoles.has(role));
+          // Use RoleRegistry for validation
+          const registry = RoleRegistry.getInstance();
+          if (!registry.isInitialized()) {
+            // During seeding/testing, allow any roles
+            return true;
+          }
+          return roles.every(role => registry.isValidRoleForUserType('staff', role));
         },
-        message: 'Invalid staff role. Must be one of: instructor, department-admin, content-admin, billing-admin'
+        message: function(props: any) {
+          const registry = RoleRegistry.getInstance();
+          if (!registry.isInitialized()) {
+            return 'Invalid staff role (registry not initialized)';
+          }
+          const validRoles = registry.getValidRolesForUserType('staff');
+          return `Invalid staff role. Must be one of: ${validRoles.join(', ')}`;
+        }
       }
     },
     isPrimary: {

@@ -2,11 +2,37 @@ import app from './app';
 import { connectDatabase } from './config/database';
 import { config } from './config/environment';
 import { logger } from './config/logger';
+import { RoleRegistry } from './services/role-registry.service';
+import { setRoleRegistry } from './middlewares/user-type-hydration';
 
 async function startServer() {
   try {
     // Connect to database
     await connectDatabase();
+
+    // Initialize RoleRegistry from database
+    logger.info('Initializing RoleRegistry...');
+    try {
+      const registry = RoleRegistry.getInstance();
+      await registry.initialize();
+
+      if (!registry.isInitialized()) {
+        logger.error('FATAL: RoleRegistry failed to initialize');
+        logger.error('Required lookup values are missing from database');
+        logger.error('Please run: npm run seed:constants');
+        process.exit(1);
+      }
+
+      // Wire registry to middleware
+      setRoleRegistry(registry);
+
+      logger.info('RoleRegistry initialized successfully');
+    } catch (error: any) {
+      logger.error('FATAL: Failed to initialize RoleRegistry:', error.message);
+      logger.error('Please ensure database is seeded with lookup values');
+      logger.error('Run: npm run seed:constants');
+      process.exit(1);
+    }
 
     // Start server
     const server = app.listen(config.port, () => {

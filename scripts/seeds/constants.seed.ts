@@ -40,8 +40,7 @@ const LOOKUP_VALUES = [
   // USER TYPES (Root Level - No Parent)
   // =========================================================================
   {
-    lookupId: 'userType.learner',
-    category: 'userType',
+    category: 'usertype',
     key: 'learner',
     parentLookupId: null,
     displayAs: 'Learner',
@@ -55,8 +54,7 @@ const LOOKUP_VALUES = [
     }
   },
   {
-    lookupId: 'userType.staff',
-    category: 'userType',
+    category: 'usertype',
     key: 'staff',
     parentLookupId: null,
     displayAs: 'Staff',
@@ -70,8 +68,7 @@ const LOOKUP_VALUES = [
     }
   },
   {
-    lookupId: 'userType.global-admin',
-    category: 'userType',
+    category: 'usertype',
     key: 'global-admin',
     parentLookupId: null,
     displayAs: 'System Admin',
@@ -86,13 +83,12 @@ const LOOKUP_VALUES = [
   },
 
   // =========================================================================
-  // LEARNER ROLES (Children of userType.learner)
+  // LEARNER ROLES (Children of usertype.learner)
   // =========================================================================
   {
-    lookupId: 'role.course-taker',
     category: 'role',
     key: 'course-taker',
-    parentLookupId: 'userType.learner',
+    parentLookupId: 'usertype.learner',
     displayAs: 'Course Taker',
     description: 'Standard learner who enrolls in and completes courses',
     sortOrder: 1,
@@ -104,10 +100,9 @@ const LOOKUP_VALUES = [
     }
   },
   {
-    lookupId: 'role.auditor',
     category: 'role',
     key: 'auditor',
-    parentLookupId: 'userType.learner',
+    parentLookupId: 'usertype.learner',
     displayAs: 'Auditor',
     description: 'View-only access, cannot earn credit or complete exams',
     sortOrder: 2,
@@ -119,10 +114,9 @@ const LOOKUP_VALUES = [
     }
   },
   {
-    lookupId: 'role.learner-supervisor',
     category: 'role',
     key: 'learner-supervisor',
-    parentLookupId: 'userType.learner',
+    parentLookupId: 'usertype.learner',
     displayAs: 'Learner Supervisor',
     description: 'Elevated permissions for TAs, peer mentors',
     sortOrder: 3,
@@ -135,13 +129,12 @@ const LOOKUP_VALUES = [
   },
 
   // =========================================================================
-  // STAFF ROLES (Children of userType.staff)
+  // STAFF ROLES (Children of usertype.staff)
   // =========================================================================
   {
-    lookupId: 'role.instructor',
     category: 'role',
     key: 'instructor',
-    parentLookupId: 'userType.staff',
+    parentLookupId: 'usertype.staff',
     displayAs: 'Instructor',
     description: 'Teaches classes, grades student work',
     sortOrder: 1,
@@ -153,10 +146,9 @@ const LOOKUP_VALUES = [
     }
   },
   {
-    lookupId: 'role.department-admin',
     category: 'role',
     key: 'department-admin',
-    parentLookupId: 'userType.staff',
+    parentLookupId: 'usertype.staff',
     displayAs: 'Department Admin',
     description: 'Manages department operations, staff, settings',
     sortOrder: 2,
@@ -168,10 +160,9 @@ const LOOKUP_VALUES = [
     }
   },
   {
-    lookupId: 'role.content-admin',
     category: 'role',
     key: 'content-admin',
-    parentLookupId: 'userType.staff',
+    parentLookupId: 'usertype.staff',
     displayAs: 'Content Admin',
     description: 'Creates and manages courses, programs',
     sortOrder: 3,
@@ -183,10 +174,9 @@ const LOOKUP_VALUES = [
     }
   },
   {
-    lookupId: 'role.billing-admin',
     category: 'role',
     key: 'billing-admin',
-    parentLookupId: 'userType.staff',
+    parentLookupId: 'usertype.staff',
     displayAs: 'Billing Admin',
     description: 'Department-level billing operations',
     sortOrder: 4,
@@ -199,13 +189,12 @@ const LOOKUP_VALUES = [
   },
 
   // =========================================================================
-  // GLOBAL ADMIN ROLES (Children of userType.global-admin)
+  // GLOBAL ADMIN ROLES (Children of usertype.global-admin)
   // =========================================================================
   {
-    lookupId: 'role.system-admin',
     category: 'role',
     key: 'system-admin',
-    parentLookupId: 'userType.global-admin',
+    parentLookupId: 'usertype.global-admin',
     displayAs: 'System Admin',
     description: 'Full system access - highest privilege',
     sortOrder: 1,
@@ -217,10 +206,9 @@ const LOOKUP_VALUES = [
     }
   },
   {
-    lookupId: 'role.enrollment-admin',
     category: 'role',
     key: 'enrollment-admin',
-    parentLookupId: 'userType.global-admin',
+    parentLookupId: 'usertype.global-admin',
     displayAs: 'Enrollment Admin',
     description: 'Manages enrollment system globally',
     sortOrder: 2,
@@ -232,10 +220,9 @@ const LOOKUP_VALUES = [
     }
   },
   {
-    lookupId: 'role.course-admin',
     category: 'role',
     key: 'course-admin',
-    parentLookupId: 'userType.global-admin',
+    parentLookupId: 'usertype.global-admin',
     displayAs: 'Course Admin',
     description: 'Manages course system globally',
     sortOrder: 3,
@@ -247,10 +234,9 @@ const LOOKUP_VALUES = [
     }
   },
   {
-    lookupId: 'role.theme-admin',
     category: 'role',
     key: 'theme-admin',
-    parentLookupId: 'userType.global-admin',
+    parentLookupId: 'usertype.global-admin',
     displayAs: 'Theme Admin',
     description: 'Manages themes, branding, UI',
     sortOrder: 4,
@@ -262,10 +248,9 @@ const LOOKUP_VALUES = [
     }
   },
   {
-    lookupId: 'role.financial-admin',
     category: 'role',
     key: 'financial-admin',
-    parentLookupId: 'userType.global-admin',
+    parentLookupId: 'usertype.global-admin',
     displayAs: 'Financial Admin',
     description: 'System-wide financial operations',
     sortOrder: 5,
@@ -290,8 +275,14 @@ async function seedLookupValues(): Promise<void> {
 
   for (const lookupData of LOOKUP_VALUES) {
     try {
-      // Check if lookup already exists
-      const existing = await LookupValue.findOne({ lookupId: lookupData.lookupId });
+      // Check if lookup already exists (query by category+key since lookupId is auto-generated)
+      const existing = await LookupValue.findOne({
+        category: lookupData.category,
+        key: lookupData.key
+      });
+
+      // Generate lookupId for logging
+      const lookupId = `${lookupData.category}.${lookupData.key}`;
 
       if (existing) {
         // Update if properties have changed (idempotent)
@@ -317,6 +308,11 @@ async function seedLookupValues(): Promise<void> {
           hasChanges = true;
         }
 
+        if (existing.parentLookupId !== lookupData.parentLookupId) {
+          existing.parentLookupId = lookupData.parentLookupId;
+          hasChanges = true;
+        }
+
         // Update metadata if changed
         if (JSON.stringify(existing.metadata) !== JSON.stringify(lookupData.metadata)) {
           existing.metadata = lookupData.metadata;
@@ -326,7 +322,7 @@ async function seedLookupValues(): Promise<void> {
         if (hasChanges) {
           await existing.save();
           updated++;
-          console.log(`  ↻ Updated: ${lookupData.lookupId}`);
+          console.log(`  ↻ Updated: ${lookupId}`);
         } else {
           skipped++;
         }
@@ -337,10 +333,11 @@ async function seedLookupValues(): Promise<void> {
       // Create new lookup
       await LookupValue.create(lookupData);
       created++;
-      console.log(`  ✓ Created: ${lookupData.lookupId}`);
+      console.log(`  ✓ Created: ${lookupId}`);
 
     } catch (error) {
-      console.error(`  ✗ Error seeding ${lookupData.lookupId}:`, error);
+      const lookupId = `${lookupData.category}.${lookupData.key}`;
+      console.error(`  ✗ Error seeding ${lookupId}:`, error);
       throw error;
     }
   }
@@ -358,7 +355,7 @@ async function validateSeededData(): Promise<void> {
   console.log('Validating seeded data...');
 
   // Check counts
-  const userTypeCount = await LookupValue.countDocuments({ category: 'userType' });
+  const userTypeCount = await LookupValue.countDocuments({ category: 'usertype' });
   const roleCount = await LookupValue.countDocuments({ category: 'role' });
 
   console.log(`  UserTypes: ${userTypeCount} (expected: 3)`);
@@ -374,13 +371,13 @@ async function validateSeededData(): Promise<void> {
 
   // Validate parent-child relationships
   const learnerRoles = await LookupValue.countDocuments({
-    parentLookupId: 'userType.learner'
+    parentLookupId: 'usertype.learner'
   });
   const staffRoles = await LookupValue.countDocuments({
-    parentLookupId: 'userType.staff'
+    parentLookupId: 'usertype.staff'
   });
   const globalAdminRoles = await LookupValue.countDocuments({
-    parentLookupId: 'userType.global-admin'
+    parentLookupId: 'usertype.global-admin'
   });
 
   console.log(`  Learner roles: ${learnerRoles} (expected: 3)`);

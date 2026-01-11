@@ -1,6 +1,6 @@
 import mongoose, { Schema, Document } from 'mongoose';
 import { DepartmentMembershipSchema, IDepartmentMembership } from './department-membership.schema';
-import { LEARNER_ROLES } from './role-constants';
+import { RoleRegistry } from '@/services/role-registry.service';
 
 export interface ILearner extends Document {
   _id: mongoose.Types.ObjectId; // Shared with User
@@ -70,13 +70,24 @@ const learnerSchema = new Schema<ILearner>(
       default: [],
       validate: {
         validator: function(memberships: IDepartmentMembership[]) {
-          // Validate role names against LEARNER_ROLES
-          const validRoles = new Set(LEARNER_ROLES as readonly string[]);
+          // Validate role names against RoleRegistry
+          const registry = RoleRegistry.getInstance();
+          if (!registry.isInitialized()) {
+            // During seeding/testing, allow any roles
+            return true;
+          }
           return memberships.every(m =>
-            m.roles.every(r => validRoles.has(r))
+            m.roles.every(r => registry.isValidRoleForUserType('learner', r))
           );
         },
-        message: 'Invalid learner role. Must be one of: course-taker, auditor, learner-supervisor'
+        message: function() {
+          const registry = RoleRegistry.getInstance();
+          if (!registry.isInitialized()) {
+            return 'Invalid learner role (registry not initialized)';
+          }
+          const validRoles = registry.getValidRolesForUserType('learner');
+          return `Invalid learner role. Must be one of: ${validRoles.join(', ')}`;
+        }
       }
     },
     isActive: {

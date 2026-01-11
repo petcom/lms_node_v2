@@ -14,12 +14,13 @@
 
 import { Schema, model, Document, Types } from 'mongoose';
 import bcrypt from 'bcryptjs';
+import { RoleRegistry } from '@/services/role-registry.service';
 
 // Constants
 export const MASTER_DEPARTMENT_ID = new Types.ObjectId('000000000000000000000001');
 export const MASTER_DEPARTMENT_NAME = 'System Administration';
 
-// Valid GlobalAdmin roles
+// Valid GlobalAdmin roles - now loaded from RoleRegistry
 export const GLOBAL_ADMIN_ROLES = [
   'system-admin',
   'enrollment-admin',
@@ -92,12 +93,32 @@ const RoleMembershipSchema = new Schema<IRoleMembership>({
   },
   roles: {
     type: [String],
-    enum: GLOBAL_ADMIN_ROLES,
     required: true,
-    validate: {
-      validator: (v: string[]) => v.length > 0,
-      message: 'At least one role is required'
-    }
+    validate: [
+      {
+        validator: (v: string[]) => v.length > 0,
+        message: 'At least one role is required'
+      },
+      {
+        validator: function(roles: string[]) {
+          // Use RoleRegistry for validation
+          const registry = RoleRegistry.getInstance();
+          if (!registry.isInitialized()) {
+            // During seeding/testing, allow any roles
+            return true;
+          }
+          return roles.every(role => registry.isValidRoleForUserType('global-admin', role));
+        },
+        message: function() {
+          const registry = RoleRegistry.getInstance();
+          if (!registry.isInitialized()) {
+            return 'Invalid global-admin role (registry not initialized)';
+          }
+          const validRoles = registry.getValidRolesForUserType('global-admin');
+          return `Invalid global-admin role. Must be one of: ${validRoles.join(', ')}`;
+        }
+      }
+    ]
   },
   assignedAt: {
     type: Date,

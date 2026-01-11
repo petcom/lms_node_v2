@@ -15,6 +15,8 @@ import staffRoutes from './routes/staff.routes';
 import learnersRoutes from './routes/learners.routes';
 import departmentsRoutes from './routes/departments.routes';
 import academicYearsRoutes from './routes/academic-years.routes';
+import lookupValuesRoutes from './routes/lookup-values.routes';
+import listsRoutes from './routes/lists.routes';
 
 // Phase 2 routes
 import programsRoutes from './routes/programs.routes';
@@ -76,6 +78,8 @@ app.use('/api/v2/users/staff', staffRoutes);
 app.use('/api/v2/users/learners', learnersRoutes);
 app.use('/api/v2/departments', departmentsRoutes);
 app.use('/api/v2/calendar', academicYearsRoutes);
+app.use('/api/v2/lookup-values', lookupValuesRoutes);
+app.use('/api/v2/lists', listsRoutes);
 
 // API routes - Phase 2
 app.use('/api/v2/programs', programsRoutes);

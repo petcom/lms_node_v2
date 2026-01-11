@@ -113,7 +113,7 @@ export class RoleRegistry implements IRoleRegistry {
         this.lookupCache.set(lookup.lookupId, lookup);
 
         // Categorize by type
-        if (lookup.category === 'userType') {
+        if (lookup.category === 'usertype') {
           this.userTypeCache.set(lookup.key, lookup);
         } else if (lookup.category === 'role' && lookup.parentLookupId) {
           // Store role by key
@@ -192,11 +192,11 @@ export class RoleRegistry implements IRoleRegistry {
   }
 
   /**
-   * Extract userType key from lookupId (e.g., "userType.staff" → "staff")
+   * Extract userType key from lookupId (e.g., "usertype.staff" → "staff")
    */
   private getUserTypeFromLookupId(lookupId: string): string | null {
     const parts = lookupId.split('.');
-    if (parts.length === 2 && parts[0] === 'userType') {
+    if (parts.length === 2 && parts[0] === 'usertype') {
       return parts[1];
     }
     return null;
