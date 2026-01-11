@@ -1,0 +1,777 @@
+{
+  "info": {
+    "name": "LMS Role System V2 - Auth & Roles API",
+    "description": "Complete Postman collection for LMS Role System V2 authentication and role management endpoints.\n\n## Features\n- All auth V2 endpoints with examples\n- All roles endpoints\n- All access rights endpoints\n- Environment variable management\n- Pre-request scripts for token management\n- Test scripts to validate responses\n\n## Setup\n1. Import this collection into Postman\n2. Create environment with variables: baseUrl, accessToken, refreshToken, adminToken\n3. Run 'Auth / Login' request first to populate tokens\n4. Other requests will automatically use stored tokens\n\n## Environment Variables\n- baseUrl: API base URL (e.g., http://localhost:3000/api/v2)\n- accessToken: Regular user access token (auto-populated)\n- refreshToken: Refresh token (auto-populated)\n- adminToken: Admin escalation token (auto-populated)\n- userId: Current user ID (auto-populated)\n- departmentId: Selected department ID (set manually or auto-populated)",
+    "_postman_id": "lms-role-system-v2",
+    "version": "2.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Global pre-request script",
+          "// Check if accessToken is expired and refresh if needed",
+          "",
+          "const accessToken = pm.environment.get('accessToken');",
+          "const tokenExpiry = pm.environment.get('tokenExpiry');",
+          "",
+          "if (!accessToken || (tokenExpiry && new Date(tokenExpiry) < new Date())) {",
+          "    console.log('Access token expired or missing');",
+          "    // Note: Automatic refresh would require async pre-request scripts",
+          "    // For now, manually run the 'Refresh Token' request",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has success flag', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "});",
+                  "",
+                  "pm.test('Response contains user data', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data).to.have.property('user');",
+                  "    pm.expect(jsonData.data.user).to.have.property('id');",
+                  "    pm.expect(jsonData.data.user).to.have.property('email');",
+                  "});",
+                  "",
+                  "pm.test('Response contains session tokens', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data).to.have.property('session');",
+                  "    pm.expect(jsonData.data.session).to.have.property('accessToken');",
+                  "    pm.expect(jsonData.data.session).to.have.property('refreshToken');",
+                  "});",
+                  "",
+                  "pm.test('Response contains V2 fields', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data).to.have.property('userTypes');",
+                  "    pm.expect(jsonData.data).to.have.property('departmentMemberships');",
+                  "    pm.expect(jsonData.data).to.have.property('allAccessRights');",
+                  "    pm.expect(jsonData.data).to.have.property('canEscalateToAdmin');",
+                  "});",
+                  "",
+                  "// Store tokens in environment",
+                  "if (pm.response.code === 200) {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.environment.set('accessToken', jsonData.data.session.accessToken);",
+                  "    pm.environment.set('refreshToken', jsonData.data.session.refreshToken);",
+                  "    pm.environment.set('userId', jsonData.data.user.id);",
+                  "    ",
+                  "    // Calculate token expiry",
+                  "    const expiresIn = jsonData.data.session.expiresIn;",
+                  "    const expiryDate = new Date(Date.now() + expiresIn * 1000);",
+                  "    pm.environment.set('tokenExpiry', expiryDate.toISOString());",
+                  "    ",
+                  "    // Store last selected department if available",
+                  "    if (jsonData.data.lastSelectedDepartment) {",
+                  "        pm.environment.set('departmentId', jsonData.data.lastSelectedDepartment);",
+                  "    }",
+                  "    ",
+                  "    console.log('Tokens stored successfully');",
+                  "    console.log('UserTypes:', jsonData.data.userTypes);",
+                  "    console.log('Can escalate to admin:', jsonData.data.canEscalateToAdmin);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"instructor@example.com\",\n  \"password\": \"SecurePass123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            },
+            "description": "Authenticate user and receive access token with roles and access rights.\n\nReturns:\n- User information\n- Access and refresh tokens\n- User types (learner, staff, global-admin)\n- Department memberships with roles\n- All access rights\n- Whether user can escalate to admin"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Current User (Me)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response contains user data', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data).to.have.property('user');",
+                  "    pm.expect(jsonData.data).to.have.property('userTypes');",
+                  "    pm.expect(jsonData.data).to.have.property('departmentMemberships');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "me"]
+            },
+            "description": "Get current authenticated user with complete role and permission information."
+          },
+          "response": []
+        },
+        {
+          "name": "Escalate to Admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response contains admin session', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data).to.have.property('adminSession');",
+                  "    pm.expect(jsonData.data.adminSession).to.have.property('adminToken');",
+                  "    pm.expect(jsonData.data.adminSession).to.have.property('adminRoles');",
+                  "});",
+                  "",
+                  "// Store admin token",
+                  "if (pm.response.code === 200) {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.environment.set('adminToken', jsonData.data.adminSession.adminToken);",
+                  "    ",
+                  "    const expiresIn = jsonData.data.adminSession.expiresIn;",
+                  "    const expiryDate = new Date(Date.now() + expiresIn * 1000);",
+                  "    pm.environment.set('adminTokenExpiry', expiryDate.toISOString());",
+                  "    ",
+                  "    console.log('Admin token stored successfully');",
+                  "    console.log('Admin roles:', jsonData.data.adminRoles);",
+                  "    console.log('Session timeout:', jsonData.data.sessionTimeoutMinutes, 'minutes');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"escalationPassword\": \"AdminSecretPass123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/escalate",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "escalate"]
+            },
+            "description": "Escalate to Admin Dashboard with separate escalation password. Requires global-admin userType."
+          },
+          "response": []
+        },
+        {
+          "name": "De-escalate from Admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "// Clear admin token",
+                  "if (pm.response.code === 200) {",
+                  "    pm.environment.unset('adminToken');",
+                  "    pm.environment.unset('adminTokenExpiry');",
+                  "    console.log('Admin token cleared');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Admin-Token",
+                "value": "{{adminToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/deescalate",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "deescalate"]
+            },
+            "description": "Leave Admin Dashboard and return to Staff Dashboard. Invalidates admin token."
+          },
+          "response": []
+        },
+        {
+          "name": "Switch Department",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response contains current department', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data).to.have.property('currentDepartment');",
+                  "    pm.expect(jsonData.data.currentDepartment).to.have.property('departmentId');",
+                  "    pm.expect(jsonData.data.currentDepartment).to.have.property('roles');",
+                  "    pm.expect(jsonData.data.currentDepartment).to.have.property('accessRights');",
+                  "});",
+                  "",
+                  "// Update stored department ID",
+                  "if (pm.response.code === 200) {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.environment.set('departmentId', jsonData.data.currentDepartment.departmentId);",
+                  "    console.log('Switched to department:', jsonData.data.currentDepartment.departmentName);",
+                  "    console.log('Roles:', jsonData.data.currentDepartment.roles);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"departmentId\": \"{{departmentId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/switch-department",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "switch-department"]
+            },
+            "description": "Switch current department context and get updated roles and access rights."
+          },
+          "response": []
+        },
+        {
+          "name": "Continue (Refresh Access Rights)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response contains updated session', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data).to.have.property('session');",
+                  "    pm.expect(jsonData.data).to.have.property('changes');",
+                  "});",
+                  "",
+                  "// Update tokens",
+                  "if (pm.response.code === 200) {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.environment.set('accessToken', jsonData.data.session.accessToken);",
+                  "    pm.environment.set('refreshToken', jsonData.data.session.refreshToken);",
+                  "    console.log('Tokens refreshed');",
+                  "    console.log('Changes:', JSON.stringify(jsonData.data.changes));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/continue",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "continue"]
+            },
+            "description": "Refresh access rights without full re-authentication. Use when roles change mid-session."
+          },
+          "response": []
+        },
+        {
+          "name": "Set Escalation Password",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response indicates success', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"newEscalationPassword\": \"SuperSecureAdminPass456!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/set-escalation-password",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "set-escalation-password"]
+            },
+            "description": "Set or change escalation password for Admin Dashboard access. Only for global-admin users."
+          },
+          "response": []
+        },
+        {
+          "name": "Refresh Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "// Update tokens",
+                  "if (pm.response.code === 200) {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.environment.set('accessToken', jsonData.data.accessToken);",
+                  "    pm.environment.set('refreshToken', jsonData.data.refreshToken);",
+                  "    console.log('Tokens refreshed successfully');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/refresh",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "refresh"]
+            },
+            "description": "Get new access token using refresh token."
+          },
+          "response": []
+        },
+        {
+          "name": "Logout",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "// Clear all tokens",
+                  "if (pm.response.code === 200) {",
+                  "    pm.environment.unset('accessToken');",
+                  "    pm.environment.unset('refreshToken');",
+                  "    pm.environment.unset('adminToken');",
+                  "    pm.environment.unset('tokenExpiry');",
+                  "    pm.environment.unset('adminTokenExpiry');",
+                  "    console.log('All tokens cleared');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "logout"]
+            },
+            "description": "Invalidate user session and tokens. Also invalidates admin token if active."
+          },
+          "response": []
+        }
+      ],
+      "description": "Authentication endpoints for Role System V2"
+    },
+    {
+      "name": "Roles",
+      "item": [
+        {
+          "name": "List All Roles",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response contains roles array', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data).to.have.property('roles');",
+                  "    pm.expect(jsonData.data.roles).to.be.an('array');",
+                  "});",
+                  "",
+                  "pm.test('Roles have required fields', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    if (jsonData.data.roles.length > 0) {",
+                  "        const role = jsonData.data.roles[0];",
+                  "        pm.expect(role).to.have.property('name');",
+                  "        pm.expect(role).to.have.property('userType');",
+                  "        pm.expect(role).to.have.property('displayName');",
+                  "        pm.expect(role).to.have.property('accessRights');",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/roles?userType=staff",
+              "host": ["{{baseUrl}}"],
+              "path": ["roles"],
+              "query": [
+                {
+                  "key": "userType",
+                  "value": "staff",
+                  "description": "Filter by userType: learner, staff, global-admin"
+                },
+                {
+                  "key": "includeInactive",
+                  "value": "false",
+                  "description": "Include inactive roles",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "List all role definitions, optionally filtered by userType."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Role by Name",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response contains role definition', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data).to.have.property('name');",
+                  "    pm.expect(jsonData.data).to.have.property('accessRights');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/roles/instructor",
+              "host": ["{{baseUrl}}"],
+              "path": ["roles", "instructor"]
+            },
+            "description": "Get a single role definition by name."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Role Access Rights (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Role access rights updated', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data).to.have.property('accessRights');",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "X-Admin-Token",
+                "value": "{{adminToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"accessRights\": [\n    \"content:courses:read\",\n    \"content:courses:manage\",\n    \"content:lessons:manage\",\n    \"grades:own-classes:manage\"\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/roles/instructor/access-rights",
+              "host": ["{{baseUrl}}"],
+              "path": ["roles", "instructor", "access-rights"]
+            },
+            "description": "Update which access rights a role grants. REQUIRES: system-admin role with escalated admin token."
+          },
+          "response": []
+        },
+        {
+          "name": "Get My Roles",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response contains my roles', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data).to.have.property('userTypes');",
+                  "    pm.expect(jsonData.data).to.have.property('departmentMemberships');",
+                  "    pm.expect(jsonData.data).to.have.property('allAccessRights');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/roles/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["roles", "me"]
+            },
+            "description": "Get all roles and access rights for the current user."
+          },
+          "response": []
+        },
+        {
+          "name": "Get My Roles for Department",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response contains department roles', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data).to.have.property('departmentId');",
+                  "    pm.expect(jsonData.data).to.have.property('roles');",
+                  "    pm.expect(jsonData.data).to.have.property('accessRights');",
+                  "    pm.expect(jsonData.data).to.have.property('isDirectMember');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/roles/me/department/{{departmentId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["roles", "me", "department", "{{departmentId}}"]
+            },
+            "description": "Get roles and access rights for current user in a specific department."
+          },
+          "response": []
+        }
+      ],
+      "description": "Role management endpoints"
+    },
+    {
+      "name": "Access Rights",
+      "item": [
+        {
+          "name": "List All Access Rights",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response contains access rights', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data).to.have.property('accessRights');",
+                  "    pm.expect(jsonData.data).to.have.property('byDomain');",
+                  "    pm.expect(jsonData.data).to.have.property('sensitive');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/access-rights?domain=content",
+              "host": ["{{baseUrl}}"],
+              "path": ["access-rights"],
+              "query": [
+                {
+                  "key": "domain",
+                  "value": "content",
+                  "description": "Filter by domain: content, enrollment, staff, etc."
+                },
+                {
+                  "key": "sensitiveOnly",
+                  "value": "false",
+                  "description": "Only return sensitive rights",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "List all available access rights, optionally filtered by domain."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Access Rights for Role",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response contains role and access rights', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data).to.have.property('role');",
+                  "    pm.expect(jsonData.data).to.have.property('accessRights');",
+                  "    pm.expect(jsonData.data).to.have.property('effectiveRights');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/access-rights/role/instructor",
+              "host": ["{{baseUrl}}"],
+              "path": ["access-rights", "role", "instructor"]
+            },
+            "description": "Get all access rights granted by a specific role."
+          },
+          "response": []
+        }
+      ],
+      "description": "Access rights endpoints"
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000/api/v2",
+      "type": "string"
+    }
+  ]
+}
