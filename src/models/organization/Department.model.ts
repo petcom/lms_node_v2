@@ -1,4 +1,5 @@
-import mongoose, { Schema, Document } from 'mongoose';
+import mongoose, { Schema, Document, Model } from 'mongoose';
+import { MASTER_DEPARTMENT_ID } from '../auth/role-constants';
 
 export interface IDepartment extends Document {
   name: string;
@@ -8,9 +9,16 @@ export interface IDepartment extends Document {
   level: number;
   path: mongoose.Types.ObjectId[];
   isActive: boolean;
+  isSystem: boolean;
+  isVisible: boolean;
+  requireExplicitMembership: boolean;
   metadata?: Record<string, any>;
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface IDepartmentModel extends Model<IDepartment> {
+  getMasterDepartment(): Promise<IDepartment | null>;
 }
 
 const departmentSchema = new Schema<IDepartment>(
@@ -54,6 +62,18 @@ const departmentSchema = new Schema<IDepartment>(
       type: Boolean,
       default: true
     },
+    isSystem: {
+      type: Boolean,
+      default: false
+    },
+    isVisible: {
+      type: Boolean,
+      default: true
+    },
+    requireExplicitMembership: {
+      type: Boolean,
+      default: false
+    },
     metadata: {
       type: Schema.Types.Mixed,
       default: undefined
@@ -80,7 +100,7 @@ departmentSchema.pre('save', async function (next) {
     } else {
       // Child department - find parent
       const parent = await mongoose.model<IDepartment>('Department').findById(this.parentDepartmentId);
-      
+
       if (!parent) {
         throw new Error('Parent department not found');
       }
@@ -89,10 +109,38 @@ departmentSchema.pre('save', async function (next) {
       this.path = [...parent.path, this._id];
     }
   }
-  
+
   next();
 });
 
-const Department = mongoose.model<IDepartment>('Department', departmentSchema);
+// Pre-delete hook to prevent deletion of system departments
+departmentSchema.pre('deleteOne', { document: true, query: false }, function (next) {
+  if (this.isSystem) {
+    return next(new Error('Cannot delete system department'));
+  }
+  next();
+});
+
+departmentSchema.pre('findOneAndDelete', async function (next) {
+  const doc = await this.model.findOne(this.getFilter());
+  if (doc && doc.isSystem) {
+    return next(new Error('Cannot delete system department'));
+  }
+  next();
+});
+
+departmentSchema.pre('remove', function (next) {
+  if (this.isSystem) {
+    return next(new Error('Cannot delete system department'));
+  }
+  next();
+});
+
+// Static method to get the master department
+departmentSchema.statics.getMasterDepartment = async function () {
+  return this.findById(MASTER_DEPARTMENT_ID);
+};
+
+const Department = mongoose.model<IDepartment, IDepartmentModel>('Department', departmentSchema);
 
 export default Department;

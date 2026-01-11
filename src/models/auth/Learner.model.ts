@@ -1,4 +1,6 @@
 import mongoose, { Schema, Document } from 'mongoose';
+import { DepartmentMembershipSchema, IDepartmentMembership } from './department-membership.schema';
+import { LEARNER_ROLES } from './role-constants';
 
 export interface ILearner extends Document {
   _id: mongoose.Types.ObjectId; // Shared with User
@@ -18,9 +20,14 @@ export interface ILearner extends Document {
     relationship?: string;
     phoneNumber?: string;
   };
+  departmentMemberships: IDepartmentMembership[];
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
+
+  // Methods
+  getRolesForDepartment(deptId: mongoose.Types.ObjectId): string[];
+  hasDepartmentRole(deptId: mongoose.Types.ObjectId, role: string): boolean;
 }
 
 const learnerSchema = new Schema<ILearner>(
@@ -58,6 +65,20 @@ const learnerSchema = new Schema<ILearner>(
       relationship: String,
       phoneNumber: String
     },
+    departmentMemberships: {
+      type: [DepartmentMembershipSchema],
+      default: [],
+      validate: {
+        validator: function(memberships: IDepartmentMembership[]) {
+          // Validate role names against LEARNER_ROLES
+          const validRoles = new Set(LEARNER_ROLES as readonly string[]);
+          return memberships.every(m =>
+            m.roles.every(r => validRoles.has(r))
+          );
+        },
+        message: 'Invalid learner role. Must be one of: course-taker, auditor, learner-supervisor'
+      }
+    },
     isActive: {
       type: Boolean,
       default: true
@@ -71,5 +92,19 @@ const learnerSchema = new Schema<ILearner>(
 // Indexes
 learnerSchema.index({ _id: 1 });
 learnerSchema.index({ isActive: 1 });
+learnerSchema.index({ 'departmentMemberships.departmentId': 1 });
+
+// Methods
+learnerSchema.methods.getRolesForDepartment = function(deptId: mongoose.Types.ObjectId): string[] {
+  const membership = this.departmentMemberships.find(
+    (m: IDepartmentMembership) => m.departmentId.equals(deptId) && m.isActive
+  );
+  return membership ? membership.roles : [];
+};
+
+learnerSchema.methods.hasDepartmentRole = function(deptId: mongoose.Types.ObjectId, role: string): boolean {
+  const roles = this.getRolesForDepartment(deptId);
+  return roles.includes(role);
+};
 
 export const Learner = mongoose.model<ILearner>('Learner', learnerSchema);
