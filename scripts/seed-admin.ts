@@ -46,8 +46,8 @@ import { User } from '../src/models/auth/User.model';
 import { Staff } from '../src/models/auth/Staff.model';
 import { Learner } from '../src/models/auth/Learner.model';
 import Department from '../src/models/organization/Department.model';
-import { GlobalAdmin, MASTER_DEPARTMENT_ID, MASTER_DEPARTMENT_NAME, GLOBAL_ADMIN_ROLES } from '../src/models/GlobalAdmin.model';
-import { RoleDefinition, LEARNER_ROLES, STAFF_ROLES } from '../src/models/RoleDefinition.model';
+import { GlobalAdmin, MASTER_DEPARTMENT_ID, MASTER_DEPARTMENT_NAME } from '../src/models/GlobalAdmin.model';
+import { RoleDefinition } from '../src/models/RoleDefinition.model';
 import { AccessRight } from '../src/models/AccessRight.model';
 
 // Configuration

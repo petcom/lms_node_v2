@@ -47,13 +47,12 @@ export const errorHandler = (
     });
   }
 
-  // Send error response
-  const response = ApiResponse.error(
-    apiError.message,
-    config.env === 'development' && apiError.stack
-      ? [{ stack: apiError.stack }]
-      : undefined
-  );
+  // Send error response - include validation errors if present
+  const errorDetails = apiError.errors 
+    ? apiError.errors 
+    : (config.env === 'development' && apiError.stack ? [{ stack: apiError.stack }] : undefined);
+    
+  const response = ApiResponse.error(apiError.message, errorDetails);
 
   res.status(apiError.statusCode).json(response);
 };

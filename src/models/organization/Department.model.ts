@@ -129,13 +129,6 @@ departmentSchema.pre('findOneAndDelete', async function (next) {
   next();
 });
 
-departmentSchema.pre('remove', function (next) {
-  if (this.isSystem) {
-    return next(new Error('Cannot delete system department'));
-  }
-  next();
-});
-
 // Static method to get the master department
 departmentSchema.statics.getMasterDepartment = async function () {
   return this.findById(MASTER_DEPARTMENT_ID);

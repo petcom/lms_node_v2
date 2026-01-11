@@ -1,0 +1,428 @@
+{
+  "team": {
+    "name": "LMS Backend Team - LookupValues Migration",
+    "version": "1.0.0",
+    "description": "Agent team for implementing LookupValues collection, RoleRegistry service, and UserType object transformation"
+  },
+  "implementationPlan": {
+    "document": "devdocs/plans/UserType_Validation_Lookup_Migration_Plan.md",
+    "reviewDocument": "devdocs/discussions/UserType_Lookup_Implementation_Review.md",
+    "architecture": "devdocs/Role_System_API_Model_Plan_V2.md",
+    "streams": 3,
+    "estimatedDuration": "3-4 days"
+  },
+  "agents": [
+    {
+      "id": "agent-data",
+      "role": "Data Layer Specialist",
+      "stream": "A",
+      "description": "Handles LookupValue model, seed scripts, and database migrations",
+      "responsibilities": [
+        "Create LookupValue model with parentLookupId pattern",
+        "Write comprehensive unit tests for LookupValue model",
+        "Create constants seed script (scripts/seeds/constants.seed.ts)",
+        "Create seed runner and validation utilities",
+        "Create migration from roledefinitions to lookupvalues",
+        "Create GlobalAdmin migration (roleMemberships → departmentMemberships)",
+        "Create rollback scripts for all migrations",
+        "Add NPM scripts for seeding"
+      ],
+      "tasks": {
+        "A1": "Create LookupValue model",
+        "A2": "Create LookupValue model tests",
+        "A3": "Create constants seed script",
+        "A4": "Create seed runner",
+        "A5": "Create migration for roledefinitions",
+        "A6": "Add npm scripts"
+      },
+      "workingDirectories": [
+        "src/models/",
+        "scripts/seeds/",
+        "src/migrations/",
+        "tests/unit/models/"
+      ],
+      "outputFiles": [
+        "src/models/LookupValue.model.ts",
+        "scripts/seeds/constants.seed.ts",
+        "scripts/seeds/run-seeds.ts",
+        "src/migrations/migrate-roledefinitions.ts",
+        "src/migrations/migrate-globaladmin.ts",
+        "src/migrations/rollback-globaladmin.ts",
+        "tests/unit/models/LookupValue.model.test.ts"
+      ],
+      "contextFiles": [
+        "devdocs/plans/UserType_Validation_Lookup_Migration_Plan.md",
+        "devdocs/discussions/UserType_Lookup_Implementation_Review.md",
+        "contracts/api/lookup-values.contract.ts",
+        "src/models/auth/role-constants.ts",
+        "src/models/GlobalAdmin.model.ts"
+      ],
+      "dependencies": {
+        "blockedBy": [],
+        "blocks": ["agent-service", "agent-api"]
+      },
+      "testCoverage": {
+        "target": 85,
+        "files": [
+          "tests/unit/models/LookupValue.model.test.ts"
+        ]
+      }
+    },
+    {
+      "id": "agent-service",
+      "role": "Service Layer Specialist",
+      "stream": "B",
+      "description": "Handles RoleRegistry service, validation factory, and UserType utilities",
+      "responsibilities": [
+        "Create RoleRegistry interface",
+        "Implement RoleRegistry service with in-memory caching",
+        "Write comprehensive unit tests for RoleRegistry",
+        "Create DepartmentValidatorFactory for role validation",
+        "Write tests for validator factory",
+        "Create UserType transformation utilities",
+        "Write tests for UserType utils",
+        "Ensure all services use mocks initially (DB-independent)"
+      ],
+      "tasks": {
+        "B1": "Create RoleRegistry interface",
+        "B2": "Create RoleRegistry tests",
+        "B3": "Create RoleRegistry implementation",
+        "B4": "Create ValidatorFactory tests",
+        "B5": "Create ValidatorFactory",
+        "B6": "Create userType utils tests",
+        "B7": "Create userType utils"
+      },
+      "workingDirectories": [
+        "src/services/",
+        "src/validators/",
+        "src/utils/",
+        "tests/unit/services/",
+        "tests/unit/validators/",
+        "tests/unit/utils/"
+      ],
+      "outputFiles": [
+        "src/services/role-registry.interface.ts",
+        "src/services/role-registry.service.ts",
+        "src/validators/department-membership.validator.ts",
+        "src/utils/user-type.utils.ts",
+        "tests/unit/services/role-registry.test.ts",
+        "tests/unit/validators/department-membership.test.ts",
+        "tests/unit/utils/user-type.utils.test.ts"
+      ],
+      "contextFiles": [
+        "devdocs/plans/UserType_Validation_Lookup_Migration_Plan.md",
+        "devdocs/discussions/UserType_Lookup_Implementation_Review.md",
+        "contracts/api/lookup-values.contract.ts",
+        "src/models/auth/role-constants.ts"
+      ],
+      "dependencies": {
+        "blockedBy": ["agent-data"],
+        "blocks": ["agent-api"]
+      },
+      "testCoverage": {
+        "target": 90,
+        "files": [
+          "tests/unit/services/role-registry.test.ts",
+          "tests/unit/validators/department-membership.test.ts",
+          "tests/unit/utils/user-type.utils.test.ts"
+        ]
+      }
+    },
+    {
+      "id": "agent-api",
+      "role": "API Layer Specialist",
+      "stream": "C",
+      "description": "Handles auth response transformation, middleware updates, and API endpoints",
+      "responsibilities": [
+        "Update auth.service.ts to transform userTypes",
+        "Create auth transform service/utilities",
+        "Write tests for auth transformations",
+        "Update isAuthenticated middleware to hydrate userTypes",
+        "Write middleware tests",
+        "Create lookup-values controller",
+        "Create lookup-values routes",
+        "Write controller tests",
+        "Update contracts as needed"
+      ],
+      "tasks": {
+        "C1": "Update auth response types",
+        "C2": "Create auth transform tests",
+        "C3": "Create auth transform layer",
+        "C4": "Create middleware tests",
+        "C5": "Update middleware",
+        "C6": "Create list endpoints tests",
+        "C7": "Create list endpoints",
+        "C8": "Create routes"
+      },
+      "workingDirectories": [
+        "src/services/auth/",
+        "src/controllers/",
+        "src/routes/",
+        "src/middlewares/",
+        "src/types/",
+        "tests/unit/services/",
+        "tests/unit/controllers/",
+        "tests/unit/middlewares/"
+      ],
+      "outputFiles": [
+        "src/services/auth/auth-transform.service.ts",
+        "src/controllers/lookup-values.controller.ts",
+        "src/routes/lookup-values.routes.ts",
+        "src/middlewares/user-type-hydration.ts",
+        "tests/unit/services/auth-transform.test.ts",
+        "tests/unit/controllers/lookup-values.test.ts",
+        "tests/unit/middlewares/user-type-hydration.test.ts"
+      ],
+      "contextFiles": [
+        "devdocs/plans/UserType_Validation_Lookup_Migration_Plan.md",
+        "devdocs/discussions/UserType_Lookup_Implementation_Review.md",
+        "contracts/api/auth-v2.contract.ts",
+        "contracts/api/lookup-values.contract.ts",
+        "src/services/auth/auth.service.ts",
+        "src/middlewares/isAuthenticated.ts"
+      ],
+      "dependencies": {
+        "blockedBy": ["agent-data", "agent-service"],
+        "blocks": []
+      },
+      "testCoverage": {
+        "target": 85,
+        "files": [
+          "tests/unit/services/auth-transform.test.ts",
+          "tests/unit/controllers/lookup-values.test.ts",
+          "tests/unit/middlewares/user-type-hydration.test.ts"
+        ]
+      }
+    },
+    {
+      "id": "agent-integration",
+      "role": "Integration & Wiring Specialist",
+      "description": "Wires all streams together, handles startup initialization, and creates E2E tests",
+      "responsibilities": [
+        "Wire RoleRegistry to LookupValue model (replace mocks)",
+        "Add RoleRegistry.initialize() to server.ts startup",
+        "Add startup validation for lookupvalues",
+        "Update Staff model to use validator factory",
+        "Update Learner model to use validator factory",
+        "Update GlobalAdmin model to use validator factory",
+        "Create integration tests for login/me with UserTypeObject[]",
+        "Create startup validation integration tests",
+        "Create E2E tests for lookup-values API",
+        "Update app.ts with lookup-values routes",
+        "Create migration guide documentation"
+      ],
+      "tasks": {
+        "I1": "Wire RoleRegistry to LookupValue",
+        "I2": "Add startup initialization",
+        "I3": "Add startup validation",
+        "I4": "Update Staff model",
+        "I5": "Update Learner model",
+        "I6": "Update GlobalAdmin model",
+        "I7": "Update auth.service.ts",
+        "I8": "Update isAuthenticated middleware",
+        "I9": "Create E2E tests",
+        "I10": "Deprecate role-constants"
+      },
+      "workingDirectories": [
+        "src/server.ts",
+        "src/app.ts",
+        "src/models/",
+        "src/services/",
+        "src/middlewares/",
+        "tests/integration/",
+        "tests/e2e/",
+        "devdocs/"
+      ],
+      "outputFiles": [
+        "tests/integration/auth/login-usertype-objects.test.ts",
+        "tests/integration/startup/registry-validation.test.ts",
+        "tests/e2e/lookup-values-api.test.ts",
+        "devdocs/MIGRATION_GUIDE_LOOKUP_VALUES.md"
+      ],
+      "contextFiles": [
+        "devdocs/plans/UserType_Validation_Lookup_Migration_Plan.md",
+        "devdocs/discussions/UserType_Lookup_Implementation_Review.md",
+        "src/models/auth/Staff.model.ts",
+        "src/models/auth/Learner.model.ts",
+        "src/models/GlobalAdmin.model.ts",
+        "src/services/auth/auth.service.ts",
+        "src/middlewares/isAuthenticated.ts",
+        "src/server.ts",
+        "src/app.ts"
+      ],
+      "dependencies": {
+        "blockedBy": ["agent-data", "agent-service", "agent-api"],
+        "blocks": []
+      },
+      "testCoverage": {
+        "target": 85,
+        "files": [
+          "tests/integration/auth/login-usertype-objects.test.ts",
+          "tests/integration/startup/registry-validation.test.ts",
+          "tests/e2e/lookup-values-api.test.ts"
+        ]
+      }
+    }
+  ],
+  "sharedContext": {
+    "projectStructure": {
+      "models": "src/models/ - Mongoose schemas organized by domain",
+      "services": "src/services/ - Business logic layer",
+      "controllers": "src/controllers/ - Express route handlers",
+      "routes": "src/routes/ - Express router definitions",
+      "middlewares": "src/middlewares/ - Express middleware",
+      "validators": "src/validators/ - Validation utilities",
+      "utils": "src/utils/ - Shared utility functions",
+      "migrations": "src/migrations/ - Database migration scripts",
+      "scripts": "scripts/ - Seed and utility scripts",
+      "scriptSeeds": "scripts/seeds/ - Organized seed scripts",
+      "tests": "tests/ - Jest test suites (unit, integration, e2e)",
+      "contracts": "contracts/ - API contracts"
+    },
+    "keyDecisions": {
+      "seedLocation": "scripts/seeds/ (not src/seeds/)",
+      "databaseApproach": "Purge and reseed - all data is test data",
+      "versionIncrement": "None - fix in place (pre-production)",
+      "breakingChanges": "Acceptable - no production deployment yet",
+      "parallelWork": "3 streams work in parallel, integration wires together"
+    },
+    "lookupValuesContext": {
+      "totalRecords": 15,
+      "userTypes": 3,
+      "learnerRoles": 3,
+      "staffRoles": 4,
+      "globalAdminRoles": 5,
+      "pattern": "category.key (e.g., userType.staff, role.instructor)",
+      "parentLookupId": "Establishes hierarchy (e.g., role.instructor → userType.staff)"
+    },
+    "conventions": {
+      "naming": {
+        "models": "PascalCase.model.ts (e.g., LookupValue.model.ts)",
+        "services": "camelCase.service.ts (e.g., role-registry.service.ts)",
+        "controllers": "camelCase.controller.ts",
+        "routes": "camelCase.routes.ts",
+        "tests": "*.test.ts matching source file"
+      },
+      "exports": {
+        "models": "Named export for model class",
+        "services": "Default export class or named functions",
+        "controllers": "Named export functions"
+      }
+    },
+    "tddWorkflow": [
+      "Hybrid TDD Approach:",
+      "1. Implement functionality following contracts and specifications",
+      "2. Create comprehensive tests at end of phase",
+      "3. Ensure 85%+ test coverage before phase completion",
+      "4. All tests must pass with real function calls",
+      "5. Refactor while keeping tests green",
+      "6. Phase gate: Cannot proceed to next phase without 85% coverage and passing tests"
+    ]
+  },
+  "phaseGates": {
+    "streamA": {
+      "name": "Data Layer Complete",
+      "criteria": [
+        "LookupValue model created with all indexes",
+        "All A2 tests passing",
+        "Seed script idempotent",
+        "npm run seed:constants works",
+        "Migration script created"
+      ]
+    },
+    "streamB": {
+      "name": "Service Layer Complete",
+      "criteria": [
+        "RoleRegistry interface defined",
+        "All B2, B4, B6 tests passing",
+        "RoleRegistry works with mock data",
+        "ValidatorFactory works with injected registry",
+        "userType utils convert to/from objects"
+      ]
+    },
+    "streamC": {
+      "name": "API Layer Complete",
+      "criteria": [
+        "Auth types updated for UserTypeObject",
+        "All C2, C4, C6 tests passing",
+        "Transform service works with mocked registry",
+        "Middleware hydrates userTypes",
+        "List endpoints created"
+      ]
+    },
+    "integration": {
+      "name": "Integration Complete",
+      "criteria": [
+        "Server starts and initializes RoleRegistry",
+        "Server fails if lookups missing",
+        "Login response includes UserTypeObject[]",
+        "/me response includes UserTypeObject[]",
+        "Staff/Learner validation uses factory",
+        "GlobalAdmin renamed and migrated",
+        "All E2E tests passing"
+      ]
+    }
+  },
+  "workflowRules": {
+    "branchNaming": "feature/lookup-values/<stream>/<task>",
+    "commitFormat": "feat(lookup-values): <description>",
+    "minTestCoverage": 85,
+    "contractsFirst": true,
+    "streamSequencing": "Streams work in parallel, integration phase requires all streams complete"
+  },
+  "agentInstructions": {
+    "startup": [
+      "1. Read devdocs/plans/UserType_Validation_Lookup_Migration_Plan.md for your stream",
+      "2. Read devdocs/discussions/UserType_Lookup_Implementation_Review.md for context",
+      "3. Check your stream section (Stream A/B/C) for specific tasks",
+      "4. Review contracts: lookup-values.contract.ts and auth-v2.contract.ts",
+      "5. Follow hybrid TDD: implement then test (85% coverage required)"
+    ],
+    "beforeCoding": [
+      "Read the relevant contract file",
+      "Check existing patterns in the codebase",
+      "Use mocks for dependencies not yet implemented",
+      "Write comprehensive tests before implementation"
+    ],
+    "afterCoding": [
+      "Create comprehensive tests for all implemented functionality",
+      "Run npm test to ensure no regressions",
+      "Ensure test coverage meets 85%+ target (REQUIRED for phase gate)",
+      "All tests must pass with real function calls",
+      "Update implementation plan with task status",
+      "Commit with format: feat(lookup-values): <description>"
+    ],
+    "streamSpecific": {
+      "streamA": [
+        "Focus on database schema and seed data",
+        "Ensure all seed scripts are idempotent",
+        "Create comprehensive migration scripts",
+        "Document all database changes"
+      ],
+      "streamB": [
+        "Use mocks for LookupValue model initially",
+        "Focus on clean interfaces and abstractions",
+        "Ensure RoleRegistry can work with any data source",
+        "Write extensive unit tests"
+      ],
+      "streamC": [
+        "Use mocked RoleRegistry initially",
+        "Focus on API contract compliance",
+        "Ensure backward compatibility where possible",
+        "Test with various response scenarios"
+      ],
+      "integration": [
+        "Replace all mocks with real implementations",
+        "Test complete end-to-end flows",
+        "Verify startup initialization",
+        "Create comprehensive migration guide"
+      ]
+    }
+  },
+  "crossTeamSync": {
+    "contractsLocation": "contracts/",
+    "exportFormat": ["json", "typescript"],
+    "versioningStrategy": "No version increments during pre-production",
+    "notifyUITeam": "After integration phase complete"
+  }
+}

@@ -13,14 +13,23 @@ async function startServer() {
       logger.info(`Server running on port ${config.port} in ${config.env} mode`);
     });
 
-    // Graceful shutdown
-    process.on('SIGTERM', () => {
-      logger.info('SIGTERM received. Closing server gracefully...');
+    // Graceful shutdown handler
+    const gracefulShutdown = (signal: string) => {
+      logger.info(`${signal} received. Closing server gracefully...`);
       server.close(() => {
         logger.info('Server closed');
         process.exit(0);
       });
-    });
+      
+      // Force exit if graceful shutdown takes too long
+      setTimeout(() => {
+        logger.warn('Forcing shutdown after timeout');
+        process.exit(1);
+      }, 5000);
+    };
+
+    process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+    process.on('SIGINT', () => gracefulShutdown('SIGINT'));  // Ctrl+C
   } catch (error) {
     logger.error('Failed to start server:', error);
     process.exit(1);

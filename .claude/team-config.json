@@ -1,95 +1,168 @@
 {
   "team": {
     "name": "LMS Backend Team",
-    "version": "1.0.0",
-    "description": "Backend development team for LMS Node V2"
+    "version": "2.0.0",
+    "description": "Backend development team for LMS Node V2 - Role System Implementation"
+  },
+  "implementationPlan": {
+    "document": "devdocs/Role_System_V2_Phased_Implementation.md",
+    "architecture": "devdocs/Role_System_API_Model_Plan_V2.md",
+    "phases": 8,
+    "estimatedDuration": "3 weeks"
   },
   "agents": [
     {
-      "id": "backend-lead",
-      "role": "Tech Lead",
-      "description": "Oversees architecture, defines contracts, reviews code, makes technical decisions",
-      "responsibilities": [
-        "Define and maintain API contracts in /contracts/",
-        "Review PRs from other agents",
-        "Make architectural decisions",
-        "Coordinate with UI team on contract changes",
-        "Ensure TDD practices are followed"
-      ],
+      "id": "agent-1",
+      "role": "User & Session Specialist",
+      "description": "Handles User model, session service, and role controllers",
+      "phaseAssignments": {
+        "phase1": ["1.1 - User.model.ts updates"],
+        "phase2": ["2.2 - Master department seed"],
+        "phase3": ["3.2 - Session service updates", "3.4 - Auth service integration"],
+        "phase4": ["4.1 - Role controller"],
+        "phase5": ["5.4 - Cache invalidation middleware"],
+        "phase6": ["6.1 - Auth request validators"],
+        "phase7": ["7.1 - Auth flow integration tests"],
+        "phase8": ["8.1 - API documentation updates"]
+      },
       "workingDirectories": [
-        "src/",
-        "contracts/",
+        "src/models/auth/",
+        "src/services/auth/",
+        "src/controllers/auth/",
+        "tests/integration/auth/"
+      ],
+      "contextFiles": [
+        "devdocs/Role_System_V2_Phased_Implementation.md",
+        "devdocs/Role_System_API_Model_Plan_V2.md",
+        "contracts/auth-v2.contract.ts"
+      ]
+    },
+    {
+      "id": "agent-2",
+      "role": "Staff & Token Specialist",
+      "description": "Handles Staff model, token service, and dashboard controllers",
+      "phaseAssignments": {
+        "phase1": ["1.2 - Staff.model.ts updates"],
+        "phase2": ["2.3 - Default roles seed"],
+        "phase3": ["3.3 - Token service updates"],
+        "phase4": ["4.2 - Dashboard controller"],
+        "phase5": ["5.5 - Audit logging middleware"],
+        "phase6": ["6.2 - Role assignment validators"],
+        "phase7": ["7.2 - Role assignment integration tests"],
+        "phase8": ["8.2 - Swagger/OpenAPI updates"]
+      },
+      "workingDirectories": [
+        "src/models/auth/",
+        "src/services/auth/",
+        "src/controllers/dashboard/",
+        "tests/integration/roles/"
+      ],
+      "contextFiles": [
+        "devdocs/Role_System_V2_Phased_Implementation.md",
+        "devdocs/Role_System_API_Model_Plan_V2.md",
+        "contracts/roles.contract.ts"
+      ]
+    },
+    {
+      "id": "agent-3",
+      "role": "Learner & Auth Controller Specialist",
+      "description": "Handles Learner model, auth controller, and department controllers",
+      "phaseAssignments": {
+        "phase1": ["1.3 - Learner.model.ts updates"],
+        "phase2": ["2.4 - Access rights seed"],
+        "phase3": ["3.5 - Login/register controller updates"],
+        "phase4": ["4.3 - Department membership controller"],
+        "phase5": ["5.6 - Error handling standardization"],
+        "phase6": ["6.3 - Department membership validators"],
+        "phase7": ["7.3 - Department scoping integration tests"],
+        "phase8": ["8.3 - Contract validation updates"]
+      },
+      "workingDirectories": [
+        "src/models/auth/",
+        "src/controllers/auth/",
+        "src/controllers/departments/",
+        "tests/integration/departments/"
+      ],
+      "contextFiles": [
+        "devdocs/Role_System_V2_Phased_Implementation.md",
+        "devdocs/Role_System_API_Model_Plan_V2.md"
+      ]
+    },
+    {
+      "id": "agent-4",
+      "role": "Department & Seeds Specialist",
+      "description": "Handles Department model, seed scripts, and permission controllers",
+      "phaseAssignments": {
+        "phase1": ["1.4 - Department.model.ts updates"],
+        "phase2": ["2.1 - Seed script infrastructure"],
+        "phase3": [],
+        "phase4": ["4.4 - Permission check controller"],
+        "phase5": [],
+        "phase6": ["6.4 - Permission check validators"],
+        "phase7": ["7.4 - Permission checking integration tests"],
+        "phase8": ["8.4 - Migration guide documentation"]
+      },
+      "workingDirectories": [
+        "src/models/organization/",
+        "scripts/",
+        "src/controllers/permissions/",
+        "tests/integration/permissions/"
+      ],
+      "contextFiles": [
+        "devdocs/Role_System_V2_Phased_Implementation.md",
+        "devdocs/Role_System_API_Model_Plan_V2.md",
+        "scripts/seed-admin.ts"
+      ]
+    },
+    {
+      "id": "agent-5",
+      "role": "GlobalAdmin & Middleware Specialist",
+      "description": "Handles GlobalAdmin model, migrations, and middleware stack",
+      "phaseAssignments": {
+        "phase1": ["1.5 - GlobalAdmin.model.ts verification"],
+        "phase2": ["2.5 - Data migration script"],
+        "phase3": ["3.1 - Permission resolver service"],
+        "phase4": ["4.5 - Access rights controller"],
+        "phase5": ["5.1 - Department scope middleware updates", "5.2 - Role restriction middleware updates", "5.3 - isAuthenticated middleware updates"],
+        "phase6": [],
+        "phase7": ["7.5 - Middleware stack integration tests"],
+        "phase8": ["8.5 - Final integration testing"]
+      },
+      "workingDirectories": [
+        "src/models/",
+        "src/middlewares/",
+        "src/services/auth/",
+        "tests/integration/middleware/"
+      ],
+      "contextFiles": [
+        "devdocs/Role_System_V2_Phased_Implementation.md",
+        "devdocs/Role_System_API_Model_Plan_V2.md",
+        "devdocs/Endpoint_Role_Authorization.md"
+      ]
+    },
+    {
+      "id": "agent-6",
+      "role": "RoleDefinition & QA Specialist",
+      "description": "Handles RoleDefinition model, tests, and documentation",
+      "phaseAssignments": {
+        "phase1": ["1.6 - RoleDefinition.model.ts verification"],
+        "phase2": [],
+        "phase3": [],
+        "phase4": ["4.6 - Role definition CRUD controller"],
+        "phase5": [],
+        "phase6": [],
+        "phase7": ["7.6 - End-to-end role system tests"],
+        "phase8": []
+      },
+      "workingDirectories": [
+        "src/models/",
+        "src/controllers/roles/",
+        "tests/",
         "devdocs/"
       ],
       "contextFiles": [
-        "devdocs/Ideal_TypeScript_DataStructures.md",
-        "devdocs/Ideal_MongoDB_DataObjects.md",
-        "devdocs/Ideal_RestfulAPI_toCurrent_Crosswalk.md",
-        "contracts/README.md"
-      ]
-    },
-    {
-      "id": "backend-models",
-      "role": "Data Engineer",
-      "description": "Implements Mongoose models, migrations, and data layer",
-      "responsibilities": [
-        "Implement Mongoose models with full validation",
-        "Create indexes for performance",
-        "Write migration scripts",
-        "Ensure data integrity constraints",
-        "Write model unit tests"
-      ],
-      "workingDirectories": [
-        "src/models/",
-        "src/services/migration/",
-        "tests/unit/models/"
-      ],
-      "contextFiles": [
-        "devdocs/Ideal_MongoDB_DataObjects.md",
-        "devdocs/Ideal_TypeScript_DataStructures.md"
-      ]
-    },
-    {
-      "id": "backend-services",
-      "role": "Service Developer",
-      "description": "Implements business logic, controllers, routes, and middleware",
-      "responsibilities": [
-        "Implement service classes with business logic",
-        "Create Express controllers",
-        "Define routes with proper middleware",
-        "Implement request validation (Joi schemas)",
-        "Write service and controller tests"
-      ],
-      "workingDirectories": [
-        "src/services/",
-        "src/controllers/",
-        "src/routes/",
-        "src/middlewares/",
-        "src/validators/",
-        "tests/unit/services/",
-        "tests/unit/controllers/"
-      ],
-      "contextFiles": [
-        "devdocs/Ideal_RestfulAPI_toCurrent_Crosswalk.md",
-        "contracts/api/"
-      ]
-    },
-    {
-      "id": "backend-qa",
-      "role": "QA Engineer",
-      "description": "Ensures test coverage, contract compliance, and quality",
-      "responsibilities": [
-        "Write integration tests",
-        "Validate API responses match contracts",
-        "Ensure minimum 80% code coverage",
-        "Test edge cases and error handling",
-        "Maintain test utilities and fixtures"
-      ],
-      "workingDirectories": [
-        "tests/",
-        "contracts/validation/"
-      ],
-      "contextFiles": [
+        "devdocs/Role_System_V2_Phased_Implementation.md",
+        "devdocs/Role_System_API_Model_Plan_V2.md",
         "TDD_TEST_COVERAGE_SUMMARY.md",
         "jest.config.js"
       ]
@@ -97,14 +170,22 @@
   ],
   "sharedContext": {
     "projectStructure": {
-      "models": "src/models/ - Mongoose schemas organized by domain",
+      "models": "src/models/ - Mongoose schemas organized by domain (auth/, organization/, etc.)",
       "services": "src/services/ - Business logic layer",
       "controllers": "src/controllers/ - Express route handlers",
       "routes": "src/routes/ - Express router definitions",
       "middlewares": "src/middlewares/ - Express middleware",
       "validators": "src/validators/ - Joi validation schemas",
       "tests": "tests/ - Jest test suites (unit, integration, e2e)",
-      "contracts": "contracts/ - API contracts shared with UI team"
+      "contracts": "contracts/ - API contracts shared with UI team",
+      "scripts": "scripts/ - Seed and migration scripts"
+    },
+    "roleSystemContext": {
+      "userTypes": ["learner", "staff", "global-admin"],
+      "masterDepartmentId": "000000000000000000000001",
+      "dashboards": ["learner-dashboard", "instructor-dashboard", "staff-dashboard", "admin-dashboard"],
+      "keyModels": ["User", "Staff", "Learner", "GlobalAdmin", "RoleDefinition", "AccessRight"],
+      "keyContracts": ["contracts/roles.contract.ts", "contracts/auth-v2.contract.ts"]
     },
     "conventions": {
       "naming": {
@@ -117,8 +198,7 @@
       "exports": {
         "models": "Named exports for User, Learner, Staff, AuditLog, Report; default exports for others",
         "services": "Default export class",
-        "controllers":
-─────────────────────────────────────────────── "Named export functions"
+        "controllers": "Named export functions"
       }
     },
     "tddWorkflow": [
@@ -129,17 +209,71 @@
       "5. Update documentation"
     ]
   },
+  "phaseGates": {
+    "phase1": {
+      "name": "Model Updates Complete",
+      "criteria": ["All model schemas updated", "TypeScript compiles", "Existing tests pass"]
+    },
+    "phase2": {
+      "name": "Seed Data Ready",
+      "criteria": ["Master department exists", "Default roles seeded", "Access rights seeded"]
+    },
+    "phase3": {
+      "name": "Auth Services Updated",
+      "criteria": ["Permission resolver works", "Token includes userTypes", "Login returns correct dashboard"]
+    },
+    "phase4": {
+      "name": "Controllers & Routes Ready",
+      "criteria": ["All new endpoints functional", "Swagger documented", "Manual testing passes"]
+    },
+    "phase5": {
+      "name": "Middleware Stack Complete",
+      "criteria": ["Department scoping works", "Role restrictions work", "Audit logging works"]
+    },
+    "phase6": {
+      "name": "Validators Complete",
+      "criteria": ["All request bodies validated", "Error messages clear"]
+    },
+    "phase7": {
+      "name": "Integration Tests Pass",
+      "criteria": ["80%+ coverage", "All integration tests pass", "No regressions"]
+    },
+    "phase8": {
+      "name": "Ready for Deployment",
+      "criteria": ["Docs complete", "Contracts validated", "Migration guide ready"]
+    }
+  },
   "workflowRules": {
-    "branchNaming": "feature/<agent-id>/<task-description>",
-    "commitFormat": "<type>(<scope>): <description>",
+    "branchNaming": "feature/role-system/<agent-id>/<phase>-<task>",
+    "commitFormat": "<type>(role-system): <description>",
     "prRequired": true,
     "minTestCoverage": 80,
-    "contractsFirst": true
+    "contractsFirst": true,
+    "phaseSequencing": "Agents work in parallel within phases, gates block next phase"
   },
   "crossTeamSync": {
     "contractsLocation": "contracts/",
     "exportFormat": ["json", "openapi"],
     "versioningStrategy": "semver",
     "notifyUITeam": "On any contract changes, export and notify UI team"
+  },
+  "agentInstructions": {
+    "startup": [
+      "1. Read devdocs/Role_System_V2_Phased_Implementation.md for your task assignments",
+      "2. Check current phase status in the implementation plan",
+      "3. Read devdocs/Role_System_API_Model_Plan_V2.md for architecture details",
+      "4. Find your assigned tasks by agent-id in the implementation plan",
+      "5. Follow TDD: write tests first, then implement"
+    ],
+    "beforeCoding": [
+      "Read the relevant contract file if one exists",
+      "Check existing model/service patterns in the codebase",
+      "Verify dependencies from other agents are complete"
+    ],
+    "afterCoding": [
+      "Run npm test to ensure no regressions",
+      "Update implementation plan with task status",
+      "Commit with proper format: feat(role-system): <description>"
+    ]
   }
 }

@@ -9,6 +9,7 @@ export interface PaginationInfo {
 
 export interface ApiSuccessResponse<T = any> {
   status: 'success';
+  success: true;  // For frontend compatibility
   message?: string;
   data: T;
   pagination?: PaginationInfo;
@@ -16,6 +17,7 @@ export interface ApiSuccessResponse<T = any> {
 
 export interface ApiErrorResponse {
   status: 'error';
+  success: false;  // For frontend compatibility
   message: string;
   errors?: any[];
 }
@@ -24,6 +26,7 @@ export class ApiResponse {
   static success<T>(data: T, message?: string): ApiSuccessResponse<T> {
     const response: ApiSuccessResponse<T> = {
       status: 'success',
+      success: true,
       data
     };
 
@@ -46,6 +49,7 @@ export class ApiResponse {
 
     return {
       status: 'success',
+      success: true,
       data,
       pagination: {
         ...pagination,
@@ -58,6 +62,7 @@ export class ApiResponse {
   static error(message: string, errors?: any[]): ApiErrorResponse {
     const response: ApiErrorResponse = {
       status: 'error',
+      success: false,
       message
     };
 
