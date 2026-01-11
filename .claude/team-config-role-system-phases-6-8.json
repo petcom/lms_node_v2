@@ -1,0 +1,215 @@
+{
+  "team": {
+    "name": "LMS Backend Team - Role System V2 Phases 6-8 Completion",
+    "version": "1.0.0",
+    "description": "Agent team for completing Role System V2 Phases 6-8: Validators, Integration Tests, and Documentation"
+  },
+  "implementationPlan": {
+    "document": "devdocs/plans/Role_System_V2_Phased_Implementation.md",
+    "phases": "6-8",
+    "status": "Phases 1-5 complete, finishing remaining phases"
+  },
+  "agents": [
+    {
+      "id": "agent-phase6-validators",
+      "role": "Phase 6 Validators & Schemas Specialist",
+      "phase": "6",
+      "description": "Verify and complete Phase 6 validators and schemas",
+      "responsibilities": [
+        "Verify all validators exist and work correctly",
+        "Create any missing validators",
+        "Ensure validation schemas are comprehensive",
+        "Create validator tests if missing",
+        "Document all validation rules"
+      ],
+      "tasks": {
+        "P6-1": "Verify escalation.validator.ts",
+        "P6-2": "Verify department-switch.validator.ts",
+        "P6-3": "Verify role.validator.ts",
+        "P6-4": "Verify auth.validator.ts",
+        "P6-5": "Create any missing tests",
+        "P6-6": "Document validation schemas"
+      },
+      "workingDirectories": [
+        "src/validators/",
+        "tests/unit/validators/"
+      ],
+      "filesToVerify": [
+        "src/validators/escalation.validator.ts",
+        "src/validators/department-switch.validator.ts",
+        "src/validators/role.validator.ts",
+        "src/validators/auth.validator.ts",
+        "src/validators/department-membership.validator.ts"
+      ],
+      "testCoverage": {
+        "target": 85,
+        "critical": true
+      }
+    },
+    {
+      "id": "agent-phase7-integration-tests",
+      "role": "Phase 7 Integration Tests Specialist",
+      "phase": "7",
+      "description": "Complete and fix all integration tests for Phase 7",
+      "responsibilities": [
+        "Fix all failing integration tests",
+        "Apply JWT and model import fixes to all test files",
+        "Create any missing integration tests",
+        "Ensure 85%+ test coverage",
+        "Verify all E2E flows work correctly"
+      ],
+      "tasks": {
+        "P7-1": "Fix login-v2.test.ts (already done)",
+        "P7-2": "Fix escalation.test.ts",
+        "P7-3": "Fix department-switch.test.ts",
+        "P7-4": "Fix role-cascading.test.ts",
+        "P7-5": "Fix authorization.test.ts (partially done)",
+        "P7-6": "Fix roles-api.test.ts",
+        "P7-7": "Create access-rights API tests if missing",
+        "P7-8": "Verify role-system-e2e.test.ts"
+      },
+      "workingDirectories": [
+        "tests/integration/auth/",
+        "tests/integration/roles/",
+        "tests/integration/middleware/",
+        "tests/e2e/"
+      ],
+      "testFiles": [
+        "tests/integration/auth/login-v2.test.ts",
+        "tests/integration/auth/escalation.test.ts",
+        "tests/integration/auth/department-switch.test.ts",
+        "tests/integration/auth/role-cascading.test.ts",
+        "tests/integration/middleware/authorization.test.ts",
+        "tests/integration/roles/roles-api.test.ts",
+        "tests/integration/role-system-e2e.test.ts"
+      ],
+      "testCoverage": {
+        "target": 85,
+        "critical": true
+      }
+    },
+    {
+      "id": "agent-phase8-documentation",
+      "role": "Phase 8 Documentation & Final Integration Specialist",
+      "phase": "8",
+      "description": "Complete documentation, create migration script, and finalize integration",
+      "responsibilities": [
+        "Create API documentation",
+        "Create/update OpenAPI spec",
+        "Create migration script for V1 to V2",
+        "Create/update Postman collection",
+        "Create final E2E integration test",
+        "Create comprehensive final report"
+      ],
+      "tasks": {
+        "P8-1": "Create API documentation (docs/api/auth-v2.md)",
+        "P8-2": "Create/update OpenAPI spec",
+        "P8-3": "Create V2 migration script",
+        "P8-4": "Create/update Postman collection",
+        "P8-5": "Verify final E2E integration test",
+        "P8-6": "Create comprehensive Phase 6-8 report",
+        "P8-7": "Create final Role System V2 completion report"
+      },
+      "workingDirectories": [
+        "docs/api/",
+        "docs/openapi/",
+        "src/migrations/",
+        "docs/postman/",
+        "devdocs/impl_reports/"
+      ],
+      "outputFiles": [
+        "docs/api/auth-v2.md",
+        "docs/api/roles-v2.md",
+        "docs/api/access-rights-v2.md",
+        "docs/openapi/auth-v2.yaml",
+        "src/migrations/v2-role-system.migration.ts",
+        "docs/postman/LMS-V2.postman_collection.json",
+        "devdocs/impl_reports/ROLE_SYSTEM_V2_Phase_6_Report.md",
+        "devdocs/impl_reports/ROLE_SYSTEM_V2_Phase_7_Report.md",
+        "devdocs/impl_reports/ROLE_SYSTEM_V2_Phase_8_Report.md",
+        "devdocs/impl_reports/ROLE_SYSTEM_V2_Final_Report.md"
+      ]
+    }
+  ],
+  "sharedContext": {
+    "currentState": {
+      "phase1-2": "Complete - Models, seeds, lookups",
+      "phase3": "Complete - Authentication services",
+      "phase4": "Complete - Controllers and routes",
+      "phase5": "Complete - Middleware and authorization",
+      "phase6": "Validators exist, need verification",
+      "phase7": "Integration tests exist but many failing",
+      "phase8": "Documentation and migration needed"
+    },
+    "knownIssues": [
+      "JWT token format issues in some tests",
+      "Admin session management in tests",
+      "Model import patterns in some test files",
+      "AccessRight validation in test data"
+    ],
+    "knownFixes": [
+      "Add type: 'access' to JWT tokens",
+      "Use named exports for Staff/Learner",
+      "Use default export for GlobalAdmin",
+      "Add resource/action to AccessRight seed data",
+      "Use _id instead of userId in model creation"
+    ],
+    "testingStrategy": [
+      "Apply known fixes to all remaining test files",
+      "Create test helpers for common patterns",
+      "Ensure 85%+ coverage for all phases",
+      "Verify all E2E flows work",
+      "Document test infrastructure for future work"
+    ]
+  },
+  "phaseGates": {
+    "phase6": {
+      "name": "Validators & Schemas Complete",
+      "criteria": [
+        "All validators verified and working",
+        "All validation schemas comprehensive",
+        "Error messages are helpful",
+        "Validators have tests",
+        "Documentation complete"
+      ]
+    },
+    "phase7": {
+      "name": "Integration Tests Complete",
+      "criteria": [
+        "All integration tests passing",
+        "Code coverage > 85%",
+        "All E2E flows verified",
+        "Test infrastructure documented",
+        "No blocking issues"
+      ]
+    },
+    "phase8": {
+      "name": "Documentation & Migration Complete",
+      "criteria": [
+        "API documentation complete",
+        "OpenAPI spec created/updated",
+        "Migration script working",
+        "Postman collection updated",
+        "Final E2E test passing",
+        "Comprehensive reports created"
+      ]
+    },
+    "finalGate": {
+      "name": "Role System V2 Complete",
+      "criteria": [
+        "All 8 phases complete",
+        "All tests passing",
+        "All documentation complete",
+        "Production ready",
+        "Migration path clear",
+        "No blocking issues"
+      ]
+    }
+  },
+  "workflowRules": {
+    "commitFormat": "feat(role-system): <description>",
+    "minTestCoverage": 85,
+    "sequencing": "Sequential - Phase 6 → Phase 7 → Phase 8",
+    "documentation": "Required for all phases"
+  }
+}
