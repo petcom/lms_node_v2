@@ -1,0 +1,742 @@
+openapi: 3.0.3
+info:
+  title: LMS Authentication API V2
+  description: |
+    Authentication and authorization API for the Learning Management System.
+
+    ## Breaking Changes from V1
+
+    - Login response now returns `userTypes[]` instead of single `role`
+    - Added `departmentMemberships` with roles and access rights
+    - Added escalation endpoint for Admin Dashboard access
+    - Added department switching endpoint
+    - Access rights follow GNAP pattern: `domain:resource:action`
+
+    ## Key Concepts
+
+    - **UserTypes**: Determine dashboard access (learner, staff, global-admin)
+    - **Roles**: Department-scoped capabilities within a userType
+    - **Access Rights**: Fine-grained permissions (domain:resource:action)
+    - **Admin Escalation**: Separate authentication for Admin Dashboard
+
+  version: 2.0.0
+  contact:
+    name: LMS Backend Team
+  license:
+    name: Proprietary
+
+servers:
+  - url: http://localhost:3000/api/v2
+    description: Local development server
+  - url: https://staging-api.lms.example.com/api/v2
+    description: Staging environment
+  - url: https://api.lms.example.com/api/v2
+    description: Production environment
+
+tags:
+  - name: Authentication
+    description: Login, logout, token management
+  - name: Escalation
+    description: Admin privilege elevation
+  - name: Department
+    description: Department context switching
+  - name: User
+    description: Current user information
+
+paths:
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: User login
+      description: |
+        Authenticate user and receive access token with roles and access rights.
+
+        **V2 Changes:**
+        - Returns `userTypes[]` instead of single role
+        - Includes `departmentMemberships` with roles/rights
+        - Includes `canEscalateToAdmin` flag
+
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: instructor@example.com
+                password:
+                  type: string
+                  format: password
+                  example: SecurePass123!
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      user:
+                        $ref: '#/components/schemas/AuthUser'
+                      session:
+                        $ref: '#/components/schemas/AuthSession'
+                      userTypes:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            _id:
+                              type: string
+                              enum: [learner, staff, global-admin]
+                            displayAs:
+                              type: string
+                        example:
+                          - _id: staff
+                            displayAs: Staff
+                          - _id: global-admin
+                            displayAs: System Admin
+                      defaultDashboard:
+                        type: string
+                        enum: [learner, staff]
+                        example: staff
+                      canEscalateToAdmin:
+                        type: boolean
+                        example: true
+                      departmentMemberships:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/DepartmentMembership'
+                      allAccessRights:
+                        type: array
+                        items:
+                          type: string
+                        example:
+                          - content:courses:read
+                          - content:courses:manage
+                          - grades:own-classes:manage
+                      lastSelectedDepartment:
+                        type: string
+                        nullable: true
+                        example: 507f1f77bcf86cd799439100
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                success: false
+                error:
+                  message: Invalid email or password
+        '403':
+          description: Account disabled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                success: false
+                error:
+                  message: Account is disabled
+
+  /auth/escalate:
+    post:
+      tags:
+        - Escalation
+      summary: Escalate to Admin Dashboard
+      description: |
+        Elevate privileges to access Admin Dashboard. Requires separate escalation password.
+
+        **Security:**
+        - Admin token expires after 15 minutes (default)
+        - Token should be stored in memory only (not localStorage)
+        - Session tracked server-side
+
+      operationId: escalate
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - escalationPassword
+              properties:
+                escalationPassword:
+                  type: string
+                  format: password
+                  minLength: 8
+                  example: AdminSecretPass123!
+      responses:
+        '200':
+          description: Escalation successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      adminSession:
+                        $ref: '#/components/schemas/AdminSession'
+                      adminRoles:
+                        type: array
+                        items:
+                          type: string
+                        example:
+                          - system-admin
+                      adminAccessRights:
+                        type: array
+                        items:
+                          type: string
+                        example:
+                          - system:*
+                          - content:*
+                      sessionTimeoutMinutes:
+                        type: integer
+                        example: 15
+        '401':
+          description: Invalid escalation password or token
+        '403':
+          description: Not a global admin user
+
+  /auth/deescalate:
+    post:
+      tags:
+        - Escalation
+      summary: De-escalate from Admin Dashboard
+      description: Leave Admin Dashboard and invalidate admin token
+      operationId: deescalate
+      security:
+        - bearerAuth: []
+        - adminToken: []
+      responses:
+        '200':
+          description: De-escalation successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Successfully de-escalated from admin session
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/switch-department:
+    post:
+      tags:
+        - Department
+      summary: Switch department context
+      description: |
+        Change current department and get updated roles/access rights.
+        Updates `User.lastSelectedDepartment` on server.
+
+      operationId: switchDepartment
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - departmentId
+              properties:
+                departmentId:
+                  type: string
+                  pattern: '^[0-9a-fA-F]{24}$'
+                  example: 507f1f77bcf86cd799439100
+      responses:
+        '200':
+          description: Department switch successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      currentDepartment:
+                        type: object
+                        properties:
+                          departmentId:
+                            type: string
+                          departmentName:
+                            type: string
+                          departmentSlug:
+                            type: string
+                          roles:
+                            type: array
+                            items:
+                              type: string
+                          accessRights:
+                            type: array
+                            items:
+                              type: string
+                      childDepartments:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            departmentId:
+                              type: string
+                            departmentName:
+                              type: string
+                            roles:
+                              type: array
+                              items:
+                                type: string
+                      isDirectMember:
+                        type: boolean
+                      inheritedFrom:
+                        type: string
+                        nullable: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Not a member of this department
+        '404':
+          description: Department not found
+
+  /auth/continue:
+    post:
+      tags:
+        - Authentication
+      summary: Refresh with updated access rights
+      description: |
+        Get new access token with updated roles and access rights without full re-authentication.
+        Use this when:
+        - System admin changes role permissions
+        - User is added/removed from a department
+        - User's roles change mid-session
+
+        This is the GNAP "continuation" pattern for access updates.
+
+      operationId: continueSession
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Token refreshed with updated rights
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      session:
+                        $ref: '#/components/schemas/AuthSession'
+                      departmentMemberships:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/DepartmentMembership'
+                      allAccessRights:
+                        type: array
+                        items:
+                          type: string
+                      changes:
+                        type: object
+                        properties:
+                          rolesAdded:
+                            type: array
+                            items:
+                              type: string
+                          rolesRemoved:
+                            type: array
+                            items:
+                              type: string
+                          departmentsAdded:
+                            type: array
+                            items:
+                              type: string
+                          departmentsRemoved:
+                            type: array
+                            items:
+                              type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/me:
+    get:
+      tags:
+        - User
+      summary: Get current user
+      description: Get current authenticated user with roles, access rights, and admin session status
+      operationId: getCurrentUser
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Current user information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      user:
+                        $ref: '#/components/schemas/AuthUser'
+                      userTypes:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            _id:
+                              type: string
+                            displayAs:
+                              type: string
+                      defaultDashboard:
+                        type: string
+                        enum: [learner, staff]
+                      canEscalateToAdmin:
+                        type: boolean
+                      departmentMemberships:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/DepartmentMembership'
+                      allAccessRights:
+                        type: array
+                        items:
+                          type: string
+                      lastSelectedDepartment:
+                        type: string
+                        nullable: true
+                      isAdminSessionActive:
+                        type: boolean
+                      adminSessionExpiresAt:
+                        type: string
+                        format: date-time
+                        nullable: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/set-escalation-password:
+    post:
+      tags:
+        - Escalation
+      summary: Set or change escalation password
+      description: |
+        Set or change the escalation password for Admin Dashboard access.
+
+        **Requirements:**
+        - User must have `global-admin` userType
+        - Password must be at least 12 characters
+        - Must be different from login password
+        - First time: no current password required
+        - Changing: current password required
+
+      operationId: setEscalationPassword
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - newEscalationPassword
+              properties:
+                currentEscalationPassword:
+                  type: string
+                  format: password
+                  description: Required when changing existing password
+                newEscalationPassword:
+                  type: string
+                  format: password
+                  minLength: 12
+                  pattern: '^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{12,}$'
+                  description: Must be different from login password
+      responses:
+        '200':
+          description: Escalation password set successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Escalation password updated successfully
+        '400':
+          description: Validation error or same as login password
+        '401':
+          description: Invalid current password or token
+        '403':
+          description: Not a global admin user
+
+  /auth/refresh:
+    post:
+      tags:
+        - Authentication
+      summary: Refresh access token
+      description: Get new access token using refresh token (V1 compatible)
+      operationId: refreshToken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - refreshToken
+              properties:
+                refreshToken:
+                  type: string
+      responses:
+        '200':
+          description: Token refreshed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/AuthSession'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/logout:
+    post:
+      tags:
+        - Authentication
+      summary: Logout
+      description: Invalidate session tokens. V2 also invalidates admin token if active.
+      operationId: logout
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Logged out successfully
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Access token from login
+    adminToken:
+      type: apiKey
+      in: header
+      name: X-Admin-Token
+      description: Admin token from escalation (required for admin operations)
+
+  schemas:
+    AuthUser:
+      type: object
+      properties:
+        id:
+          type: string
+          example: 507f1f77bcf86cd799439011
+        email:
+          type: string
+          format: email
+          example: instructor@example.com
+        firstName:
+          type: string
+          example: Jane
+        lastName:
+          type: string
+          example: Smith
+        isActive:
+          type: boolean
+          example: true
+        lastLogin:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    AuthSession:
+      type: object
+      properties:
+        accessToken:
+          type: string
+          description: JWT access token
+        refreshToken:
+          type: string
+          description: JWT refresh token
+        expiresIn:
+          type: integer
+          description: Token expiration in seconds
+          example: 3600
+        tokenType:
+          type: string
+          enum: [Bearer, DPoP]
+          default: Bearer
+
+    AdminSession:
+      type: object
+      properties:
+        adminToken:
+          type: string
+          description: Separate token for admin operations (store in memory only)
+        expiresIn:
+          type: integer
+          description: Admin session expiration in seconds
+          example: 900
+        adminRoles:
+          type: array
+          items:
+            type: string
+          example:
+            - system-admin
+        adminAccessRights:
+          type: array
+          items:
+            type: string
+          example:
+            - system:*
+            - content:*
+
+    DepartmentMembership:
+      type: object
+      properties:
+        departmentId:
+          type: string
+          example: 507f1f77bcf86cd799439100
+        departmentName:
+          type: string
+          example: Cognitive Therapy
+        departmentSlug:
+          type: string
+          example: cognitive-therapy
+        roles:
+          type: array
+          items:
+            type: string
+          example:
+            - instructor
+            - content-admin
+        accessRights:
+          type: array
+          items:
+            type: string
+          example:
+            - content:courses:read
+            - content:courses:manage
+            - grades:own-classes:manage
+        isPrimary:
+          type: boolean
+          example: true
+        isActive:
+          type: boolean
+          example: true
+        joinedAt:
+          type: string
+          format: date-time
+        childDepartments:
+          type: array
+          items:
+            type: object
+            properties:
+              departmentId:
+                type: string
+              departmentName:
+                type: string
+              roles:
+                type: array
+                items:
+                  type: string
+
+    Error:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          properties:
+            message:
+              type: string
+            details:
+              type: object
+              additionalProperties: true
+
+  responses:
+    Unauthorized:
+      description: Invalid or expired token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            success: false
+            error:
+              message: Invalid or expired token
+
+    ValidationError:
+      description: Validation error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            success: false
+            error:
+              message: Validation error
+              details:
+                email: Email is required
+                password: Password must be at least 8 characters
