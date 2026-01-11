@@ -20,8 +20,8 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import app from '@/app';
 import { User } from '@/models/auth/User.model';
-import Staff from '@/models/auth/Staff.model';
-import { GlobalAdmin } from '@/models/GlobalAdmin.model';
+import { Staff } from '@/models/auth/Staff.model';
+import GlobalAdmin from '@/models/GlobalAdmin.model';
 import Department from '@/models/organization/Department.model';
 import { RoleDefinition } from '@/models/RoleDefinition.model';
 import { AccessRight } from '@/models/AccessRight.model';
@@ -112,18 +112,18 @@ describe('Authorization Middleware Integration Tests', () => {
 
     // Seed access rights
     await AccessRight.create([
-      { name: 'content:courses:read', domain: 'content', description: 'Read courses' },
-      { name: 'content:courses:manage', domain: 'content', description: 'Manage courses' },
-      { name: 'content:lessons:read', domain: 'content', description: 'Read lessons' },
-      { name: 'content:lessons:manage', domain: 'content', description: 'Manage lessons' },
-      { name: 'content:materials:manage', domain: 'content', description: 'Manage materials' },
-      { name: 'grades:own-classes:manage', domain: 'grades', description: 'Manage grades' },
-      { name: 'staff:department:manage', domain: 'staff', description: 'Manage department' },
-      { name: 'reports:department:read', domain: 'reports', description: 'Read reports' },
-      { name: 'staff:members:manage', domain: 'staff', description: 'Manage members' },
-      { name: 'system:*', domain: 'system', description: 'All system operations' },
-      { name: 'content:*', domain: 'content', description: 'All content operations' },
-      { name: 'enrollment:*', domain: 'enrollment', description: 'All enrollment operations' }
+      { name: 'content:courses:read', domain: 'content', resource: 'courses', action: 'read', description: 'Read courses', isActive: true },
+      { name: 'content:courses:manage', domain: 'content', resource: 'courses', action: 'manage', description: 'Manage courses', isActive: true },
+      { name: 'content:lessons:read', domain: 'content', resource: 'lessons', action: 'read', description: 'Read lessons', isActive: true },
+      { name: 'content:lessons:manage', domain: 'content', resource: 'lessons', action: 'manage', description: 'Manage lessons', isActive: true },
+      { name: 'content:materials:manage', domain: 'content', resource: 'materials', action: 'manage', description: 'Manage materials', isActive: true },
+      { name: 'grades:own-classes:manage', domain: 'grades', resource: 'own-classes', action: 'manage', description: 'Manage grades', isActive: true },
+      { name: 'staff:department:manage', domain: 'staff', resource: 'department', action: 'manage', description: 'Manage department', isActive: true },
+      { name: 'reports:department:read', domain: 'reports', resource: 'department', action: 'read', description: 'Read reports', isActive: true },
+      { name: 'staff:members:manage', domain: 'staff', resource: 'members', action: 'manage', description: 'Manage members', isActive: true },
+      { name: 'system:*', domain: 'system', resource: '*', action: '*', description: 'All system operations', isActive: true },
+      { name: 'content:*', domain: 'content', resource: '*', action: '*', description: 'All content operations', isActive: true },
+      { name: 'enrollment:*', domain: 'enrollment', resource: '*', action: '*', description: 'All enrollment operations', isActive: true }
     ]);
   });
 
@@ -144,7 +144,7 @@ describe('Authorization Middleware Integration Tests', () => {
     });
 
     await Staff.create({
-      userId: instructorUser._id,
+      _id: instructorUser._id,
       firstName: 'Test',
       lastName: 'Instructor',
       departmentMemberships: [{
@@ -156,7 +156,7 @@ describe('Authorization Middleware Integration Tests', () => {
     });
 
     instructorToken = jwt.sign(
-      { userId: instructorUser._id.toString(), email: instructorUser.email },
+      { userId: instructorUser._id.toString(), email: instructorUser.email, roles: ['instructor'], type: 'access' },
       process.env.JWT_ACCESS_SECRET || 'test-secret',
       { expiresIn: '1h' }
     );
@@ -170,7 +170,7 @@ describe('Authorization Middleware Integration Tests', () => {
     });
 
     await Staff.create({
-      userId: contentAdminUser._id,
+      _id: contentAdminUser._id,
       firstName: 'Content',
       lastName: 'Admin',
       departmentMemberships: [{
@@ -182,7 +182,7 @@ describe('Authorization Middleware Integration Tests', () => {
     });
 
     contentAdminToken = jwt.sign(
-      { userId: contentAdminUser._id.toString(), email: contentAdminUser.email },
+      { userId: contentAdminUser._id.toString(), email: contentAdminUser.email, roles: ['content-admin'], type: 'access' },
       process.env.JWT_ACCESS_SECRET || 'test-secret',
       { expiresIn: '1h' }
     );
@@ -196,7 +196,7 @@ describe('Authorization Middleware Integration Tests', () => {
     });
 
     await Staff.create({
-      userId: deptAdminUser._id,
+      _id: deptAdminUser._id,
       firstName: 'Dept',
       lastName: 'Admin',
       departmentMemberships: [{
@@ -208,7 +208,7 @@ describe('Authorization Middleware Integration Tests', () => {
     });
 
     deptAdminToken = jwt.sign(
-      { userId: deptAdminUser._id.toString(), email: deptAdminUser.email },
+      { userId: deptAdminUser._id.toString(), email: deptAdminUser.email, roles: ['department-admin'], type: 'access' },
       process.env.JWT_ACCESS_SECRET || 'test-secret',
       { expiresIn: '1h' }
     );
@@ -222,7 +222,7 @@ describe('Authorization Middleware Integration Tests', () => {
     });
 
     await Staff.create({
-      userId: nonMemberUser._id,
+      _id: nonMemberUser._id,
       firstName: 'Non',
       lastName: 'Member',
       departmentMemberships: [{
@@ -234,7 +234,7 @@ describe('Authorization Middleware Integration Tests', () => {
     });
 
     nonMemberToken = jwt.sign(
-      { userId: nonMemberUser._id.toString(), email: nonMemberUser.email },
+      { userId: nonMemberUser._id.toString(), email: nonMemberUser.email, roles: ['instructor'], type: 'access' },
       process.env.JWT_ACCESS_SECRET || 'test-secret',
       { expiresIn: '1h' }
     );
@@ -248,7 +248,7 @@ describe('Authorization Middleware Integration Tests', () => {
     });
 
     await Staff.create({
-      userId: globalAdminUser._id,
+      _id: globalAdminUser._id,
       firstName: 'Global',
       lastName: 'Admin',
       departmentMemberships: [{
@@ -260,14 +260,19 @@ describe('Authorization Middleware Integration Tests', () => {
     });
 
     await GlobalAdmin.create({
-      userId: globalAdminUser._id,
-      roles: ['system-admin'],
+      _id: globalAdminUser._id,
       escalationPassword: await bcrypt.hash('AdminPass123!', 10),
+      roleMemberships: [{
+        departmentId: masterDepartment._id,
+        roles: ['system-admin'],
+        assignedAt: new Date(),
+        isActive: true
+      }],
       isActive: true
     });
 
     globalAdminToken = jwt.sign(
-      { userId: globalAdminUser._id.toString(), email: globalAdminUser.email },
+      { userId: globalAdminUser._id.toString(), email: globalAdminUser.email, roles: ['instructor'], type: 'access' },
       process.env.JWT_ACCESS_SECRET || 'test-secret',
       { expiresIn: '1h' }
     );
@@ -277,6 +282,8 @@ describe('Authorization Middleware Integration Tests', () => {
       {
         userId: globalAdminUser._id.toString(),
         email: globalAdminUser.email,
+        roles: ['system-admin'],
+        type: 'access',
         isAdmin: true,
         adminRoles: ['system-admin']
       },
@@ -425,6 +432,8 @@ describe('Authorization Middleware Integration Tests', () => {
         {
           userId: globalAdminUser._id.toString(),
           email: globalAdminUser.email,
+          roles: ['enrollment-admin'],
+          type: 'access',
           isAdmin: true,
           adminRoles: ['enrollment-admin']
         },

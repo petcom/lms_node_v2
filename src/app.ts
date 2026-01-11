@@ -61,6 +61,13 @@ if (config.env !== 'test') {
   app.use(morgan('combined', { stream }));
 }
 
+// Test routes (only in test environment)
+if (config.env === 'test') {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const testRoutes = require('./routes/test.routes').default;
+  app.use('/api/v2', testRoutes);
+}
+
 // Health check endpoint
 app.get('/health', (_req, res) => {
   res.status(200).json({
