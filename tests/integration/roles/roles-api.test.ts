@@ -19,9 +19,9 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import app from '@/app';
 import { User } from '@/models/auth/User.model';
-import Staff from '@/models/auth/Staff.model';
-import Learner from '@/models/auth/Learner.model';
-import { GlobalAdmin } from '@/models/GlobalAdmin.model';
+import { Staff } from '@/models/auth/Staff.model';
+import { Learner } from '@/models/auth/Learner.model';
+import GlobalAdmin from '@/models/GlobalAdmin.model';
 import Department from '@/models/organization/Department.model';
 import { RoleDefinition } from '@/models/RoleDefinition.model';
 import { AccessRight } from '@/models/AccessRight.model';
@@ -209,31 +209,31 @@ describe('Roles API Integration Tests', () => {
 
     // Seed access rights
     await AccessRight.create([
-      { name: 'content:courses:read', domain: 'content', description: 'Read courses' },
-      { name: 'content:courses:manage', domain: 'content', description: 'Manage courses' },
-      { name: 'content:lessons:read', domain: 'content', description: 'Read lessons' },
-      { name: 'content:lessons:manage', domain: 'content', description: 'Manage lessons' },
-      { name: 'content:materials:manage', domain: 'content', description: 'Manage materials' },
-      { name: 'enrollment:own:manage', domain: 'enrollment', description: 'Manage own enrollments' },
-      { name: 'grades:own-classes:manage', domain: 'grades', description: 'Manage own grades' },
-      { name: 'staff:department:manage', domain: 'staff', description: 'Manage department' },
-      { name: 'staff:members:manage', domain: 'staff', description: 'Manage members' },
-      { name: 'reports:department:read', domain: 'reports', description: 'Read reports' },
-      { name: 'learner:supervised:view', domain: 'learner', description: 'View supervised' },
-      { name: 'learner:progress:monitor', domain: 'learner', description: 'Monitor progress' },
-      { name: 'billing:invoices:read', domain: 'billing', description: 'Read invoices' },
-      { name: 'billing:payments:process', domain: 'billing', description: 'Process payments' },
-      { name: 'billing:reports:read', domain: 'billing', description: 'Read billing reports' },
-      { name: 'system:*', domain: 'system', description: 'All system operations' },
-      { name: 'content:*', domain: 'content', description: 'All content operations' },
-      { name: 'enrollment:*', domain: 'enrollment', description: 'All enrollment operations' },
-      { name: 'billing:*', domain: 'billing', description: 'All billing operations' },
-      { name: 'reports:enrollment:read', domain: 'reports', description: 'Read enrollment reports' },
-      { name: 'reports:courses:read', domain: 'reports', description: 'Read course reports' },
-      { name: 'reports:financial:read', domain: 'reports', description: 'Read financial reports' },
-      { name: 'reports:financial:export', domain: 'reports', description: 'Export financial reports' },
-      { name: 'system:themes:manage', domain: 'system', description: 'Manage themes' },
-      { name: 'system:ui:customize', domain: 'system', description: 'Customize UI' }
+      { name: 'content:courses:read', domain: 'content', resource: 'courses', action: 'read', description: 'Read courses', isActive: true },
+      { name: 'content:courses:manage', domain: 'content', resource: 'courses', action: 'manage', description: 'Manage courses', isActive: true },
+      { name: 'content:lessons:read', domain: 'content', resource: 'lessons', action: 'read', description: 'Read lessons', isActive: true },
+      { name: 'content:lessons:manage', domain: 'content', resource: 'lessons', action: 'manage', description: 'Manage lessons', isActive: true },
+      { name: 'content:materials:manage', domain: 'content', resource: 'materials', action: 'manage', description: 'Manage materials', isActive: true },
+      { name: 'enrollment:own:manage', domain: 'enrollment', resource: 'own', action: 'manage', description: 'Manage own enrollments', isActive: true },
+      { name: 'grades:own-classes:manage', domain: 'grades', resource: 'own-classes', action: 'manage', description: 'Manage own grades', isActive: true },
+      { name: 'staff:department:manage', domain: 'staff', resource: 'department', action: 'manage', description: 'Manage department', isActive: true },
+      { name: 'staff:members:manage', domain: 'staff', resource: 'members', action: 'manage', description: 'Manage members', isActive: true },
+      { name: 'reports:department:read', domain: 'reports', resource: 'department', action: 'read', description: 'Read reports', isActive: true },
+      { name: 'learner:supervised:view', domain: 'learner', resource: 'supervised', action: 'view', description: 'View supervised', isActive: true },
+      { name: 'learner:progress:monitor', domain: 'learner', resource: 'progress', action: 'monitor', description: 'Monitor progress', isActive: true },
+      { name: 'billing:invoices:read', domain: 'billing', resource: 'invoices', action: 'read', description: 'Read invoices', isActive: true },
+      { name: 'billing:payments:process', domain: 'billing', resource: 'payments', action: 'process', description: 'Process payments', isActive: true },
+      { name: 'billing:reports:read', domain: 'billing', resource: 'reports', action: 'read', description: 'Read billing reports', isActive: true },
+      { name: 'system:*', domain: 'system', resource: '*', action: '*', description: 'All system operations', isActive: true },
+      { name: 'content:*', domain: 'content', resource: '*', action: '*', description: 'All content operations', isActive: true },
+      { name: 'enrollment:*', domain: 'enrollment', resource: '*', action: '*', description: 'All enrollment operations', isActive: true },
+      { name: 'billing:*', domain: 'billing', resource: '*', action: '*', description: 'All billing operations', isActive: true },
+      { name: 'reports:enrollment:read', domain: 'reports', resource: 'enrollment', action: 'read', description: 'Read enrollment reports', isActive: true },
+      { name: 'reports:courses:read', domain: 'reports', resource: 'courses', action: 'read', description: 'Read course reports', isActive: true },
+      { name: 'reports:financial:read', domain: 'reports', resource: 'financial', action: 'read', description: 'Read financial reports', isActive: true },
+      { name: 'reports:financial:export', domain: 'reports', resource: 'financial', action: 'export', description: 'Export financial reports', isActive: true },
+      { name: 'system:themes:manage', domain: 'system', resource: 'themes', action: 'manage', description: 'Manage themes', isActive: true },
+      { name: 'system:ui:customize', domain: 'system', resource: 'ui', action: 'customize', description: 'Customize UI', isActive: true }
     ]);
   });
 
@@ -254,7 +254,7 @@ describe('Roles API Integration Tests', () => {
     });
 
     await Staff.create({
-      userId: staffUser._id,
+      _id: staffUser._id,
       firstName: 'Test',
       lastName: 'Staff',
       departmentMemberships: [{
@@ -280,7 +280,7 @@ describe('Roles API Integration Tests', () => {
     });
 
     await Staff.create({
-      userId: multiDeptUser._id,
+      _id: multiDeptUser._id,
       firstName: 'Multi',
       lastName: 'Dept',
       departmentMemberships: [
@@ -300,7 +300,7 @@ describe('Roles API Integration Tests', () => {
     });
 
     await Learner.create({
-      userId: multiDeptUser._id,
+      _id: multiDeptUser._id,
       firstName: 'Multi',
       lastName: 'Dept',
       departmentMemberships: [{
@@ -326,7 +326,7 @@ describe('Roles API Integration Tests', () => {
     });
 
     await Staff.create({
-      userId: globalAdminUser._id,
+      _id: globalAdminUser._id,
       firstName: 'Global',
       lastName: 'Admin',
       departmentMemberships: [{
@@ -338,9 +338,14 @@ describe('Roles API Integration Tests', () => {
     });
 
     await GlobalAdmin.create({
-      userId: globalAdminUser._id,
-      roles: ['system-admin'],
+      _id: globalAdminUser._id,
       escalationPassword: await bcrypt.hash('AdminPass123!', 10),
+      roleMemberships: [{
+        departmentId: masterDepartment._id,
+        roles: ['system-admin'],
+        assignedAt: new Date(),
+        isActive: true
+      }],
       isActive: true
     });
 
@@ -858,7 +863,7 @@ describe('Roles API Integration Tests', () => {
       });
 
       await Staff.create({
-        userId: noMemberUser._id,
+        _id: noMemberUser._id,
         firstName: 'No',
         lastName: 'Member',
         departmentMemberships: []

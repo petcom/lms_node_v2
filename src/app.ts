@@ -8,6 +8,7 @@ import { errorHandler, notFoundHandler } from './middlewares/errorHandler';
 
 // Phase 1 routes
 import authRoutes from './routes/auth.routes';
+import rolesRoutes from './routes/roles.routes';
 import permissionsRoutes from './routes/permissions.routes';
 import accessRightsRoutes from './routes/access-rights.routes';
 import usersRoutes from './routes/users.routes';
@@ -71,6 +72,7 @@ app.get('/health', (_req, res) => {
 
 // API routes - Phase 1
 app.use('/api/v2/auth', authRoutes);
+app.use('/api/v2/roles', rolesRoutes);
 app.use('/api/v2/permissions', permissionsRoutes);
 app.use('/api/v2/access-rights', accessRightsRoutes);
 app.use('/api/v2/users', usersRoutes);

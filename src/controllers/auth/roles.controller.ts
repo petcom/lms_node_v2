@@ -77,7 +77,7 @@ export const getRole = asyncHandler(async (req: Request, res: Response) => {
     throw ApiError.notFound(`Role '${name}' not found`);
   }
 
-  res.status(200).json(ApiResponse.success(role));
+  res.status(200).json(ApiResponse.success({ role }));
 });
 
 /**
@@ -175,7 +175,7 @@ export const updateRoleAccessRights = asyncHandler(async (req: Request, res: Res
   role.accessRights = accessRights;
   await role.save();
 
-  res.status(200).json(ApiResponse.success(role, 'Role access rights updated successfully'));
+  res.status(200).json(ApiResponse.success({ role }, 'Role access rights updated successfully'));
 });
 
 /**
@@ -189,7 +189,7 @@ export const updateRoleAccessRights = asyncHandler(async (req: Request, res: Res
  */
 export const getMyRoles = asyncHandler(async (req: Request, res: Response) => {
   // Extract authenticated user ID
-  const userId = (req as any).user?.id;
+  const userId = (req as any).user?.userId || (req as any).user?.id;
 
   if (!userId) {
     throw ApiError.unauthorized('Authentication required');
@@ -205,10 +205,42 @@ export const getMyRoles = asyncHandler(async (req: Request, res: Response) => {
   // Get all roles for the user across all userTypes
   const memberships = await RoleService.getAllRolesForUser(userObjectId);
 
+  // Transform memberships to match expected format with access rights and child departments
+  const { AccessRightsService } = await import('@/services/auth/access-rights.service');
+
+  const departments = await Promise.all(memberships.map(async (membership) => {
+    // Get access rights for roles
+    const accessRights = await AccessRightsService.getAccessRightsForRoles(membership.roles);
+
+    // Get cascaded child departments
+    const childDepartments = await RoleService.getCascadedChildDepartments(
+      userObjectId,
+      membership.departmentId,
+      membership.userType
+    );
+
+    return {
+      departmentId: membership.departmentId.toString(),
+      departmentName: membership.departmentName,
+      departmentCode: membership.departmentCode,
+      userType: membership.userType,
+      roles: membership.roles,
+      accessRights,
+      isPrimary: membership.isPrimary,
+      isActive: membership.isActive,
+      joinedAt: membership.joinedAt,
+      childDepartments: childDepartments.map(child => ({
+        departmentId: child.id.toString(),
+        departmentName: child.name,
+        roles: child.roles
+      }))
+    };
+  }));
+
   res.status(200).json(ApiResponse.success({
     userId,
-    memberships,
-    total: memberships.length
+    departments,
+    total: departments.length
   }));
 });
 
@@ -230,7 +262,7 @@ export const getMyRolesForDepartment = asyncHandler(async (req: Request, res: Re
   const { userType } = req.query;
 
   // Extract authenticated user ID
-  const userId = (req as any).user?.id;
+  const userId = (req as any).user?.userId || (req as any).user?.id;
 
   if (!userId) {
     throw ApiError.unauthorized('Authentication required');
@@ -253,31 +285,16 @@ export const getMyRolesForDepartment = asyncHandler(async (req: Request, res: Re
   const userObjectId = new mongoose.Types.ObjectId(userId);
   const deptObjectId = new mongoose.Types.ObjectId(departmentId);
 
-  // If userType specified, validate and check only that type
-  if (userType) {
-    const userTypeStr = userType as string;
+  // Get department details
+  const department = await Department.findById(deptObjectId);
 
-    if (!USER_TYPES.includes(userTypeStr as UserType)) {
-      throw ApiError.badRequest(`Invalid userType. Must be one of: ${USER_TYPES.join(', ')}`);
-    }
-
-    const roles = await RoleService.getRolesForDepartment(
-      userObjectId,
-      deptObjectId,
-      userTypeStr as UserType
-    );
-
-    res.status(200).json(ApiResponse.success({
-      userId,
-      departmentId,
-      userType: userTypeStr,
-      roles
-    }));
-    return;
+  if (!department) {
+    throw ApiError.notFound('Department not found');
   }
 
-  // If no userType specified, check all userTypes
-  const allRoles: { [key: string]: string[] } = {
+  // Collect all roles from all user types
+  const allRoles: string[] = [];
+  const userTypeRoles: { [key: string]: string[] } = {
     learner: [],
     staff: [],
     'global-admin': []
@@ -289,12 +306,52 @@ export const getMyRolesForDepartment = asyncHandler(async (req: Request, res: Re
       deptObjectId,
       ut
     );
-    allRoles[ut] = roles;
+    userTypeRoles[ut] = roles;
+    allRoles.push(...roles);
+  }
+
+  // Check if user has any membership (direct or cascaded)
+  if (allRoles.length === 0) {
+    throw ApiError.forbidden('NOT_A_MEMBER', 'User is not a member of this department');
+  }
+
+  // Get access rights for all roles
+  const { AccessRightsService } = await import('@/services/auth/access-rights.service');
+  const accessRights = await AccessRightsService.getAccessRightsForRoles(allRoles);
+
+  // Check if it's a direct membership or inherited
+  const memberships = await RoleService.getAllRolesForUser(userObjectId);
+  const directMembership = memberships.find(m =>
+    m.departmentId.toString() === departmentId
+  );
+  const isDirectMember = !!directMembership;
+
+  // If not direct member, find parent department
+  let inheritedFrom = null;
+  if (!isDirectMember) {
+    // Find parent department where user has membership
+    const parent = await Department.findById(department.parentDepartmentId);
+    if (parent) {
+      const parentMembership = memberships.find(m =>
+        m.departmentId.toString() === parent._id.toString()
+      );
+      if (parentMembership) {
+        inheritedFrom = parent._id.toString();
+      }
+    }
   }
 
   res.status(200).json(ApiResponse.success({
     userId,
     departmentId,
-    rolesByUserType: allRoles
+    department: {
+      departmentId: department._id.toString(),
+      departmentName: department.name,
+      departmentCode: department.code,
+      roles: allRoles,
+      accessRights
+    },
+    isDirectMember,
+    inheritedFrom
   }));
 });
