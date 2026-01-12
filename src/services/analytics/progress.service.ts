@@ -10,6 +10,8 @@ import CourseContent from '@/models/content/CourseContent.model';
 import { Learner } from '@/models/auth/Learner.model';
 import { User } from '@/models/auth/User.model';
 import { ApiError } from '@/utils/ApiError';
+import { maskLastName, maskUserList } from '@/utils/dataMasking';
+import { getDepartmentAndSubdepartments } from '@/utils/departmentHierarchy';
 
 /**
  * Progress Tracking Service
@@ -1303,5 +1305,139 @@ export class ProgressService {
       learnerDetails: learnerDetails.filter(Boolean),
       downloadUrl: null
     };
+  }
+
+  /**
+   * Apply instructor class scoping to progress queries
+   *
+   * Business Rule: Instructors can only see progress for their assigned classes
+   */
+  static async applyInstructorClassScoping(query: any, user: any): Promise<any> {
+    if (!user.roles?.includes('instructor')) {
+      return query;
+    }
+
+    // Get instructor's assigned class IDs
+    const instructorClasses = await Class.find({
+      'metadata.instructorId': user._id
+    }).select('_id');
+
+    const classIds = instructorClasses.map(c => c._id);
+
+    // Add class filter to query
+    if (query.classId) {
+      // If query already has classId, intersect with instructor's classes
+      query.classId = {
+        $in: Array.isArray(query.classId.$in)
+          ? query.classId.$in.filter((id: any) => classIds.some(cid => cid.toString() === id.toString()))
+          : classIds
+      };
+    } else {
+      query.classId = { $in: classIds };
+    }
+
+    return query;
+  }
+
+  /**
+   * Apply department scoping to progress queries
+   *
+   * Business Rule: Department-admin can see only their department's progress
+   */
+  static async applyDepartmentScoping(query: any, user: any): Promise<any> {
+    // System admin and enrollment-admin see all
+    if (user.roles?.includes('system-admin') || user.roles?.includes('enrollment-admin')) {
+      return query;
+    }
+
+    // For department-admin, apply department filtering
+    if (user.roles?.includes('department-admin')) {
+      const userDepartmentIds = user.departmentMemberships?.map((m: any) => m.departmentId.toString()) || [];
+
+      if (userDepartmentIds.length === 0) {
+        // No department membership - no data visible
+        query._id = { $in: [] };
+        return query;
+      }
+
+      // Expand department IDs to include subdepartments for top-level members
+      const expandedDeptIds: string[] = [];
+      for (const deptId of userDepartmentIds) {
+        const deptHierarchy = await getDepartmentAndSubdepartments(deptId);
+        expandedDeptIds.push(...deptHierarchy);
+      }
+
+      // Get courses in these departments
+      const courses = await Course.find({
+        departmentId: { $in: expandedDeptIds }
+      }).select('_id');
+
+      const courseIds = courses.map(c => c._id);
+
+      // Get classes for these courses
+      const classes = await Class.find({
+        courseId: { $in: courseIds }
+      }).select('_id');
+
+      const classIds = classes.map(c => c._id);
+
+      // Add class filter to query
+      if (query.classId) {
+        // Intersect with existing classId filter
+        query.classId = {
+          $in: Array.isArray(query.classId.$in)
+            ? query.classId.$in.filter((id: any) => classIds.some(cid => cid.toString() === id.toString()))
+            : classIds
+        };
+      } else {
+        query.classId = { $in: classIds };
+      }
+    }
+
+    return query;
+  }
+
+  /**
+   * Apply combined authorization scoping
+   *
+   * Combines instructor and department scoping for progress queries
+   */
+  static async applyAuthorizationScoping(query: any, user: any): Promise<any> {
+    // First apply instructor scoping (if instructor)
+    query = await this.applyInstructorClassScoping(query, user);
+
+    // Then apply department scoping (if department-admin)
+    query = await this.applyDepartmentScoping(query, user);
+
+    return query;
+  }
+
+  /**
+   * Apply data masking to learner information
+   *
+   * Business Rule: Instructors and department-admin see "FirstName L." format
+   */
+  static applyDataMasking(learnerData: any, user: any): any {
+    // Create a temporary user object for masking
+    const learnerUser = {
+      firstName: learnerData.learnerName?.split(' ')[0] || learnerData.firstName || '',
+      lastName: learnerData.learnerName?.split(' ')[1] || learnerData.lastName || '',
+      fullName: learnerData.learnerName || '',
+      ...learnerData
+    };
+
+    const masked = maskLastName(learnerUser, user);
+
+    return {
+      ...learnerData,
+      learnerName: masked.fullName || `${masked.firstName} ${masked.lastName}`
+    };
+  }
+
+  /**
+   * Apply data masking to a list of learner progress records
+   */
+  static applyDataMaskingToList(learners: any[], user: any): any[] {
+    return learners.map(learner => this.applyDataMasking(learner, user));
   }
 }

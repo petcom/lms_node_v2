@@ -12,6 +12,8 @@ import { User } from '@/models/auth/User.model';
 import { Staff } from '@/models/auth/Staff.model';
 import Department from '@/models/organization/Department.model';
 import { ApiError } from '@/utils/ApiError';
+import { maskLastName, maskUserList } from '@/utils/dataMasking';
+import { getDepartmentAndSubdepartments } from '@/utils/departmentHierarchy';
 
 /**
  * Reports Service
@@ -1913,5 +1915,185 @@ export class ReportsService {
         learnerId: filters.learnerId || null
       }
     };
+  }
+
+  /**
+   * Apply department scoping to transcript filtering
+   *
+   * Business Rule: Department-admin can only see transcripts for courses in their department
+   */
+  static async filterTranscriptByDepartment(transcript: any, user: any): Promise<any> {
+    // System admin and enrollment-admin see everything
+    if (user.roles?.includes('system-admin') || user.roles?.includes('enrollment-admin')) {
+      return transcript;
+    }
+
+    // For department-admin, filter programs and courses to their department
+    if (user.roles?.includes('department-admin')) {
+      const userDepartmentIds = user.departmentMemberships?.map((m: any) => m.departmentId.toString()) || [];
+
+      if (userDepartmentIds.length === 0) {
+        // No department - return empty transcript
+        transcript.programs = [];
+        return transcript;
+      }
+
+      // Expand department IDs to include subdepartments
+      const expandedDeptIds: string[] = [];
+      for (const deptId of userDepartmentIds) {
+        const deptHierarchy = await getDepartmentAndSubdepartments(deptId);
+        expandedDeptIds.push(...deptHierarchy);
+      }
+
+      // Filter programs to only those in user's departments
+      const filteredPrograms = [];
+      for (const program of transcript.programs) {
+        // Get program's courses
+        const courses = await Course.find({
+          '_id': { $in: program.courses.map((c: any) => c.courseId) }
+        });
+
+        // Filter courses to those in user's departments
+        const visibleCourses = program.courses.filter((course: any) => {
+          const matchingCourse = courses.find(c => c._id.toString() === course.courseId);
+          if (!matchingCourse) return false;
+          return expandedDeptIds.includes(matchingCourse.departmentId.toString());
+        });
+
+        // Only include program if it has visible courses
+        if (visibleCourses.length > 0) {
+          filteredPrograms.push({
+            ...program,
+            courses: visibleCourses
+          });
+        }
+      }
+
+      transcript.programs = filteredPrograms;
+    }
+
+    return transcript;
+  }
+
+  /**
+   * Apply instructor class scoping to report queries
+   *
+   * Business Rule: Instructors can only see reports for their assigned classes
+   */
+  static async applyInstructorClassScoping(filters: any, user: any): Promise<any> {
+    if (!user.roles?.includes('instructor')) {
+      return filters;
+    }
+
+    // Get instructor's assigned class IDs
+    const instructorClasses = await Class.find({
+      'metadata.instructorId': user._id
+    }).select('_id courseId');
+
+    const classIds = instructorClasses.map(c => c._id.toString());
+    const courseIds = instructorClasses.map(c => c.courseId.toString());
+
+    // Apply class filter if not already specified
+    if (!filters.classId && !filters.courseId) {
+      filters.classId = classIds.length > 0 ? classIds[0] : null;
+    }
+
+    // If classId specified, verify it's in instructor's classes
+    if (filters.classId && !classIds.includes(filters.classId)) {
+      filters.classId = null; // Not authorized
+    }
+
+    // If courseId specified, verify it's in instructor's courses
+    if (filters.courseId && !courseIds.includes(filters.courseId)) {
+      filters.courseId = null; // Not authorized
+    }
+
+    return filters;
+  }
+
+  /**
+   * Apply department scoping to report queries
+   *
+   * Business Rule: Department-admin can only see reports for their department
+   */
+  static async applyDepartmentScoping(filters: any, user: any): Promise<any> {
+    // System admin and enrollment-admin see all
+    if (user.roles?.includes('system-admin') || user.roles?.includes('enrollment-admin')) {
+      return filters;
+    }
+
+    // For department-admin, apply department filtering
+    if (user.roles?.includes('department-admin')) {
+      const userDepartmentIds = user.departmentMemberships?.map((m: any) => m.departmentId.toString()) || [];
+
+      if (userDepartmentIds.length === 0) {
+        // No department - no data visible
+        filters.departmentId = 'none';
+        return filters;
+      }
+
+      // Expand department IDs to include subdepartments
+      const expandedDeptIds: string[] = [];
+      for (const deptId of userDepartmentIds) {
+        const deptHierarchy = await getDepartmentAndSubdepartments(deptId);
+        expandedDeptIds.push(...deptHierarchy);
+      }
+
+      // If department not specified, use user's first department
+      if (!filters.departmentId) {
+        filters.departmentId = expandedDeptIds[0];
+      }
+
+      // If department specified, verify it's in user's departments
+      if (filters.departmentId && !expandedDeptIds.includes(filters.departmentId)) {
+        filters.departmentId = 'none'; // Not authorized
+      }
+    }
+
+    return filters;
+  }
+
+  /**
+   * Apply combined authorization scoping to report filters
+   *
+   * Combines instructor and department scoping for reports
+   */
+  static async applyAuthorizationScoping(filters: any, user: any): Promise<any> {
+    // First apply instructor scoping (if instructor)
+    filters = await this.applyInstructorClassScoping(filters, user);
+
+    // Then apply department scoping (if department-admin)
+    filters = await this.applyDepartmentScoping(filters, user);
+
+    return filters;
+  }
+
+  /**
+   * Apply data masking to learner information in reports
+   *
+   * Business Rule: Instructors and department-admin see "FirstName L." format
+   */
+  static applyDataMasking(learnerData: any, user: any): any {
+    // Create a temporary user object for masking
+    const learnerUser = {
+      firstName: learnerData.learnerName?.split(' ')[0] || learnerData.firstName || '',
+      lastName: learnerData.learnerName?.split(' ')[1] || learnerData.lastName || '',
+      fullName: learnerData.learnerName || '',
+      ...learnerData
+    };
+
+    const masked = maskLastName(learnerUser, user);
+
+    return {
+      ...learnerData,
+      learnerName: masked.fullName || `${masked.firstName} ${masked.lastName}`
+    };
+  }
+
+  /**
+   * Apply data masking to a list of learner records in reports
+   */
+  static applyDataMaskingToList(learners: any[], user: any): any[] {
+    return learners.map(learner => this.applyDataMasking(learner, user));
   }
 }

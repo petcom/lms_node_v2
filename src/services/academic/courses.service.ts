@@ -6,6 +6,7 @@ import Program from '@/models/academic/Program.model';
 import { Staff } from '@/models/auth/Staff.model';
 import { User } from '@/models/auth/User.model';
 import { ApiError } from '@/utils/ApiError';
+import { getDepartmentAndSubdepartments } from '@/utils/departmentHierarchy';
 
 interface ListCoursesFilters {
   page?: number;
@@ -1013,5 +1014,147 @@ export class CoursesService {
         name: program.name
       }
     };
+  }
+
+  /**
+   * Check if user can view a course based on visibility rules
+   *
+   * Business Rules:
+   * - Draft courses: visible to all department members
+   * - Published courses: visible to all users
+   * - Archived courses: visible to department members only
+   */
+  static async canViewCourse(course: any, user: any): Promise<boolean> {
+    const courseStatus = !course.isActive ? 'archived' : (course.metadata?.status === 'published' ? 'published' : 'draft');
+
+    // Published courses are visible to everyone
+    if (courseStatus === 'published') {
+      return true;
+    }
+
+    // Draft and archived courses visible to department members only
+    if (courseStatus === 'draft' || courseStatus === 'archived') {
+      // Get user's department IDs
+      const userDepartmentIds = user.departmentMemberships?.map((m: any) => m.departmentId.toString()) || [];
+
+      // Check if user is in the course's department or subdepartment
+      const courseDeptId = course.departmentId.toString();
+
+      // Check direct membership
+      if (userDepartmentIds.includes(courseDeptId)) {
+        return true;
+      }
+
+      // Check hierarchical membership (user in parent department sees subdepartment courses)
+      for (const userDeptId of userDepartmentIds) {
+        const deptHierarchy = await getDepartmentAndSubdepartments(userDeptId);
+        if (deptHierarchy.includes(courseDeptId)) {
+          return true;
+        }
+      }
+
+      return false;
+    }
+
+    return false;
+  }
+
+  /**
+   * Check if user can edit a course based on creator and status rules
+   *
+   * Business Rules:
+   * - Draft courses: editable by creator + department-admin
+   * - Published courses: editable by department-admin only
+   * - Archived courses: not editable (must unarchive first)
+   */
+  static async canEditCourse(course: any, user: any): Promise<boolean> {
+    const courseStatus = !course.isActive ? 'archived' : (course.metadata?.status === 'published' ? 'published' : 'draft');
+
+    // Archived courses cannot be edited
+    if (courseStatus === 'archived') {
+      return false;
+    }
+
+    // Get user roles
+    const userRoles = user.roles || [];
+    const isDepartmentAdmin = userRoles.includes('department-admin');
+    const isSystemAdmin = userRoles.includes('system-admin');
+
+    // System admin can edit anything
+    if (isSystemAdmin) {
+      return true;
+    }
+
+    // Check if user is in the same department
+    const userDepartmentIds = user.departmentMemberships?.map((m: any) => m.departmentId.toString()) || [];
+    const courseDeptId = course.departmentId.toString();
+    const isInDepartment = userDepartmentIds.includes(courseDeptId);
+
+    // For published courses: only department-admin can edit
+    if (courseStatus === 'published') {
+      return isDepartmentAdmin && isInDepartment;
+    }
+
+    // For draft courses: creator or department-admin can edit
+    if (courseStatus === 'draft') {
+      const isCreator = course.metadata?.createdBy && course.metadata.createdBy.toString() === user._id.toString();
+      return isCreator || (isDepartmentAdmin && isInDepartment);
+    }
+
+    return false;
+  }
+
+  /**
+   * Apply department scoping to course list query
+   *
+   * Filters courses based on user's department membership and hierarchical access
+   */
+  static async applyDepartmentScoping(query: any, user: any): Promise<any> {
+    // System admin sees all
+    if (user.roles?.includes('system-admin')) {
+      return query;
+    }
+
+    // Get user's department IDs with hierarchical expansion
+    const userDepartmentIds = user.departmentMemberships?.map((m: any) => m.departmentId.toString()) || [];
+
+    if (userDepartmentIds.length === 0) {
+      // No department membership - no courses visible
+      query.departmentId = { $in: [] };
+      return query;
+    }
+
+    // Expand department IDs to include subdepartments for top-level members
+    const expandedDeptIds: string[] = [];
+    for (const deptId of userDepartmentIds) {
+      const deptHierarchy = await getDepartmentAndSubdepartments(deptId);
+      expandedDeptIds.push(...deptHierarchy);
+    }
+
+    // Remove duplicates
+    const uniqueDeptIds = [...new Set(expandedDeptIds)];
+
+    // Add department filter to query
+    query.departmentId = { $in: uniqueDeptIds };
+
+    return query;
+  }
+
+  /**
+   * Filter courses based on visibility rules
+   *
+   * Applies business rules for draft/published/archived course visibility
+   */
+  static async filterCoursesByVisibility(courses: any[], user: any): Promise<any[]> {
+    const visibleCourses: any[] = [];
+
+    for (const course of courses) {
+      const canView = await this.canViewCourse(course, user);
+      if (canView) {
+        visibleCourses.push(course);
+      }
+    }
+
+    return visibleCourses;
   }
 }
