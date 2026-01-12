@@ -82,6 +82,8 @@ describe('Service Layer Authorization Integration Tests', () => {
       name: 'Draft Course',
       code: 'DFT101',
       departmentId: topLevelDepartment._id,
+      credits: 3,
+      duration: 15,
       isActive: true,
       metadata: {
         status: 'draft',
@@ -93,6 +95,8 @@ describe('Service Layer Authorization Integration Tests', () => {
       name: 'Published Course',
       code: 'PUB101',
       departmentId: topLevelDepartment._id,
+      credits: 3,
+      duration: 15,
       isActive: true,
       metadata: {
         status: 'published',
@@ -104,6 +108,8 @@ describe('Service Layer Authorization Integration Tests', () => {
       name: 'Archived Course',
       code: 'ARC101',
       departmentId: topLevelDepartment._id,
+      credits: 3,
+      duration: 15,
       isActive: false,
       metadata: {
         status: 'archived',
@@ -112,10 +118,16 @@ describe('Service Layer Authorization Integration Tests', () => {
     });
 
     // Create test class
+    const academicYearId = new mongoose.Types.ObjectId();
     testClass = await Class.create({
       name: 'Test Class',
       courseId: publishedCourse._id,
       departmentId: topLevelDepartment._id,
+      academicYearId: academicYearId,
+      termCode: 'FALL2026',
+      startDate: new Date('2026-09-01'),
+      endDate: new Date('2026-12-15'),
+      maxEnrollment: 30,
       isActive: true
     });
   });
@@ -287,6 +299,8 @@ describe('Service Layer Authorization Integration Tests', () => {
           name: 'Sub Dept Draft',
           code: 'SUB101',
           departmentId: subDepartment._id,
+          credits: 3,
+          duration: 15,
           isActive: true,
           metadata: { status: 'draft' }
         });
@@ -636,7 +650,7 @@ describe('Service Layer Authorization Integration Tests', () => {
       const scopedQuery = await ProgressService.applyInstructorClassScoping(query, user);
 
       expect(scopedQuery.classId).toBeDefined();
-      expect(scopedQuery.classId.$in).toContain(testClass._id);
+      expect(scopedQuery.classId.$in).toContainEqual(testClass._id);
     });
 
     it('should not filter for non-instructors', async () => {
@@ -732,6 +746,8 @@ describe('Service Layer Authorization Integration Tests', () => {
         name: 'Other Dept Course',
         code: 'OTH101',
         departmentId: otherDepartment._id,
+        credits: 3,
+        duration: 15,
         isActive: true,
         metadata: { status: 'draft' }
       });
@@ -771,7 +787,7 @@ describe('Service Layer Authorization Integration Tests', () => {
 
       // Should have class filter from instructor scoping
       expect(scopedQuery.classId).toBeDefined();
-      expect(scopedQuery.classId.$in).toContain(testClass._id);
+      expect(scopedQuery.classId.$in).toContainEqual(testClass._id);
     });
 
     it('should skip instructor scoping for department-admin', async () => {

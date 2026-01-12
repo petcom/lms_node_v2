@@ -167,6 +167,8 @@ describe('E2E Authorization API Tests', () => {
       name: 'Draft Course',
       code: 'CS101',
       departmentId: topLevelDepartment._id,
+      credits: 3,
+      duration: 15,
       isActive: true,
       metadata: {
         status: 'draft',
@@ -178,6 +180,8 @@ describe('E2E Authorization API Tests', () => {
       name: 'Published Course',
       code: 'CS201',
       departmentId: topLevelDepartment._id,
+      credits: 3,
+      duration: 15,
       isActive: true,
       metadata: {
         status: 'published',
@@ -189,6 +193,8 @@ describe('E2E Authorization API Tests', () => {
       name: 'Archived Course',
       code: 'CS301',
       departmentId: topLevelDepartment._id,
+      credits: 3,
+      duration: 15,
       isActive: false,
       metadata: {
         status: 'archived',
@@ -197,10 +203,16 @@ describe('E2E Authorization API Tests', () => {
     });
 
     // Create test class
+    const academicYearId = new mongoose.Types.ObjectId();
     testClass = await Class.create({
       name: 'Test Class',
       courseId: publishedCourse._id,
       departmentId: topLevelDepartment._id,
+      academicYearId: academicYearId,
+      termCode: 'FALL2026',
+      startDate: new Date('2026-09-01'),
+      endDate: new Date('2026-12-15'),
+      maxEnrollment: 30,
       isActive: true
     });
   });
@@ -239,6 +251,7 @@ describe('E2E Authorization API Tests', () => {
         email: instructorUser.email,
         roles: ['instructor'],
         type: 'access',
+        allAccessRights: ['content:courses:read', 'content:lessons:read'],
         departmentMemberships: [{ departmentId: topLevelDepartment._id.toString(), roles: ['instructor'] }]
       },
       process.env.JWT_ACCESS_SECRET || 'test-secret',
@@ -277,6 +290,7 @@ describe('E2E Authorization API Tests', () => {
         email: contentAdminUser.email,
         roles: ['content-admin'],
         type: 'access',
+        allAccessRights: ['content:courses:read', 'content:courses:manage', 'content:lessons:manage'],
         departmentMemberships: [{ departmentId: topLevelDepartment._id.toString(), roles: ['content-admin'] }]
       },
       process.env.JWT_ACCESS_SECRET || 'test-secret',
@@ -309,6 +323,7 @@ describe('E2E Authorization API Tests', () => {
         email: deptAdminUser.email,
         roles: ['department-admin'],
         type: 'access',
+        allAccessRights: ['content:courses:read', 'content:courses:manage', 'staff:department:manage', 'reports:department:read'],
         departmentMemberships: [{ departmentId: topLevelDepartment._id.toString(), roles: ['department-admin'] }]
       },
       process.env.JWT_ACCESS_SECRET || 'test-secret',
@@ -341,6 +356,7 @@ describe('E2E Authorization API Tests', () => {
         email: enrollmentAdminUser.email,
         roles: ['enrollment-admin'],
         type: 'access',
+        allAccessRights: ['enrollment:*', 'content:courses:read', 'reports:*'],
         departmentMemberships: [{ departmentId: topLevelDepartment._id.toString(), roles: ['enrollment-admin'] }]
       },
       process.env.JWT_ACCESS_SECRET || 'test-secret',
@@ -385,6 +401,7 @@ describe('E2E Authorization API Tests', () => {
         email: systemAdminUser.email,
         roles: ['system-admin'],
         type: 'access',
+        allAccessRights: ['system:*', 'content:*', 'enrollment:*'],
         departmentMemberships: [{ departmentId: masterDepartment._id.toString(), roles: ['system-admin'] }]
       },
       process.env.JWT_ACCESS_SECRET || 'test-secret',
@@ -397,6 +414,7 @@ describe('E2E Authorization API Tests', () => {
         email: systemAdminUser.email,
         roles: ['system-admin'],
         type: 'access',
+        allAccessRights: ['system:*', 'content:*', 'enrollment:*'],
         isAdmin: true,
         adminRoles: ['system-admin']
       },
@@ -424,7 +442,8 @@ describe('E2E Authorization API Tests', () => {
         userId: learner1User._id.toString(),
         email: learner1User.email,
         roles: ['learner'],
-        type: 'access'
+        type: 'access',
+        allAccessRights: ['content:courses:read']
       },
       process.env.JWT_ACCESS_SECRET || 'test-secret',
       { expiresIn: '1h' }
@@ -486,6 +505,7 @@ describe('E2E Authorization API Tests', () => {
             email: otherUser.email,
             roles: ['instructor'],
             type: 'access',
+            allAccessRights: ['content:courses:read', 'content:lessons:read'],
             departmentMemberships: [{ departmentId: otherDepartment._id.toString(), roles: ['instructor'] }]
           },
           process.env.JWT_ACCESS_SECRET || 'test-secret',
@@ -545,6 +565,7 @@ describe('E2E Authorization API Tests', () => {
             email: otherUser.email,
             roles: ['instructor'],
             type: 'access',
+            allAccessRights: ['content:courses:read', 'content:lessons:read'],
             departmentMemberships: [{ departmentId: otherDepartment._id.toString(), roles: ['instructor'] }]
           },
           process.env.JWT_ACCESS_SECRET || 'test-secret',
@@ -811,7 +832,8 @@ describe('E2E Authorization API Tests', () => {
           userId: limitedUser._id.toString(),
           email: limitedUser.email,
           roles: [],
-          type: 'access'
+          type: 'access',
+          allAccessRights: []
         },
         process.env.JWT_ACCESS_SECRET || 'test-secret',
         { expiresIn: '1h' }

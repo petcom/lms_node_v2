@@ -24,7 +24,8 @@ export const authenticate = (req: Request, _res: Response, next: NextFunction) =
     (req as any).user = {
       userId: payload.userId,
       email: payload.email,
-      roles: payload.roles
+      roles: payload.roles,
+      ...(payload as any).allAccessRights && { allAccessRights: (payload as any).allAccessRights }
     };
 
     next();

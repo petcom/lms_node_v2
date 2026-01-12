@@ -510,12 +510,10 @@ export class EnrollmentsService {
 
     // Get learner details
     const learnerDetails = await Learner.findById(data.learnerId);
-    const course = classDoc.courseId as any;
     const instructor = classDoc.instructorIds.length > 0 ? classDoc.instructorIds[0] : null;
 
-    // Get department
-    const courseDoc = await Course.findById(course._id).populate('departmentId');
-    const department = courseDoc?.departmentId as any;
+    // Get department (reuse course from above)
+    const department = course.departmentId as any;
 
     return {
       enrollment: {

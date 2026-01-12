@@ -80,7 +80,7 @@ router.put('/:id',
  */
 router.delete('/:id',
   requireEscalation,
-  requireAdminRole(['system-admin', 'department-admin', 'enrollment-admin']),
+  requireAdminRole(['system-admin', 'enrollment-admin']),
   requireAccessRight('learner:pii:read'),
   learnersController.deleteLearner
 );

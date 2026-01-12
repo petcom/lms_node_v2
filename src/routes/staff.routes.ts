@@ -76,7 +76,7 @@ router.put('/:id',
  */
 router.delete('/:id',
   requireEscalation,
-  requireAdminRole(['system-admin', 'department-admin']),
+  requireAdminRole(['system-admin']),
   requireAccessRight('staff:department:manage'),
   staffController.deleteStaff
 );

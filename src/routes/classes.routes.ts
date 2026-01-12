@@ -107,12 +107,12 @@ router.put('/:id',
  * Delete a class (soft delete if enrollments exist)
  * Permissions: admin
  * Access Right: content:courses:manage
- * Middleware: requireAdminRole(['department-admin', 'system-admin'])
+ * Middleware: requireAdminRole(['system-admin'])
  * Query params:
  * - force: boolean (force hard delete even with enrollments, admin only)
  */
 router.delete('/:id',
-  requireAdminRole(['department-admin', 'system-admin']),
+  requireAdminRole(['system-admin']),
   requireAccessRight('content:courses:manage'),
   classesController.deleteClass
 );
