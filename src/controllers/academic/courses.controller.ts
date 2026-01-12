@@ -12,6 +12,8 @@ import { ApiError } from '@/utils/ApiError';
 /**
  * GET /api/v2/courses
  * List courses with optional filtering and pagination
+ *
+ * Authorization: Applies department scoping and visibility filtering
  */
 export const listCourses = asyncHandler(async (req: Request, res: Response) => {
   const filters = {
@@ -39,7 +41,18 @@ export const listCourses = asyncHandler(async (req: Request, res: Response) => {
     throw ApiError.badRequest('Invalid status. Must be one of: draft, published, archived');
   }
 
+  // Get authenticated user from request
+  const user = (req as any).user;
+
   const result = await CoursesService.listCourses(filters);
+
+  // Apply visibility filtering based on user's roles and department
+  if (result.courses && Array.isArray(result.courses)) {
+    result.courses = await CoursesService.filterCoursesByVisibility(result.courses, user);
+    result.total = result.courses.length;
+    result.totalPages = Math.ceil(result.courses.length / filters.limit);
+  }
+
   res.status(200).json(ApiResponse.success(result));
 });
 
@@ -139,6 +152,8 @@ export const createCourse = asyncHandler(async (req: Request, res: Response) => 
 /**
  * GET /api/v2/courses/:id
  * Get course details by ID
+ *
+ * Authorization: Checks if user can view course (visibility rules)
  */
 export const getCourseById = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
@@ -147,13 +162,24 @@ export const getCourseById = asyncHandler(async (req: Request, res: Response) =>
     throw ApiError.badRequest('Course ID is required');
   }
 
-  const result = await CoursesService.getCourseById(id);
-  res.status(200).json(ApiResponse.success(result));
+  const course = await CoursesService.getCourseById(id);
+
+  // Check if user has permission to view this course
+  const user = (req as any).user;
+  const canView = await CoursesService.canViewCourse(course, user);
+
+  if (!canView) {
+    throw ApiError.forbidden('You do not have permission to view this course');
+  }
+
+  res.status(200).json(ApiResponse.success(course));
 });
 
 /**
  * PUT /api/v2/courses/:id
  * Update course (full replacement)
+ *
+ * Authorization: Checks if user can edit course (creator/dept-admin rules)
  */
 export const updateCourse = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
@@ -161,6 +187,15 @@ export const updateCourse = asyncHandler(async (req: Request, res: Response) => 
 
   if (!id) {
     throw ApiError.badRequest('Course ID is required');
+  }
+
+  // Get course and check edit permissions
+  const course = await CoursesService.getCourseById(id);
+  const user = (req as any).user;
+  const canEdit = await CoursesService.canEditCourse(course, user);
+
+  if (!canEdit) {
+    throw ApiError.forbidden('You do not have permission to edit this course');
   }
 
   // Validate required fields for full update

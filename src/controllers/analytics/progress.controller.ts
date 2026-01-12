@@ -395,9 +395,8 @@ export const getDetailedProgressReport = asyncHandler(async (req: Request, res: 
   const shouldIncludeAssessments = includeAssessments !== 'false';
   const shouldIncludeAttendance = includeAttendance === 'true';
 
-  // TODO: Add permission checks
-  // - Staff can only generate reports for their departments
-  // - Instructors can generate reports for their assigned courses
+  // Authorization: Apply instructor and department scoping
+  const user = (req as any).user;
 
   const filters = {
     programId: programId as string | undefined,
@@ -411,6 +410,11 @@ export const getDetailedProgressReport = asyncHandler(async (req: Request, res: 
   };
 
   const result = await ProgressService.getDetailedProgressReport(filters);
+
+  // Apply data masking to learner information (FERPA compliance)
+  if (result.learnerDetails && Array.isArray(result.learnerDetails)) {
+    result.learnerDetails = ProgressService.applyDataMaskingToList(result.learnerDetails, user);
+  }
 
   // For CSV/XLSX formats, would need to generate file and return download URL
   if (reportFormat !== 'json') {

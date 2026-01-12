@@ -83,11 +83,10 @@ export const getCompletionReport = asyncHandler(async (req: Request, res: Respon
   // Parse boolean
   const parsedIncludeDetails = includeDetails === 'true' || typeof includeDetails === 'boolean' && includeDetails;
 
-  // TODO: Add permission checks
-  // - Staff can only view reports for their departments
-  // - Global admins can view reports across all departments
+  // Authorization: Apply instructor and department scoping
+  const user = (req as any).user;
 
-  const filters = {
+  let filters: any = {
     programId: programId as string | undefined,
     courseId: courseId as string | undefined,
     classId: classId as string | undefined,
@@ -102,7 +101,15 @@ export const getCompletionReport = asyncHandler(async (req: Request, res: Respon
     limit: parsedLimit
   };
 
+  // Apply authorization scoping to filters
+  filters = await ReportsService.applyAuthorizationScoping(filters, user);
+
   const result = await ReportsService.getCompletionReport(filters);
+
+  // Apply data masking to learner information (FERPA compliance)
+  if (result.data && Array.isArray(result.data)) {
+    result.data = ReportsService.applyDataMaskingToList(result.data, user);
+  }
 
   res.status(200).json(ApiResponse.success(result));
 });
@@ -213,16 +220,17 @@ export const getLearnerTranscript = asyncHandler(async (req: Request, res: Respo
   // Parse boolean
   const parsedIncludeInProgress = includeInProgress === 'true';
 
-  // TODO: Add permission checks
-  // - Learners can only view their own transcript
-  // - Staff can view transcripts for learners in their departments
-  // - Global admins can view any transcript
+  // Authorization: Filter transcript by department for department-admin
+  const user = (req as any).user;
 
-  const result = await ReportsService.getLearnerTranscript(
+  let result = await ReportsService.getLearnerTranscript(
     learnerId,
     programId as string | undefined,
     parsedIncludeInProgress
   );
+
+  // Apply transcript filtering based on user's department (Phase 2 integration)
+  result = await ReportsService.filterTranscriptByDepartment(result, user);
 
   res.status(200).json(ApiResponse.success(result));
 });
