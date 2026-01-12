@@ -240,7 +240,7 @@ export const getLearnerTranscript = asyncHandler(async (req: Request, res: Respo
   );
 
   // Apply transcript filtering based on user's department (Phase 2 integration)
-  result = await ReportsService.filterTranscriptByDepartment(result, user);
+  result.transcript = await ReportsService.filterTranscriptByDepartment(result.transcript, user);
 
   res.status(200).json(ApiResponse.success(result));
 });

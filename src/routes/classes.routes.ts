@@ -195,7 +195,7 @@ router.get('/:id/roster',
  * Returns aggregate progress, scores, completion rates, and module-level breakdown
  */
 router.get('/:id/progress',
-  requireAccessRight(['reports:own-classes:read', 'reports:department:read']),
+  requireAccessRight(['reports:own-classes:read', 'reports:department:read'], { requireAny: true }),
   classesController.getClassProgress
 );
 

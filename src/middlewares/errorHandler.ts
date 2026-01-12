@@ -17,12 +17,21 @@ export const errorHandler = (
 ) => {
   let error = err;
 
+  // Handle cases where err is undefined or null
+  if (!error) {
+    error = new ApiError(500, 'Internal server error', false);
+  }
   // Convert non-ApiError errors to ApiError
-  if (!(error instanceof ApiError)) {
+  else if (!(error instanceof ApiError)) {
     const statusCode = 500;
-    const message = config.env === 'production' 
-      ? 'Internal server error' 
-      : error.message;
+    let message: string;
+    try {
+      message = config.env === 'production'
+        ? 'Internal server error'
+        : (error.message || 'Unknown error');
+    } catch (msgErr) {
+      message = 'Internal server error';
+    }
     error = new ApiError(statusCode, message, false);
   }
 

@@ -33,10 +33,10 @@ router.use(authenticate);
  *   - includeDetails: boolean (optional)
  *   - page: number (optional)
  *   - limit: number (optional)
- * Access: reports:department:read (department-admin), reports:enrollment:read (enrollment-admin), instructor scoped
+ * Access: reports:department:read OR reports:enrollment:read OR reports:own-classes:read (department-admin OR enrollment-admin OR instructor), instructor scoped
  */
 router.get('/completion',
-  requireAccessRight(['reports:department:read', 'reports:enrollment:read']),
+  requireAccessRight(['reports:department:read', 'reports:enrollment:read', 'reports:own-classes:read'], { requireAny: true }),
   reportsController.getCompletionReport
 );
 
@@ -70,11 +70,11 @@ router.get('/performance',
  * Query params:
  *   - programId: ObjectId (optional) - filter by specific program
  *   - includeInProgress: boolean (optional) - include in-progress courses
- * Access: learner:transcripts:read (dept-admin sees only their dept courses), grades:own:read (learner sees own)
+ * Access: learner:transcripts:read OR grades:own:read (dept-admin sees only their dept courses OR learner sees own)
  * Service layer: Department-admin filter to show ONLY their department courses
  */
 router.get('/transcript/:learnerId',
-  requireAccessRight(['learner:transcripts:read', 'grades:own:read']),
+  requireAccessRight(['learner:transcripts:read', 'grades:own:read'], { requireAny: true }),
   reportsController.getLearnerTranscript
 );
 
@@ -107,10 +107,10 @@ router.post('/transcript/:learnerId/generate',
  *   - startDate: Date (optional)
  *   - endDate: Date (optional)
  *   - includeModules: boolean (optional) - include module-level breakdown
- * Access: reports:own-classes:read (instructor own classes), reports:content:read (content-admin), reports:department:read (dept-admin)
+ * Access: reports:own-classes:read OR reports:content:read OR reports:department:read (instructor own classes OR content-admin OR dept-admin)
  */
 router.get('/course/:courseId',
-  requireAccessRight(['reports:own-classes:read', 'reports:department:read', 'reports:content:read']),
+  requireAccessRight(['reports:own-classes:read', 'reports:department:read', 'reports:content:read'], { requireAny: true }),
   reportsController.getCourseReport
 );
 
@@ -123,10 +123,10 @@ router.get('/course/:courseId',
  *   - academicYearId: ObjectId (optional)
  *   - startDate: Date (optional)
  *   - endDate: Date (optional)
- * Access: reports:department:read (department-admin), reports:enrollment:read (enrollment-admin)
+ * Access: reports:department:read OR reports:enrollment:read (department-admin OR enrollment-admin)
  */
 router.get('/program/:programId',
-  requireAccessRight(['reports:department:read', 'reports:enrollment:read']),
+  requireAccessRight(['reports:department:read', 'reports:enrollment:read'], { requireAny: true }),
   reportsController.getProgramReport
 );
 
@@ -160,10 +160,10 @@ router.get('/department/:departmentId',
  *   - endDate: Date (optional)
  *   - learnerId: ObjectId (optional)
  *   - includeDetails: boolean (optional)
- * Access: reports:department:read, reports:own-classes:read (instructor scoped to own classes)
+ * Access: reports:department:read OR reports:own-classes:read (instructor scoped to own classes)
  */
 router.get('/export',
-  requireAccessRight(['reports:department:read', 'reports:own-classes:read']),
+  requireAccessRight(['reports:department:read', 'reports:own-classes:read'], { requireAny: true }),
   reportsController.exportReport
 );
 

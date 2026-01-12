@@ -406,7 +406,7 @@ describe('E2E Authorization API Tests', () => {
         email: systemAdminUser.email,
         roles: ['system-admin'],
         type: 'access',
-        allAccessRights: ['system:*', 'content:*', 'enrollment:*'],
+        allAccessRights: ['system:*', 'content:*', 'enrollment:*', 'reports:*', 'grades:*', 'learner:*'],
         departmentMemberships: [{ departmentId: masterDepartment._id.toString(), roles: ['system-admin'] }]
       },
       process.env.JWT_ACCESS_SECRET || 'test-secret',
@@ -480,7 +480,7 @@ describe('E2E Authorization API Tests', () => {
           .expect(200);
 
         expect(response.body.success).toBe(true);
-        expect(response.body.data.name).toBe('Draft Course');
+        expect(response.body.data.title).toBe('Draft Course');
       });
 
       it('should block non-department member from viewing draft course', async () => {
@@ -530,7 +530,7 @@ describe('E2E Authorization API Tests', () => {
           .expect(200);
 
         expect(response.body.success).toBe(true);
-        expect(response.body.data.name).toBe('Published Course');
+        expect(response.body.data.title).toBe('Published Course');
       });
 
       it('should allow department member to view archived course', async () => {
@@ -540,7 +540,7 @@ describe('E2E Authorization API Tests', () => {
           .expect(200);
 
         expect(response.body.success).toBe(true);
-        expect(response.body.data.name).toBe('Archived Course');
+        expect(response.body.data.title).toBe('Archived Course');
       });
 
       it('should block non-department member from viewing archived course', async () => {
@@ -595,10 +595,10 @@ describe('E2E Authorization API Tests', () => {
         expect(response.body.data.courses).toBeDefined();
 
         // Should see all courses in same department (draft, published, archived)
-        const courseNames = response.body.data.courses.map((c: any) => c.name);
-        expect(courseNames).toContain('Draft Course');
-        expect(courseNames).toContain('Published Course');
-        expect(courseNames).toContain('Archived Course');
+        const courseTitles = response.body.data.courses.map((c: any) => c.title);
+        expect(courseTitles).toContain('Draft Course');
+        expect(courseTitles).toContain('Published Course');
+        expect(courseTitles).toContain('Archived Course');
       });
 
       it('should allow learner to see only published courses', async () => {
@@ -610,10 +610,10 @@ describe('E2E Authorization API Tests', () => {
         expect(response.body.success).toBe(true);
 
         // Should only see published courses
-        const courseNames = response.body.data.courses.map((c: any) => c.name);
-        expect(courseNames).toContain('Published Course');
-        expect(courseNames).not.toContain('Draft Course');
-        expect(courseNames).not.toContain('Archived Course');
+        const courseTitles = response.body.data.courses.map((c: any) => c.title);
+        expect(courseTitles).toContain('Published Course');
+        expect(courseTitles).not.toContain('Draft Course');
+        expect(courseTitles).not.toContain('Archived Course');
       });
     });
   });
@@ -814,7 +814,7 @@ describe('E2E Authorization API Tests', () => {
         .expect(200);
 
       expect(response.body.success).toBe(true);
-      expect(response.body.data.name).toBe('Draft Course');
+      expect(response.body.data.title).toBe('Draft Course');
     });
 
     it('should return 401 when no auth token provided', async () => {

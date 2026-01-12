@@ -20,10 +20,10 @@ router.use(authenticate);
  * GET /api/v2/progress/reports/summary
  * Get progress summary report with filtering options
  * Staff can filter by program, course, class, department, status, date range, progress range
- * Access: reports:department:read, reports:own-classes:read (instructors see own classes only)
+ * Access: reports:department:read OR reports:own-classes:read (instructors see own classes only)
  */
 router.get('/reports/summary',
-  requireAccessRight(['reports:department:read', 'reports:own-classes:read']),
+  requireAccessRight(['reports:department:read', 'reports:own-classes:read'], { requireAny: true }),
   progressController.getProgressSummary
 );
 
@@ -31,10 +31,10 @@ router.get('/reports/summary',
  * GET /api/v2/progress/reports/detailed
  * Get detailed progress report with module-level breakdown
  * Supports export to JSON, CSV, or XLSX formats
- * Access: reports:department:read, reports:own-classes:read (instructors see own classes only)
+ * Access: reports:department:read OR reports:own-classes:read (instructors see own classes only)
  */
 router.get('/reports/detailed',
-  requireAccessRight(['reports:department:read', 'reports:own-classes:read']),
+  requireAccessRight(['reports:department:read', 'reports:own-classes:read'], { requireAny: true }),
   progressController.getDetailedProgressReport
 );
 

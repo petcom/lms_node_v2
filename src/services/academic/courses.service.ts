@@ -1025,7 +1025,8 @@ export class CoursesService {
    * - Archived courses: visible to department members only
    */
   static async canViewCourse(course: any, user: any): Promise<boolean> {
-    const courseStatus = !course.isActive ? 'archived' : (course.metadata?.status === 'published' ? 'published' : 'draft');
+    // Handle transformed API object (has 'status' field) vs raw DB object (has 'isActive' field)
+    const courseStatus = course.status || (!course.isActive ? 'archived' : (course.metadata?.status === 'published' ? 'published' : 'draft'));
 
     // Published courses are visible to everyone
     if (courseStatus === 'published') {
@@ -1035,10 +1036,16 @@ export class CoursesService {
     // Draft and archived courses visible to department members only
     if (courseStatus === 'draft' || courseStatus === 'archived') {
       // Get user's department IDs
-      const userDepartmentIds = user.departmentMemberships?.map((m: any) => m.departmentId.toString()) || [];
+      const userDepartmentIds = user.departmentMemberships?.map((m: any) => m.departmentId?.toString() || m.departmentId) || [];
 
       // Check if user is in the course's department or subdepartment
-      const courseDeptId = course.departmentId.toString();
+      // Handle both raw DB object (departmentId) and transformed API object (department.id)
+      const courseDeptId = course.departmentId?.toString() || course.department?.id;
+
+      // If we can't determine course department, deny access
+      if (!courseDeptId) {
+        return false;
+      }
 
       // Check direct membership
       if (userDepartmentIds.includes(courseDeptId)) {
@@ -1068,7 +1075,8 @@ export class CoursesService {
    * - Archived courses: not editable (must unarchive first)
    */
   static async canEditCourse(course: any, user: any): Promise<boolean> {
-    const courseStatus = !course.isActive ? 'archived' : (course.metadata?.status === 'published' ? 'published' : 'draft');
+    // Handle transformed API object (has 'status' field) vs raw DB object (has 'isActive' field)
+    const courseStatus = course.status || (!course.isActive ? 'archived' : (course.metadata?.status === 'published' ? 'published' : 'draft'));
 
     // Archived courses cannot be edited
     if (courseStatus === 'archived') {
@@ -1086,8 +1094,15 @@ export class CoursesService {
     }
 
     // Check if user is in the same department
-    const userDepartmentIds = user.departmentMemberships?.map((m: any) => m.departmentId.toString()) || [];
-    const courseDeptId = course.departmentId.toString();
+    const userDepartmentIds = user.departmentMemberships?.map((m: any) => m.departmentId?.toString() || m.departmentId) || [];
+    // Handle both raw DB object (departmentId) and transformed API object (department.id)
+    const courseDeptId = course.departmentId?.toString() || course.department?.id;
+
+    // If we can't determine course department, deny access
+    if (!courseDeptId) {
+      return false;
+    }
+
     const isInDepartment = userDepartmentIds.includes(courseDeptId);
 
     // For published courses: only department-admin can edit
@@ -1097,7 +1112,10 @@ export class CoursesService {
 
     // For draft courses: creator or department-admin can edit
     if (courseStatus === 'draft') {
-      const isCreator = course.metadata?.createdBy && course.metadata.createdBy.toString() === user._id.toString();
+      // Handle both raw DB object (metadata.createdBy as ObjectId) and transformed API object (createdBy.id)
+      const creatorId = course.metadata?.createdBy?.toString() || course.createdBy?.id;
+      const userId = user._id?.toString() || user.userId;
+      const isCreator = creatorId && userId && creatorId === userId;
       return isCreator || (isDepartmentAdmin && isInDepartment);
     }
 

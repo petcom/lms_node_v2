@@ -151,12 +151,12 @@ router.get('/:id',
 /**
  * PUT /api/v2/courses/:id
  * Replace entire course resource (full update)
- * Access Right: content:lessons:manage
+ * Access Right: content:courses:manage
  * Roles: instructor (drafts, own), department-admin (all)
  * Service Layer: creator-only for drafts, admin-only for published
  */
 router.put('/:id',
-  requireAccessRight('content:lessons:manage'),
+  requireAccessRight('content:courses:manage'),
   coursesController.updateCourse
 );
 
