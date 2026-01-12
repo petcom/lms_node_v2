@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { authenticate } from '@/middlewares/authenticate';
+import { requireAccessRight } from '@/middlewares/require-access-right';
 import * as usersController from '@/controllers/users/users.controller';
 
 const router = Router();
@@ -9,6 +10,8 @@ const router = Router();
  * Base path: /api/v2/users
  *
  * All routes require authentication
+ * Note: /me routes are self-access (no additional authorization)
+ * List routes require staff/admin permissions
  */
 
 // Apply authentication middleware to all routes
