@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import { authenticate } from '@/middlewares/authenticate';
+import { requireAccessRight } from '@/middlewares/require-access-right';
+import { requireEscalation } from '@/middlewares/require-escalation';
 import * as reportsController from '@/controllers/reporting/reports.controller';
 
 const router = Router();
@@ -31,8 +33,12 @@ router.use(authenticate);
  *   - includeDetails: boolean (optional)
  *   - page: number (optional)
  *   - limit: number (optional)
+ * Access: reports:department:read (department-admin), reports:enrollment:read (enrollment-admin), instructor scoped
  */
-router.get('/completion', reportsController.getCompletionReport);
+router.get('/completion',
+  requireAccessRight(['reports:department:read', 'reports:enrollment:read']),
+  reportsController.getCompletionReport
+);
 
 /**
  * GET /api/v2/reports/performance
@@ -49,8 +55,12 @@ router.get('/completion', reportsController.getCompletionReport);
  *   - includeRankings: boolean (optional)
  *   - page: number (optional)
  *   - limit: number (optional)
+ * Access: reports:department:read (department-admin, instructor scoped to own classes)
  */
-router.get('/performance', reportsController.getPerformanceReport);
+router.get('/performance',
+  requireAccessRight('reports:department:read'),
+  reportsController.getPerformanceReport
+);
 
 /**
  * GET /api/v2/reports/transcript/:learnerId
@@ -60,8 +70,13 @@ router.get('/performance', reportsController.getPerformanceReport);
  * Query params:
  *   - programId: ObjectId (optional) - filter by specific program
  *   - includeInProgress: boolean (optional) - include in-progress courses
+ * Access: learner:transcripts:read (dept-admin sees only their dept courses), grades:own:read (learner sees own)
+ * Service layer: Department-admin filter to show ONLY their department courses
  */
-router.get('/transcript/:learnerId', reportsController.getLearnerTranscript);
+router.get('/transcript/:learnerId',
+  requireAccessRight(['learner:transcripts:read', 'grades:own:read']),
+  reportsController.getLearnerTranscript
+);
 
 /**
  * POST /api/v2/reports/transcript/:learnerId/generate
@@ -73,8 +88,14 @@ router.get('/transcript/:learnerId', reportsController.getLearnerTranscript);
  *   - includeInProgress: boolean (optional)
  *   - officialFormat: boolean (optional)
  *   - watermark: string (optional) - none|unofficial|draft
+ * Access: learner:transcripts:read (enrollment-admin, system-admin only for PDF generation)
+ * Requires escalation (sensitive operation)
  */
-router.post('/transcript/:learnerId/generate', reportsController.generatePDFTranscript);
+router.post('/transcript/:learnerId/generate',
+  requireEscalation,
+  requireAccessRight('learner:transcripts:read'),
+  reportsController.generatePDFTranscript
+);
 
 /**
  * GET /api/v2/reports/course/:courseId
@@ -86,8 +107,12 @@ router.post('/transcript/:learnerId/generate', reportsController.generatePDFTran
  *   - startDate: Date (optional)
  *   - endDate: Date (optional)
  *   - includeModules: boolean (optional) - include module-level breakdown
+ * Access: reports:own-classes:read (instructor own classes), reports:content:read (content-admin), reports:department:read (dept-admin)
  */
-router.get('/course/:courseId', reportsController.getCourseReport);
+router.get('/course/:courseId',
+  requireAccessRight(['reports:own-classes:read', 'reports:department:read', 'reports:content:read']),
+  reportsController.getCourseReport
+);
 
 /**
  * GET /api/v2/reports/program/:programId
@@ -98,8 +123,12 @@ router.get('/course/:courseId', reportsController.getCourseReport);
  *   - academicYearId: ObjectId (optional)
  *   - startDate: Date (optional)
  *   - endDate: Date (optional)
+ * Access: reports:department:read (department-admin), reports:enrollment:read (enrollment-admin)
  */
-router.get('/program/:programId', reportsController.getProgramReport);
+router.get('/program/:programId',
+  requireAccessRight(['reports:department:read', 'reports:enrollment:read']),
+  reportsController.getProgramReport
+);
 
 /**
  * GET /api/v2/reports/department/:departmentId
@@ -110,8 +139,12 @@ router.get('/program/:programId', reportsController.getProgramReport);
  *   - startDate: Date (optional)
  *   - endDate: Date (optional)
  *   - includeSubDepartments: boolean (optional)
+ * Access: reports:department:read (department-admin own dept, system-admin all)
  */
-router.get('/department/:departmentId', reportsController.getDepartmentReport);
+router.get('/department/:departmentId',
+  requireAccessRight('reports:department:read'),
+  reportsController.getDepartmentReport
+);
 
 /**
  * GET /api/v2/reports/export
@@ -127,7 +160,11 @@ router.get('/department/:departmentId', reportsController.getDepartmentReport);
  *   - endDate: Date (optional)
  *   - learnerId: ObjectId (optional)
  *   - includeDetails: boolean (optional)
+ * Access: reports:department:read, reports:own-classes:read (instructor scoped to own classes)
  */
-router.get('/export', reportsController.exportReport);
+router.get('/export',
+  requireAccessRight(['reports:department:read', 'reports:own-classes:read']),
+  reportsController.exportReport
+);
 
 export default router;
