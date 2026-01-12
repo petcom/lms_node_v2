@@ -1,5 +1,8 @@
 import { Router } from 'express';
 import { authenticate } from '@/middlewares/authenticate';
+import { requireAccessRight } from '@/middlewares/require-access-right';
+import { requireEscalation } from '@/middlewares/require-escalation';
+import { requireAdminRole } from '@/middlewares/require-admin-role';
 import * as settingsController from '@/controllers/system/settings.controller';
 
 const router = Router();
@@ -10,6 +13,11 @@ const router = Router();
  *
  * All routes require authentication
  * Comprehensive system settings and configuration management
+ *
+ * Authorization:
+ * - Public settings: All authenticated users can read
+ * - Private settings: Instructors can read (read-only), admins can read and write
+ * - Write operations: Only department-admin and system-admin
  */
 
 // Apply authentication middleware to all routes
@@ -22,7 +30,8 @@ router.use(authenticate);
  *   - category: string (optional) - general|authentication|enrollment|notifications|security|features|branding
  *   - includePrivate: boolean (optional) - Include private settings (admin only)
  *   - departmentId: ObjectId (optional) - Get department-specific overrides
- * Permissions: read:settings
+ * Access Rights: None (public) OR system:department-settings:manage (private, read-only for instructors)
+ * Roles: All authenticated (public), instructor/department-admin/system-admin (private)
  */
 router.get('/', settingsController.getAllSettings);
 
@@ -34,31 +43,10 @@ router.get('/', settingsController.getAllSettings);
  * Query params:
  *   - includePrivate: boolean (optional) - Include private settings (admin only)
  *   - departmentId: ObjectId (optional) - Include department-specific overrides
- * Permissions: read:settings
+ * Access Rights: None (public) OR system:department-settings:manage (private, read-only for instructors)
+ * Roles: All authenticated (public), instructor/department-admin/system-admin (private)
  */
 router.get('/categories/:category', settingsController.getSettingsByCategory);
-
-/**
- * POST /api/v2/settings/bulk
- * Update multiple settings in a single request
- * Body:
- *   - settings: array (required) - Array of setting objects with key, value, and optional departmentId
- *   - validateOnly: boolean (optional) - Validate without applying changes (dry run)
- * Permissions: write:settings
- */
-router.post('/bulk', settingsController.bulkUpdateSettings);
-
-/**
- * POST /api/v2/settings/reset
- * Reset settings to their default values
- * Body:
- *   - keys: array (optional) - Specific setting keys to reset
- *   - category: string (optional) - Reset all settings in a category
- *   - departmentId: ObjectId (optional) - Reset department overrides only
- *   - confirm: boolean (required) - Must be true to confirm reset operation
- * Permissions: admin:settings
- */
-router.post('/reset', settingsController.resetSettings);
 
 /**
  * GET /api/v2/settings/:key
@@ -67,7 +55,8 @@ router.post('/reset', settingsController.resetSettings);
  *   - key: string (required) - Setting key in dot notation (e.g., system.name)
  * Query params:
  *   - departmentId: ObjectId (optional) - Get department-specific override value
- * Permissions: read:settings
+ * Access Rights: None (public) OR system:department-settings:manage (private, read-only for instructors)
+ * Roles: All authenticated (public), instructor/department-admin/system-admin (private)
  */
 router.get('/:key', settingsController.getSettingByKey);
 
@@ -79,8 +68,49 @@ router.get('/:key', settingsController.getSettingByKey);
  * Body:
  *   - value: any (required) - New setting value (must match setting type)
  *   - departmentId: ObjectId (optional) - Create department-specific override
- * Permissions: write:settings
+ * Access Rights: system:department-settings:manage
+ * Roles: department-admin (dept settings), system-admin (all)
+ * Requires: Escalation
  */
-router.put('/:key', settingsController.updateSetting);
+router.put('/:key',
+  requireEscalation,
+  requireAccessRight('system:department-settings:manage'),
+  settingsController.updateSetting
+);
+
+/**
+ * POST /api/v2/settings/bulk
+ * Update multiple settings in a single request
+ * Body:
+ *   - settings: array (required) - Array of setting objects with key, value, and optional departmentId
+ *   - validateOnly: boolean (optional) - Validate without applying changes (dry run)
+ * Access Rights: system:department-settings:manage
+ * Roles: department-admin (dept settings), system-admin (all)
+ * Requires: Escalation
+ */
+router.post('/bulk',
+  requireEscalation,
+  requireAccessRight('system:department-settings:manage'),
+  settingsController.bulkUpdateSettings
+);
+
+/**
+ * POST /api/v2/settings/reset
+ * Reset settings to their default values
+ * Body:
+ *   - keys: array (optional) - Specific setting keys to reset
+ *   - category: string (optional) - Reset all settings in a category
+ *   - departmentId: ObjectId (optional) - Reset department overrides only
+ *   - confirm: boolean (required) - Must be true to confirm reset operation
+ * Access Rights: system:*
+ * Roles: system-admin only
+ * Requires: Escalation + Admin Role
+ */
+router.post('/reset',
+  requireEscalation,
+  requireAdminRole(['system-admin']),
+  requireAccessRight('system:*'),
+  settingsController.resetSettings
+);
 
 export default router;
