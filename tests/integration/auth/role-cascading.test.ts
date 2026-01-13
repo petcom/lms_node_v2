@@ -145,18 +145,18 @@ describe('Role Cascading Integration Tests', () => {
 
     // Seed access rights
     await AccessRight.create([
-      { name: 'content:courses:read', domain: 'content', description: 'Read courses' },
-      { name: 'content:courses:manage', domain: 'content', description: 'Manage courses' },
-      { name: 'content:lessons:read', domain: 'content', description: 'Read lessons' },
-      { name: 'content:lessons:manage', domain: 'content', description: 'Manage lessons' },
-      { name: 'content:materials:manage', domain: 'content', description: 'Manage materials' },
-      { name: 'grades:own-classes:manage', domain: 'grades', description: 'Manage grades' },
-      { name: 'staff:department:manage', domain: 'staff', description: 'Manage department' },
-      { name: 'reports:department:read', domain: 'reports', description: 'Read reports' },
-      { name: 'staff:members:manage', domain: 'staff', description: 'Manage members' },
-      { name: 'enrollment:own:manage', domain: 'enrollment', description: 'Manage own enrollments' },
-      { name: 'learner:supervised:view', domain: 'learner', description: 'View supervised learners' },
-      { name: 'learner:progress:monitor', domain: 'learner', description: 'Monitor progress' }
+      { name: 'content:courses:read', domain: 'content', resource: 'courses', action: 'read', description: 'Read courses' },
+      { name: 'content:courses:manage', domain: 'content', resource: 'courses', action: 'manage', description: 'Manage courses' },
+      { name: 'content:lessons:read', domain: 'content', resource: 'lessons', action: 'read', description: 'Read lessons' },
+      { name: 'content:lessons:manage', domain: 'content', resource: 'lessons', action: 'manage', description: 'Manage lessons' },
+      { name: 'content:materials:manage', domain: 'content', resource: 'materials', action: 'manage', description: 'Manage materials' },
+      { name: 'grades:own-classes:manage', domain: 'grades', resource: 'own-classes', action: 'manage', description: 'Manage grades' },
+      { name: 'staff:department:manage', domain: 'staff', resource: 'department', action: 'manage', description: 'Manage department' },
+      { name: 'reports:department:read', domain: 'reports', resource: 'department', action: 'read', description: 'Read reports' },
+      { name: 'staff:members:manage', domain: 'staff', resource: 'members', action: 'manage', description: 'Manage members' },
+      { name: 'enrollment:own:manage', domain: 'enrollment', resource: 'own', action: 'manage', description: 'Manage own enrollments' },
+      { name: 'learner:supervised:view', domain: 'learner', resource: 'supervised', action: 'view', description: 'View supervised learners' },
+      { name: 'learner:progress:monitor', domain: 'learner', resource: 'progress', action: 'monitor', description: 'Monitor progress' }
     ]);
   });
 
@@ -176,21 +176,34 @@ describe('Role Cascading Integration Tests', () => {
     });
 
     await Staff.create({
-      userId: staffUser._id,
-      firstName: 'Test',
-      lastName: 'Staff',
+      _id: staffUser._id,
+      person: {
+        firstName: 'Test',
+        lastName: 'Staff',
+        emails: [{ email: staffUser.email, type: 'institutional', isPrimary: true, verified: true, allowNotifications: true }],
+        phones: [],
+        addresses: [],
+        timezone: 'America/New_York',
+        languagePreference: 'en'
+      },
       departmentMemberships: [
         {
           departmentId: grandparentDept._id,
           roles: ['instructor', 'content-admin'],
           isPrimary: true,
-          isActive: true
+          isActive: true,
+          joinedAt: new Date()
         }
       ]
     });
 
     staffAccessToken = jwt.sign(
-      { userId: staffUser._id.toString(), email: staffUser.email },
+      {
+        userId: staffUser._id.toString(),
+        email: staffUser.email,
+        roles: ['staff'],
+        type: 'access'
+      },
       process.env.JWT_ACCESS_SECRET || 'test-secret',
       { expiresIn: '1h' }
     );
@@ -204,21 +217,34 @@ describe('Role Cascading Integration Tests', () => {
     });
 
     await Learner.create({
-      userId: learnerUser._id,
-      firstName: 'Test',
-      lastName: 'Learner',
+      _id: learnerUser._id,
+      person: {
+        firstName: 'Test',
+        lastName: 'Learner',
+        emails: [{ email: learnerUser.email, type: 'institutional', isPrimary: true, verified: true, allowNotifications: true }],
+        phones: [],
+        addresses: [],
+        timezone: 'America/New_York',
+        languagePreference: 'en'
+      },
       departmentMemberships: [
         {
           departmentId: parentDept._id,
           roles: ['course-taker'],
           isPrimary: true,
-          isActive: true
+          isActive: true,
+          joinedAt: new Date()
         }
       ]
     });
 
     learnerAccessToken = jwt.sign(
-      { userId: learnerUser._id.toString(), email: learnerUser.email },
+      {
+        userId: learnerUser._id.toString(),
+        email: learnerUser.email,
+        roles: ['learner'],
+        type: 'access'
+      },
       process.env.JWT_ACCESS_SECRET || 'test-secret',
       { expiresIn: '1h' }
     );
@@ -304,7 +330,7 @@ describe('Role Cascading Integration Tests', () => {
 
     it('should allow access with explicit membership to restricted department', async () => {
       // Add explicit membership
-      const staff = await Staff.findOne({ userId: staffUser._id });
+      const staff = await Staff.findOne({ _id: staffUser._id });
       staff!.departmentMemberships.push({
         departmentId: restrictedDept._id,
         roles: ['department-admin'],
@@ -509,7 +535,7 @@ describe('Role Cascading Integration Tests', () => {
 
     it('should deny access when parent membership is inactive', async () => {
       // Deactivate grandparent membership
-      const staff = await Staff.findOne({ userId: staffUser._id });
+      const staff = await Staff.findOne({ _id: staffUser._id });
       staff!.departmentMemberships[0].isActive = false;
       await staff!.save();
 
@@ -589,7 +615,7 @@ describe('Role Cascading Integration Tests', () => {
 
     it('should not cascade from inactive membership', async () => {
       // Deactivate parent membership
-      const staff = await Staff.findOne({ userId: staffUser._id });
+      const staff = await Staff.findOne({ _id: staffUser._id });
       staff!.departmentMemberships[0].isActive = false;
       await staff!.save();
 
@@ -610,7 +636,7 @@ describe('Role Cascading Integration Tests', () => {
 
     it('should only list active memberships in login response', async () => {
       // Add inactive membership
-      const staff = await Staff.findOne({ userId: staffUser._id });
+      const staff = await Staff.findOne({ _id: staffUser._id });
       staff!.departmentMemberships.push({
         departmentId: siblingDept._id,
         roles: ['instructor'],
