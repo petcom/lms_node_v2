@@ -50,6 +50,115 @@ Any additional context
 
 <!-- Add new issues here in priority order -->
 
+### ISS-008: Fix Page Load Loops on Certificates and Departments Pages
+
+**Priority:** high
+**Type:** bug
+**Status:** pending
+**Assigned:** UI Agent
+**Dependencies:** None
+
+**Description:**
+Clicking on the "Certificates" link and "Departments" links in the sidebar causes infinite page load loops where the pages continuously reload and content is not loadable. This makes these sections completely unusable.
+
+**Current Behavior:**
+1. User clicks "Certificates" link in sidebar
+   - Page attempts to load
+   - Gets stuck in infinite reload loop
+   - Content never displays
+   - User cannot interact with the page
+
+2. User clicks on department links in sidebar
+   - Page attempts to load
+   - Gets stuck in infinite reload loop
+   - Content never displays
+   - User cannot interact with the page
+
+**Expected Behavior:**
+- Clicking "Certificates" link should navigate to `/learner/certificates` and display certificates page
+- Clicking department links should navigate to appropriate department route and display department content
+- Pages should load once and display content successfully
+- No infinite loops or reloads
+- User can interact with page content
+
+**Root Cause Investigation Needed:**
+1. **Route Configuration:**
+   - Check if routes exist for `/learner/certificates` and department paths
+   - Verify route guards aren't causing redirect loops
+   - Check for circular redirects in route configuration
+
+2. **Component Loading:**
+   - Check if page components exist and can mount
+   - Verify data fetching doesn't trigger reloads
+   - Check for infinite useEffect loops
+
+3. **Authentication/Authorization:**
+   - Check if auth checks are causing reload loops
+   - Verify permission checks aren't redirecting incorrectly
+   - Check department context switching
+
+4. **Navigation Guards:**
+   - Check if route guards are functioning correctly
+   - Verify guards aren't causing circular navigation
+   - Check for missing route definitions
+
+**Acceptance Criteria:**
+
+**Certificates Page:**
+- [ ] Clicking "Certificates" link navigates to certificates page
+- [ ] Page loads successfully without loops
+- [ ] Content displays (or appropriate empty state)
+- [ ] No console errors related to infinite loops
+- [ ] Back button works correctly
+- [ ] Page can be bookmarked and accessed directly
+
+**Department Pages:**
+- [ ] Clicking department links navigates successfully
+- [ ] Pages load without infinite loops
+- [ ] Department content displays correctly
+- [ ] No console errors related to loops
+- [ ] Department switching works smoothly
+- [ ] Back button works correctly
+
+**Error Handling:**
+- [ ] If route doesn't exist, show 404 page (not loop)
+- [ ] If permission denied, show access denied message (not loop)
+- [ ] If data fetch fails, show error message (not loop)
+- [ ] Clear error messages in console for debugging
+
+**Testing Requirements:**
+- [ ] Test Certificates page as learner user
+- [ ] Test Certificates page as non-learner (should be disabled/not accessible)
+- [ ] Test department navigation with multiple departments
+- [ ] Test department navigation with no departments
+- [ ] Test direct URL access (bypassing sidebar)
+- [ ] Test browser back/forward buttons
+- [ ] Check browser console for errors/warnings
+- [ ] Verify no infinite renders in React DevTools
+
+**Related Files:**
+- `src/app/router/index.tsx` - Route definitions
+- `src/pages/learner/certificates/` - Certificates page (if exists)
+- `src/widgets/sidebar/Sidebar.tsx` - Sidebar navigation
+- `src/widgets/sidebar/config/navItems.ts` - Navigation items
+- Route guard components (LearnerOnlyRoute, etc.)
+
+**Debug Information Needed:**
+When reproducing the issue, capture:
+1. Browser console errors/warnings
+2. Network tab (are requests firing repeatedly?)
+3. React DevTools (component render count)
+4. Current URL during the loop
+5. User's userType and permissions
+
+**Notes:**
+- This is blocking users from accessing critical functionality
+- May be related to ISS-003 (infinite loop issues) but on different pages
+- Could be caused by missing page components or route definitions
+- Similar symptoms suggest common root cause with previous navigation issues
+
+---
+
 ### ISS-007: Consolidate Sidebar Navigation - Remove Duplicate Dashboards
 
 **Priority:** high
