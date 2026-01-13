@@ -59,41 +59,77 @@ Any additional context
 **Dependencies:** None
 
 **Description:**
-The sidebar currently shows three different "Dashboard" entries (one for each userType: learner, staff, admin). This creates confusion and clutters the navigation. The sidebar should have a common base set of navigation links that appear for all users, regardless of their userType, followed by the "My Departments" section.
+The sidebar currently shows three different "Dashboard" entries (one for each userType: learner, staff, admin). This creates confusion and clutters the navigation. The sidebar should have a three-section structure: (1) common base navigation links for all users, (2) context-specific links based on current dashboard, and (3) "My Departments" section.
 
 **Current Behavior:**
 - Multiple "Dashboard" links appear (e.g., "Learner Dashboard", "Staff Dashboard", "Admin Dashboard")
 - Navigation items are scattered and context-dependent
 - Users see different navigation structures on different dashboards
+- No clear separation between universal and dashboard-specific navigation
 
 **Expected Behavior:**
-All users should see a common base navigation section at the top with these links:
+
+**Section 1: Base Navigation (Always Visible)**
+All users should see these common links at the top:
 1. **Dashboard** - Takes user to their primary dashboard based on primaryUserType
 2. **My Profile** - Universal profile page at `/profile`
 3. **My Progress** - Learner-specific, grayed out if user doesn't have learner userType
 4. **Certificates** - Learner-specific certificate view
 
-Below the base navigation, show:
-5. **My Departments** section (collapsible) - Shows available departments with department-specific actions
+**Section 2: Context-Specific Links (Changes Based on Current Dashboard)**
+The links in this section change depending on which dashboard the user is currently viewing:
+
+- **Learner Dashboard** (`/learner/*` routes):
+  - My Classes
+
+- **Staff Dashboard** (`/staff/*` routes):
+  - Analytics
+  - Reports
+  - Grading
+
+- **Admin Dashboard** (`/admin/*` routes):
+  - User Management
+  - Department Management
+  - System Settings
+
+**Section 3: Department Navigation**
+- **My Departments** section (collapsible) - Shows available departments with department-specific actions
 
 **Navigation Structure:**
 ```
-┌─────────────────────────────┐
-│ NAVIGATION (always visible) │
-├─────────────────────────────┤
-│ 📊 Dashboard                │ ← Primary dashboard
-│ 👤 My Profile               │ ← /profile
-│ 📈 My Progress              │ ← /learner/progress (grayed if no learner userType)
-│ 🎓 Certificates             │ ← /learner/certificates (grayed if no learner userType)
-├─────────────────────────────┤
-│ MY DEPARTMENTS              │
-│   📁 Computer Science       │
-│      → Department Dashboard │
-│      → Manage Staff         │
-│      → Manage Courses       │
-├─────────────────────────────┤
-│ ⚙️ Settings                 │
-└─────────────────────────────┘
+┌─────────────────────────────────────┐
+│ SECTION 1: BASE (always visible)   │
+├─────────────────────────────────────┤
+│ 📊 Dashboard                        │ ← Primary dashboard
+│ 👤 My Profile                       │ ← /profile
+│ 📈 My Progress                      │ ← /learner/progress (grayed if no learner userType)
+│ 🎓 Certificates                     │ ← /learner/certificates (grayed if no learner userType)
+├─────────────────────────────────────┤
+│ SECTION 2: CONTEXT-SPECIFIC        │
+├─────────────────────────────────────┤
+│ [IF ON LEARNER DASHBOARD]          │
+│   📚 My Classes                     │
+│                                     │
+│ [IF ON STAFF DASHBOARD]            │
+│   📊 Analytics                      │
+│   📋 Reports                        │
+│   ✏️  Grading                       │
+│                                     │
+│ [IF ON ADMIN DASHBOARD]            │
+│   👥 User Management                │
+│   🏢 Department Management          │
+│   ⚙️  System Settings               │
+├─────────────────────────────────────┤
+│ SECTION 3: MY DEPARTMENTS          │
+├─────────────────────────────────────┤
+│ MY DEPARTMENTS (collapsible)       │
+│   📁 Computer Science               │
+│      → Department Dashboard         │
+│      → Manage Staff                 │
+│      → Manage Courses               │
+├─────────────────────────────────────┤
+│ ⚙️ Settings                         │
+└─────────────────────────────────────┘
 ```
 
 **Dashboard Link Behavior:**
@@ -105,7 +141,7 @@ Below the base navigation, show:
 
 **Acceptance Criteria:**
 
-**Base Navigation:**
+**Section 1: Base Navigation:**
 - [ ] Only ONE "Dashboard" link appears at top of sidebar
 - [ ] "Dashboard" link navigates to primary dashboard based on primaryUserType
 - [ ] "My Profile" link goes to `/profile` (universal)
@@ -117,8 +153,24 @@ Below the base navigation, show:
   - [ ] Grayed out/disabled if user doesn't have learner userType
 - [ ] Base navigation section is ALWAYS visible regardless of which dashboard user is on
 
-**Department Section:**
-- [ ] "My Departments" section appears below base navigation
+**Section 2: Context-Specific Links:**
+- [ ] Context section appears between base navigation and departments
+- [ ] Links change based on current dashboard route (`/learner/*`, `/staff/*`, `/admin/*`)
+- [ ] Learner Dashboard shows:
+  - [ ] My Classes link
+- [ ] Staff Dashboard shows:
+  - [ ] Analytics link
+  - [ ] Reports link
+  - [ ] Grading link
+- [ ] Admin Dashboard shows:
+  - [ ] User Management link
+  - [ ] Department Management link
+  - [ ] System Settings link
+- [ ] Context-specific links are only visible when on their respective dashboard
+- [ ] Switching dashboards immediately updates the context-specific section
+
+**Section 3: Department Navigation:**
+- [ ] "My Departments" section appears below context-specific links
 - [ ] Department section only shows if user has departments
 - [ ] Selecting a department shows department-specific actions
 - [ ] Department actions are context-appropriate (staff actions for staff, learner actions for learner)
@@ -137,6 +189,11 @@ Below the base navigation, show:
 - [ ] Test Dashboard link from each dashboard (verify correct navigation)
 - [ ] Verify no duplicate links appear
 - [ ] Verify navigation consistency across all dashboards
+- [ ] Test context-specific section on Learner Dashboard (shows My Classes)
+- [ ] Test context-specific section on Staff Dashboard (shows Analytics, Reports, Grading)
+- [ ] Test context-specific section on Admin Dashboard (shows User Management, Dept Management, System Settings)
+- [ ] Test switching between dashboards updates context-specific links immediately
+- [ ] Verify three sections maintain visual separation (borders/spacing)
 
 **Related Files:**
 - `src/widgets/sidebar/Sidebar.tsx` - Main sidebar component with filtering logic
@@ -144,7 +201,10 @@ Below the base navigation, show:
 - `src/widgets/sidebar/ui/NavLink.tsx` - NavLink component (supports disabled state)
 
 **Implementation Notes:**
-1. Create a `BASE_NAV_ITEMS` array that's always visible:
+
+1. **Create three navigation sections:**
+
+   **Section 1: BASE_NAV_ITEMS (always visible)**
    ```typescript
    const BASE_NAV_ITEMS = [
      { label: 'Dashboard', path: getDashboardPath(primaryUserType), icon: Home },
@@ -156,14 +216,52 @@ Below the base navigation, show:
    ];
    ```
 
-2. Update filtering logic:
+   **Section 2: CONTEXT_NAV_ITEMS (dashboard-specific)**
+   ```typescript
+   const LEARNER_CONTEXT_NAV = [
+     { label: 'My Classes', path: '/learner/classes', icon: BookOpen },
+   ];
+
+   const STAFF_CONTEXT_NAV = [
+     { label: 'Analytics', path: '/staff/analytics', icon: BarChart },
+     { label: 'Reports', path: '/staff/reports', icon: FileText },
+     { label: 'Grading', path: '/staff/grading', icon: CheckSquare },
+   ];
+
+   const ADMIN_CONTEXT_NAV = [
+     { label: 'User Management', path: '/admin/users', icon: Users },
+     { label: 'Department Management', path: '/admin/departments', icon: Building },
+     { label: 'System Settings', path: '/admin/settings', icon: Settings },
+   ];
+   ```
+
+2. **Detect current dashboard context:**
+   ```typescript
+   const location = useLocation();
+   const currentDashboard = location.pathname.split('/')[1]; // 'learner', 'staff', or 'admin'
+
+   const contextNavItems = useMemo(() => {
+     switch (currentDashboard) {
+       case 'learner': return LEARNER_CONTEXT_NAV;
+       case 'staff': return STAFF_CONTEXT_NAV;
+       case 'admin': return ADMIN_CONTEXT_NAV;
+       default: return [];
+     }
+   }, [currentDashboard]);
+   ```
+
+3. **Render three sections with visual separation:**
+   - Section 1: Base Navigation (border-b)
+   - Section 2: Context Navigation (border-b)
+   - Section 3: Department Navigation
+
+4. **Remove userType-specific dashboard links from GLOBAL_NAV_ITEMS**
+
+5. **Update filtering logic:**
    - Base items always render
    - Check userType to determine if link should be disabled
    - Use `disabled` prop on NavLink for items user can't access
-
-3. Remove userType-specific dashboard links from GLOBAL_NAV_ITEMS
-
-4. Keep department-specific actions in separate section
+   - Context items only show when on matching dashboard
 
 **Notes:**
 - This affects the core navigation UX across the entire application
