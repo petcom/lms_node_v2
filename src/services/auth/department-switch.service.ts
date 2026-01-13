@@ -77,6 +77,11 @@ export class DepartmentSwitchService {
    * 5. Gets child departments if role cascading is enabled
    * 6. Updates User.lastSelectedDepartment field
    *
+   * Special handling for Master Department (ISS-005):
+   * - Master Department has isVisible: false in database
+   * - Accessible ONLY to users with system-admin role OR global-admin userType
+   * - Regular users without these privileges cannot access it
+   *
    * @param userId - User's ObjectId
    * @param deptId - Target department's ObjectId
    * @returns SwitchDepartmentResponse with department context
@@ -89,21 +94,33 @@ export class DepartmentSwitchService {
     deptId: mongoose.Types.ObjectId
   ): Promise<SwitchDepartmentResponse> {
     try {
-      // Step 1: Validate department exists and is active
-      const department = await Department.findOne({
-        _id: deptId,
-        isActive: true,
-        isVisible: true
-      });
-
-      if (!department) {
-        throw ApiError.notFound('Department not found or is not accessible');
-      }
-
-      // Step 2: Get user to determine userTypes
+      // Step 1: Get user to determine userTypes and check privileges
       const user = await User.findById(userId);
       if (!user) {
         throw ApiError.notFound('User not found');
+      }
+
+      // Step 2: Check if user has special privileges for hidden departments
+      const hasSpecialPrivileges = await this.hasSpecialDepartmentPrivileges(
+        userId,
+        user.userTypes
+      );
+
+      // Step 3: Validate department exists and is active
+      // Apply isVisible filter only if user doesn't have special privileges
+      const departmentQuery: any = {
+        _id: deptId,
+        isActive: true
+      };
+
+      if (!hasSpecialPrivileges) {
+        departmentQuery.isVisible = true;
+      }
+
+      const department = await Department.findOne(departmentQuery);
+
+      if (!department) {
+        throw ApiError.notFound('Department not found or is not accessible', 'DEPARTMENT_NOT_FOUND');
       }
 
       // Step 3: Check department membership and get roles
@@ -115,7 +132,8 @@ export class DepartmentSwitchService {
 
       if (roles.length === 0) {
         throw ApiError.forbidden(
-          'You do not have access to this department'
+          'You are not a member of this department',
+          'NOT_A_MEMBER'
         );
       }
 
@@ -157,6 +175,50 @@ export class DepartmentSwitchService {
         'Failed to switch department',
         error instanceof Error ? error : undefined
       );
+    }
+  }
+
+  /**
+   * Check if user has special privileges for hidden departments
+   *
+   * Users with special privileges can access departments with isVisible: false:
+   * - Users with 'system-admin' role in any department
+   * - Users with 'global-admin' userType
+   *
+   * This addresses ISS-005 - Master Department visibility fix
+   *
+   * @param userId - User's ObjectId
+   * @param userTypes - User's userTypes array
+   * @returns True if user has special privileges, false otherwise
+   * @private
+   */
+  private static async hasSpecialDepartmentPrivileges(
+    userId: mongoose.Types.ObjectId,
+    userTypes: UserType[]
+  ): Promise<boolean> {
+    try {
+      // Check if user has global-admin userType
+      if (userTypes.includes('global-admin')) {
+        return true;
+      }
+
+      // Check if user has system-admin role in any department
+      if (userTypes.includes('staff') || userTypes.includes('global-admin')) {
+        const staff = await Staff.findById(userId);
+        if (staff) {
+          // Check if any department membership includes system-admin role
+          for (const membership of staff.departmentMemberships) {
+            if (membership.isActive && membership.roles.includes('system-admin')) {
+              return true;
+            }
+          }
+        }
+      }
+
+      return false;
+    } catch (error) {
+      console.error('Error checking special department privileges:', error);
+      return false;
     }
   }
 
@@ -329,6 +391,8 @@ export class DepartmentSwitchService {
    * If the department allows role cascading (requireExplicitMembership: false),
    * returns all active child departments where the user's roles cascade down.
    *
+   * Respects ISS-005: Users with special privileges see hidden child departments too.
+   *
    * @param userId - User's ObjectId
    * @param deptId - Parent department ObjectId
    * @param roles - User's roles in parent department
@@ -350,12 +414,24 @@ export class DepartmentSwitchService {
     }
 
     try {
-      // Find all active, visible child departments
-      const children = await Department.find({
+      // Check if user has special privileges for hidden departments
+      const user = await User.findById(userId);
+      const hasSpecialPrivileges = user
+        ? await this.hasSpecialDepartmentPrivileges(userId, user.userTypes)
+        : false;
+
+      // Find all active child departments
+      const childQuery: any = {
         parentDepartmentId: deptId,
-        isActive: true,
-        isVisible: true
-      });
+        isActive: true
+      };
+
+      // Only filter by isVisible if user doesn't have special privileges
+      if (!hasSpecialPrivileges) {
+        childQuery.isVisible = true;
+      }
+
+      const children = await Department.find(childQuery);
 
       // Map to child department info
       return children.map(child => ({
@@ -409,6 +485,10 @@ export class DepartmentSwitchService {
    * Returns all departments where the user has either direct membership
    * or cascaded access from parent departments.
    *
+   * Respects ISS-005 Master Department visibility:
+   * - Regular users only see isVisible: true departments
+   * - Users with system-admin role or global-admin userType also see hidden departments
+   *
    * @param userId - User's ObjectId
    * @returns Array of accessible departments with roles
    */
@@ -427,11 +507,22 @@ export class DepartmentSwitchService {
         roles: string[];
       }> = [];
 
-      // Get all active, visible departments
-      const allDepartments = await Department.find({
-        isActive: true,
-        isVisible: true
-      });
+      // Check if user has special privileges for hidden departments
+      const hasSpecialPrivileges = await this.hasSpecialDepartmentPrivileges(
+        userId,
+        user.userTypes
+      );
+
+      // Get all active departments (visible or all if user has special privileges)
+      const departmentQuery: any = {
+        isActive: true
+      };
+
+      if (!hasSpecialPrivileges) {
+        departmentQuery.isVisible = true;
+      }
+
+      const allDepartments = await Department.find(departmentQuery);
 
       // Check access for each department
       for (const dept of allDepartments) {

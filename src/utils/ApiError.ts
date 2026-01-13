@@ -2,11 +2,13 @@ export class ApiError extends Error {
   public readonly statusCode: number;
   public readonly isOperational: boolean;
   public readonly errors?: any[];
+  public readonly code?: string;
 
-  constructor(statusCode: number, message: string, isOperational: boolean | any[] = true, errors?: any[]) {
+  constructor(statusCode: number, message: string, isOperational: boolean | any[] = true, errors?: any[], code?: string) {
     super(message);
     this.statusCode = statusCode;
-    
+    this.code = code;
+
     // Handle overloaded constructor
     if (Array.isArray(isOperational)) {
       this.isOperational = true;
@@ -28,12 +30,12 @@ export class ApiError extends Error {
     return new ApiError(401, message);
   }
 
-  static forbidden(message = 'Forbidden'): ApiError {
-    return new ApiError(403, message);
+  static forbidden(message = 'Forbidden', code?: string): ApiError {
+    return new ApiError(403, message, true, undefined, code);
   }
 
-  static notFound(message = 'Not found'): ApiError {
-    return new ApiError(404, message);
+  static notFound(message = 'Not found', code?: string): ApiError {
+    return new ApiError(404, message, true, undefined, code);
   }
 
   static conflict(message: string): ApiError {

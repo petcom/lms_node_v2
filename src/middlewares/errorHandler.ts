@@ -57,11 +57,11 @@ export const errorHandler = (
   }
 
   // Send error response - include validation errors if present
-  const errorDetails = apiError.errors 
-    ? apiError.errors 
+  const errorDetails = apiError.errors
+    ? apiError.errors
     : (config.env === 'development' && apiError.stack ? [{ stack: apiError.stack }] : undefined);
-    
-  const response = ApiResponse.error(apiError.message, errorDetails);
+
+  const response = ApiResponse.error(apiError.message, errorDetails, apiError.code);
 
   res.status(apiError.statusCode).json(response);
 };

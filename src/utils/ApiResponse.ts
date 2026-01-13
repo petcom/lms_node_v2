@@ -19,6 +19,7 @@ export interface ApiErrorResponse {
   status: 'error';
   success: false;  // For frontend compatibility
   message: string;
+  code?: string;
   errors?: any[];
 }
 
@@ -59,12 +60,16 @@ export class ApiResponse {
     };
   }
 
-  static error(message: string, errors?: any[]): ApiErrorResponse {
+  static error(message: string, errors?: any[], code?: string): ApiErrorResponse {
     const response: ApiErrorResponse = {
       status: 'error',
       success: false,
       message
     };
+
+    if (code) {
+      response.code = code;
+    }
 
     if (errors !== undefined) {
       response.errors = errors;
