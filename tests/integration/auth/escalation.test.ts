@@ -104,13 +104,27 @@ describe('Escalation Integration Tests', () => {
 
     await Staff.create({
       _id: adminUser._id,
-      firstName: 'Admin',
-      lastName: 'User',
+      person: {
+        firstName: 'Admin',
+        lastName: 'User',
+        emails: [{
+          email: adminUser.email,
+          type: 'institutional',
+          isPrimary: true,
+          verified: true,
+          allowNotifications: true
+        }],
+        phones: [],
+        addresses: [],
+        timezone: 'America/New_York',
+        languagePreference: 'en'
+      },
       departmentMemberships: [{
         departmentId: testDepartment._id,
         roles: ['instructor'],
         isPrimary: true,
-        isActive: true
+        isActive: true,
+        joinedAt: new Date()
       }]
     });
 
@@ -150,13 +164,27 @@ describe('Escalation Integration Tests', () => {
 
     await Staff.create({
       _id: staffUser._id,
-      firstName: 'Staff',
-      lastName: 'User',
+      person: {
+        firstName: 'Staff',
+        lastName: 'User',
+        emails: [{
+          email: staffUser.email,
+          type: 'institutional',
+          isPrimary: true,
+          verified: true,
+          allowNotifications: true
+        }],
+        phones: [],
+        addresses: [],
+        timezone: 'America/New_York',
+        languagePreference: 'en'
+      },
       departmentMemberships: [{
         departmentId: testDepartment._id,
         roles: ['instructor'],
         isPrimary: true,
-        isActive: true
+        isActive: true,
+        joinedAt: new Date()
       }]
     });
 
