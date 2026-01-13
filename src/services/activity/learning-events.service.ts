@@ -239,8 +239,8 @@ export class LearningEventsService {
           type: event.type,
           learner: {
             id: event.learner.id,
-            firstName: event.learner.firstName,
-            lastName: event.learner.lastName
+            firstName: event.learner.person.firstName,
+            lastName: event.learner.person.lastName
           },
           timestamp: event.timestamp,
           createdAt: event.createdAt
@@ -386,8 +386,8 @@ export class LearningEventsService {
     return {
       learner: {
         id: learner._id.toString(),
-        firstName: learner.firstName || '',
-        lastName: learner.lastName || '',
+        firstName: learner.person.firstName || '',
+        lastName: learner.person.lastName || '',
         email: email
       },
       events: formattedEvents,
@@ -481,8 +481,8 @@ export class LearningEventsService {
         type: this.mapEventTypeToContract(event.eventType),
         learner: learner ? {
           id: learner._id.toString(),
-          firstName: learner.firstName || '',
-          lastName: learner.lastName || ''
+          firstName: learner.person.firstName || '',
+          lastName: learner.person.lastName || ''
         } : null,
         content: content ? {
           id: content._id.toString(),
@@ -591,8 +591,8 @@ export class LearningEventsService {
         type: this.mapEventTypeToContract(event.eventType),
         learner: learner ? {
           id: learner._id.toString(),
-          firstName: learner.firstName || '',
-          lastName: learner.lastName || ''
+          firstName: learner.person.firstName || '',
+          lastName: learner.person.lastName || ''
         } : null,
         content: content ? {
           id: content._id.toString(),
@@ -761,8 +761,8 @@ export class LearningEventsService {
       type: this.mapEventTypeToContract(event.eventType),
       learner: learner ? {
         id: learner._id?.toString() || learner.toString(),
-        firstName: learner.firstName || '',
-        lastName: learner.lastName || '',
+        firstName: learner.person.firstName || '',
+        lastName: learner.person.lastName || '',
         email: learner.email || ''
       } : null,
       course: course ? {
@@ -983,8 +983,8 @@ export class LearningEventsService {
       .map(([learnerId, data]) => ({
         learner: {
           id: learnerId,
-          firstName: data.learner.firstName || '',
-          lastName: data.learner.lastName || ''
+          firstName: data.learner.person.firstName || '',
+          lastName: data.learner.person.lastName || ''
         },
         averageScore: Math.round((data.total / data.count) * 10) / 10,
         completedCount: data.count

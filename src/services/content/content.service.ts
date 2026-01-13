@@ -762,7 +762,7 @@ export class ContentService {
     const user = await User.findById(userId).lean();
     const staff = user ? await Staff.findById(userId).lean() : null;
     const publisherName = staff
-      ? `${staff.firstName} ${staff.lastName}`.trim()
+      ? `${staff.person.firstName} ${staff.person.lastName}`.trim()
       : 'Unknown';
 
     return {
@@ -821,7 +821,7 @@ export class ContentService {
     const user = await User.findById(userId).lean();
     const staff = user ? await Staff.findById(userId).lean() : null;
     const unpublisherName = staff
-      ? `${staff.firstName} ${staff.lastName}`.trim()
+      ? `${staff.person.firstName} ${staff.person.lastName}`.trim()
       : 'Unknown';
 
     return {

@@ -418,8 +418,8 @@ export class ResolverService {
 
     // Try exact name matches
     for (const staff of instructorStaff) {
-      const fullName = `${staff.firstName} ${staff.lastName}`.toLowerCase();
-      const reverseName = `${staff.lastName}, ${staff.firstName}`.toLowerCase();
+      const fullName = `${staff.person.firstName} ${staff.person.lastName}`.toLowerCase();
+      const reverseName = `${staff.person.lastName}, ${staff.person.firstName}`.toLowerCase();
 
       if (
         fullName === trimmedInput.toLowerCase() ||

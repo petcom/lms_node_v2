@@ -164,8 +164,8 @@ export class ContentAttemptsService {
         learnerId: learner._id?.toString() || '',
         learner: {
           id: learner._id?.toString() || '',
-          firstName: learner.firstName || '',
-          lastName: learner.lastName || '',
+          firstName: learner.person.firstName || '',
+          lastName: learner.person.lastName || '',
           email: learner.email || ''
         },
         enrollmentId: attempt.metadata?.enrollmentId || null,
@@ -272,7 +272,7 @@ export class ContentAttemptsService {
     if (content.type === 'scorm' && data.scormVersion) {
       const user = await User.findById(userId).lean();
       const staff = user ? await Staff.findById(userId).lean() : null;
-      const learnerName = staff ? `${staff.lastName}, ${staff.firstName}` : 'Learner';
+      const learnerName = staff ? `${staff.person.lastName}, ${staff.person.firstName}` : 'Learner';
 
       // Initialize CMI data based on version
       const cmiData: Record<string, any> = {};
@@ -406,8 +406,8 @@ export class ContentAttemptsService {
       learnerId: learner._id?.toString() || '',
       learner: {
         id: learner._id?.toString() || '',
-        firstName: learner.firstName || '',
-        lastName: learner.lastName || '',
+        firstName: learner.person.firstName || '',
+        lastName: learner.person.lastName || '',
         email: learner.email || ''
       },
       enrollmentId: attempt.metadata?.enrollmentId || null,

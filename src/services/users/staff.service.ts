@@ -192,8 +192,8 @@ export class StaffService {
         return {
           id: staff._id.toString(),
           email: user.email,
-          firstName: staff.firstName,
-          lastName: staff.lastName,
+          firstName: staff.person.firstName,
+          lastName: staff.person.lastName,
           role: 'staff',
           departments,
           permissions,
@@ -337,8 +337,8 @@ export class StaffService {
     return {
       id: user._id.toString(),
       email: user.email,
-      firstName: staff.firstName,
-      lastName: staff.lastName,
+      firstName: staff.person.firstName,
+      lastName: staff.person.lastName,
       role: 'staff',
       departments,
       permissions,
@@ -419,8 +419,8 @@ export class StaffService {
     return {
       id: staff._id.toString(),
       email: user.email,
-      firstName: staff.firstName,
-      lastName: staff.lastName,
+      firstName: staff.person.firstName,
+      lastName: staff.person.lastName,
       role: 'staff',
       departments,
       permissions,
@@ -506,10 +506,10 @@ export class StaffService {
 
     // Update staff fields
     if (updateData.firstName) {
-      staff.firstName = updateData.firstName;
+      staff.person.firstName = updateData.firstName;
     }
     if (updateData.lastName) {
-      staff.lastName = updateData.lastName;
+      staff.person.lastName = updateData.lastName;
     }
 
     await user.save();
@@ -532,8 +532,8 @@ export class StaffService {
     return {
       id: staff._id.toString(),
       email: user.email,
-      firstName: staff.firstName,
-      lastName: staff.lastName,
+      firstName: staff.person.firstName,
+      lastName: staff.person.lastName,
       role: 'staff',
       departments,
       permissions,

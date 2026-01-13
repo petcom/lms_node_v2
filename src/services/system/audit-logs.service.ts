@@ -244,12 +244,12 @@ export class AuditLogsService {
     if (user.roles.includes('learner')) {
       const learner = await Learner.findById(userId);
       if (learner) {
-        userName = `${learner.firstName} ${learner.lastName}`;
+        userName = `${learner.person.firstName} ${learner.person.lastName}`;
       }
     } else {
       const staff = await Staff.findById(userId);
       if (staff) {
-        userName = `${staff.firstName} ${staff.lastName}`;
+        userName = `${staff.person.firstName} ${staff.person.lastName}`;
       }
       userRole = user.roles[0] || 'staff';
     }

@@ -52,7 +52,7 @@ import { AccessRight } from '../src/models/AccessRight.model';
 
 // Configuration
 const config = {
-  adminEmail: process.env.ADMIN_EMAIL || 'admin@system.local',
+  adminEmail: process.env.ADMIN_EMAIL || 'admin@lms.edu',
   adminPassword: process.env.ADMIN_PASSWORD || 'Admin123!',
   adminEscalationPassword: process.env.ADMIN_ESCALATION_PASSWORD || 'Escalate123!',
   adminFirstName: 'System',
@@ -171,12 +171,12 @@ async function createAdminStaff(userId: mongoose.Types.ObjectId): Promise<void> 
 
     // Update if needed (idempotent)
     let updated = false;
-    if (existing.firstName !== config.adminFirstName) {
-      existing.firstName = config.adminFirstName;
+    if (existing.person.firstName !== config.adminFirstName) {
+      existing.person.firstName = config.adminFirstName;
       updated = true;
     }
-    if (existing.lastName !== config.adminLastName) {
-      existing.lastName = config.adminLastName;
+    if (existing.person.lastName !== config.adminLastName) {
+      existing.person.lastName = config.adminLastName;
       updated = true;
     }
     if (existing.title !== 'System Administrator') {
@@ -186,6 +186,22 @@ async function createAdminStaff(userId: mongoose.Types.ObjectId): Promise<void> 
     if (!existing.isActive) {
       existing.isActive = true;
       updated = true;
+    }
+    
+    // Ensure Master Department membership exists
+    const hasMasterDept = existing.departmentMemberships.some(
+      (m: any) => m.departmentId.equals(MASTER_DEPARTMENT_ID)
+    );
+    if (!hasMasterDept) {
+      existing.departmentMemberships.push({
+        departmentId: MASTER_DEPARTMENT_ID,
+        roles: ['instructor', 'department-admin', 'content-admin', 'billing-admin'],
+        isPrimary: true,
+        isActive: true,
+        joinedAt: new Date()
+      });
+      updated = true;
+      console.log('  ✓ Added Master Department membership');
     }
 
     if (updated) {
@@ -198,14 +214,33 @@ async function createAdminStaff(userId: mongoose.Types.ObjectId): Promise<void> 
 
   await Staff.create({
     _id: userId,
-    firstName: config.adminFirstName,
-    lastName: config.adminLastName,
+    person: {
+      firstName: config.adminFirstName,
+      lastName: config.adminLastName,
+      emails: [{
+        email: config.adminEmail,
+        type: 'institutional',
+        isPrimary: true,
+        verified: true,
+        allowNotifications: true
+      }],
+      phones: [],
+      addresses: [],
+      timezone: 'America/New_York',
+      languagePreference: 'en'
+    },
     title: 'System Administrator',
-    departmentMemberships: [], // No regular department memberships
+    departmentMemberships: [{
+      departmentId: MASTER_DEPARTMENT_ID,
+      roles: ['instructor', 'department-admin', 'content-admin', 'billing-admin'],
+      isPrimary: true,
+      isActive: true,
+      joinedAt: new Date()
+    }],
     isActive: true
   });
 
-  console.log('  ✓ Admin staff record created');
+  console.log('  ✓ Admin staff record created with Master Department membership');
 }
 
 /**
@@ -220,12 +255,12 @@ async function createAdminLearner(userId: mongoose.Types.ObjectId): Promise<void
 
     // Update if needed (idempotent)
     let updated = false;
-    if (existing.firstName !== config.adminFirstName) {
-      existing.firstName = config.adminFirstName;
+    if (existing.person.firstName !== config.adminFirstName) {
+      existing.person.firstName = config.adminFirstName;
       updated = true;
     }
-    if (existing.lastName !== config.adminLastName) {
-      existing.lastName = config.adminLastName;
+    if (existing.person.lastName !== config.adminLastName) {
+      existing.person.lastName = config.adminLastName;
       updated = true;
     }
     if (!existing.isActive) {
@@ -243,8 +278,21 @@ async function createAdminLearner(userId: mongoose.Types.ObjectId): Promise<void
 
   await Learner.create({
     _id: userId,
-    firstName: config.adminFirstName,
-    lastName: config.adminLastName,
+    person: {
+      firstName: config.adminFirstName,
+      lastName: config.adminLastName,
+      emails: [{
+        email: config.adminEmail,
+        type: 'institutional',
+        isPrimary: true,
+        verified: true,
+        allowNotifications: true
+      }],
+      phones: [],
+      addresses: [],
+      timezone: 'America/New_York',
+      languagePreference: 'en'
+    },
     departmentMemberships: [], // No learner enrollments
     isActive: true
   });

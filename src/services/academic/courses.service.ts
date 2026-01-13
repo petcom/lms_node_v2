@@ -168,8 +168,8 @@ export class CoursesService {
             if (staff && user) {
               return {
                 id: staff._id.toString(),
-                firstName: staff.firstName,
-                lastName: staff.lastName,
+                firstName: staff.person.firstName,
+                lastName: staff.person.lastName,
                 email: user.email
               };
             }
@@ -360,8 +360,8 @@ export class CoursesService {
         if (staff && user) {
           return {
             id: staff._id.toString(),
-            firstName: staff.firstName,
-            lastName: staff.lastName,
+            firstName: staff.person.firstName,
+            lastName: staff.person.lastName,
             email: user.email,
             role: user.roles.includes('instructor') ? 'instructor' : 'content-admin'
           };

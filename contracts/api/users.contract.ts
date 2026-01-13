@@ -1,6 +1,6 @@
 /**
  * Users API Contracts
- * Version: 1.0.0
+ * Version: 2.0.0 (BREAKING CHANGES)
  *
  * Phase 1: Core Identity & Organization (Critical Path)
  *
@@ -9,6 +9,31 @@
  * based on authenticated user's role (global-admin, staff, learner).
  *
  * Both backend and UI teams use these as the source of truth.
+ *
+ * ⚠️  BREAKING CHANGES in v2.0.0 ⚠️
+ * ------------------------------------
+ * The person data structure has been refactored from flat fields to a
+ * three-layer architecture:
+ * 1. IPerson (Basic) - Core contact & identity (GET /users/me/person)
+ * 2. IPersonExtended - Role-specific data (GET /users/me/person/extended)
+ * 3. IDemographics - Compliance data (GET /users/me/demographics)
+ *
+ * MIGRATION GUIDE:
+ * - OLD: response.data.firstName → NEW: response.data.person.firstName
+ * - OLD: response.data.lastName → NEW: response.data.person.lastName
+ * - OLD: response.data.phone → NEW: response.data.person.phones[0].number (or use getPrimaryPhone)
+ * - OLD: response.data.profileImage → NEW: response.data.person.avatar
+ *
+ * NEW ENDPOINTS:
+ * - GET /api/v2/users/me/person - Get basic person data
+ * - PUT /api/v2/users/me/person - Update basic person data
+ * - GET /api/v2/users/me/person/extended - Get extended person data (role-specific)
+ * - PUT /api/v2/users/me/person/extended - Update extended person data
+ * - GET /api/v2/users/me/demographics - Get demographics data
+ * - PUT /api/v2/users/me/demographics - Update demographics data
+ *
+ * See: contracts/api/person.contract.ts
+ * See: contracts/api/demographics.contract.ts
  */
 
 export const UsersContract = {
@@ -41,11 +66,29 @@ export const UsersContract = {
           data: {
             id: 'string',
             email: 'string',
-            firstName: 'string',
-            lastName: 'string',
             role: 'global-admin | staff | learner',
             status: 'active | inactive | withdrawn',
             isActive: 'boolean',
+
+            // ⚠️  BREAKING CHANGE: Person data now nested ⚠️
+            // OLD: firstName, lastName, phone, profileImage (removed)
+            // NEW: person object (IPerson)
+            person: {
+              firstName: 'string',
+              lastName: 'string',
+              middleName: 'string | null',
+              preferredFirstName: 'string | null',
+              preferredLastName: 'string | null',
+              pronouns: 'string | null',
+              emails: '[{ email, type, isPrimary, verified }]',
+              phones: '[{ number, type, isPrimary, verified }]',
+              addresses: '[{ street1, city, state, postalCode, country }]',
+              avatar: 'string | null',
+              bio: 'string | null',
+              timezone: 'string',
+              languagePreference: 'string'
+              // ... see GET /users/me/person for full structure
+            },
 
             // Staff-only fields (present when role === 'staff')
             departments: 'ObjectId[] | undefined',
@@ -56,10 +99,6 @@ export const UsersContract = {
             studentId: 'string | undefined',
             programEnrollments: 'ObjectId[] | undefined',
             courseEnrollments: 'ObjectId[] | undefined',
-
-            // Common optional fields
-            profileImage: 'string | null',
-            phone: 'string | null',
 
             // Metadata
             createdAt: 'Date',
@@ -81,18 +120,46 @@ export const UsersContract = {
         data: {
           id: '507f1f77bcf86cd799439011',
           email: 'john.instructor@example.com',
-          firstName: 'John',
-          lastName: 'Doe',
           role: 'staff',
           status: 'active',
           isActive: true,
+          // ⚠️ BREAKING CHANGE: Person data now nested
+          person: {
+            firstName: 'John',
+            lastName: 'Doe',
+            middleName: null,
+            preferredFirstName: null,
+            preferredLastName: null,
+            pronouns: 'he/him',
+            emails: [
+              {
+                email: 'john.instructor@example.com',
+                type: 'institutional',
+                isPrimary: true,
+                verified: true,
+                allowNotifications: true
+              }
+            ],
+            phones: [
+              {
+                number: '+1-555-0123',
+                type: 'mobile',
+                isPrimary: true,
+                verified: true,
+                allowSMS: true
+              }
+            ],
+            addresses: [],
+            avatar: 'https://cdn.example.com/profiles/john.jpg',
+            bio: 'Computer Science instructor',
+            timezone: 'America/New_York',
+            languagePreference: 'en'
+          },
           departments: ['507f1f77bcf86cd799439012'],
           permissions: ['content:read', 'content:write', 'courses:manage', 'learners:view'],
           departmentRoles: [
             { departmentId: '507f1f77bcf86cd799439012', role: 'instructor' }
           ],
-          profileImage: 'https://cdn.example.com/profiles/john.jpg',
-          phone: '+1-555-0123',
           createdAt: '2025-01-01T00:00:00.000Z',
           lastLoginAt: '2026-01-08T10:30:00.000Z',
           updatedAt: '2026-01-08T10:30:00.000Z'
@@ -103,12 +170,31 @@ export const UsersContract = {
     permissions: ['authenticated'],
 
     notes: `
+      ⚠️ BREAKING CHANGES in v2.0.0 ⚠️
+      - Person data now nested in person object (was flat)
+      - Migration required for UI:
+        * data.firstName → data.person.firstName
+        * data.lastName → data.person.lastName
+        * data.phone → data.person.phones[0].number
+        * data.profileImage → data.person.avatar
+      - New fields available:
+        * pronouns, preferredFirstName, preferredLastName
+        * Multiple emails, phones, addresses (array)
+        * timezone, languagePreference (required)
+        * Communication preferences, legal consent
+
       - Returns unified user profile regardless of role (global-admin, staff, learner)
       - Role-specific fields included based on user type:
         * Staff: departments, permissions, departmentRoles
         * Learner: studentId, programEnrollments, courseEnrollments
       - Always requires valid authentication token
       - Token user ID must match requested profile (enforced by /me endpoint)
+
+      - For detailed person data, use new endpoints:
+        * GET /users/me/person - Full IPerson (Basic) data
+        * GET /users/me/person/extended - IPersonExtended (role-specific)
+        * GET /users/me/demographics - IDemographics (compliance)
+
       - Frontend should use this as primary profile endpoint instead of legacy:
         * /staff/profile (deprecated)
         * /learners/profile (deprecated)

@@ -122,9 +122,27 @@ async function createStaffMembers() {
 
   const staff1 = await Staff.create({
     _id: user1._id,
-    firstName: 'Emily',
-    lastName: 'Carter',
-    phoneNumber: '+1-555-0101',
+    person: {
+      firstName: 'Emily',
+      lastName: 'Carter',
+      emails: [{
+        email: 'emily.carter@lms.edu',
+        type: 'institutional',
+        isPrimary: true,
+        verified: true,
+        allowNotifications: true
+      }],
+      phones: [{
+        number: '+1-555-0101',
+        type: 'work',
+        isPrimary: true,
+        verified: true,
+        allowSMS: false
+      }],
+      addresses: [],
+      timezone: 'America/New_York',
+      languagePreference: 'en'
+    },
     title: 'Clinical Psychology Director',
     departmentMemberships: [
       {
@@ -156,9 +174,27 @@ async function createStaffMembers() {
 
   const staff2 = await Staff.create({
     _id: user2._id,
-    firstName: 'Michael',
-    lastName: 'Rodriguez',
-    phoneNumber: '+1-555-0102',
+    person: {
+      firstName: 'Michael',
+      lastName: 'Rodriguez',
+      emails: [{
+        email: 'michael.rodriguez@lms.edu',
+        type: 'institutional',
+        isPrimary: true,
+        verified: true,
+        allowNotifications: true
+      }],
+      phones: [{
+        number: '+1-555-0102',
+        type: 'work',
+        isPrimary: true,
+        verified: true,
+        allowSMS: false
+      }],
+      addresses: [],
+      timezone: 'America/New_York',
+      languagePreference: 'en'
+    },
     title: 'Behavioral Science Director',
     departmentMemberships: [
       {
@@ -177,8 +213,8 @@ async function createStaffMembers() {
   seedData.staff.push(staff2);
 
   console.log(`✓ Created ${seedData.staff.length} staff members`);
-  console.log(`  - ${staff1.firstName} ${staff1.lastName}: Content-Admin & Dept-Admin of ${seedData.departments[0].name}, Instructor of ${seedData.departments[1].name}`);
-  console.log(`  - ${staff2.firstName} ${staff2.lastName}: Content-Admin & Dept-Admin of ${seedData.departments[1].name}, Instructor of ${seedData.departments[0].name}`);
+  console.log(`  - ${staff1.person.firstName} ${staff1.person.lastName}: Content-Admin & Dept-Admin of ${seedData.departments[0].name}, Instructor of ${seedData.departments[1].name}`);
+  console.log(`  - ${staff2.person.firstName} ${staff2.person.lastName}: Content-Admin & Dept-Admin of ${seedData.departments[1].name}, Instructor of ${seedData.departments[0].name}`);
 }
 
 async function createCoursesWithSegments() {
@@ -402,7 +438,7 @@ async function printSummary() {
 
   console.log('\n👥 STAFF MEMBERS:');
   for (const staff of seedData.staff) {
-    console.log(`  • ${staff.firstName} ${staff.lastName} (${staff.title})`);
+    console.log(`  • ${staff.person.firstName} ${staff.person.lastName} (${staff.title})`);
     console.log(`    Email: ${seedData.users.find((u: any) => u._id.equals(staff._id))?.email}`);
     console.log(`    Password: StaffPass123!`);
     console.log(`    Department Memberships:`);

@@ -72,6 +72,64 @@ export const updateMe = asyncHandler(async (req: Request, res: Response) => {
 });
 
 /**
+ * POST /api/v2/users/me/password
+ * Change current user's password
+ * Requires current password for verification (ISS-001)
+ */
+export const changePassword = asyncHandler(async (req: Request, res: Response) => {
+  const userId = (req as any).user.userId;
+  const { currentPassword, newPassword, confirmPassword } = req.body;
+
+  // Validate required fields
+  if (!currentPassword || typeof currentPassword !== 'string' || currentPassword.length === 0) {
+    throw ApiError.badRequest('Current password is required');
+  }
+
+  if (!newPassword || typeof newPassword !== 'string') {
+    throw ApiError.badRequest('New password is required');
+  }
+
+  if (!confirmPassword || typeof confirmPassword !== 'string') {
+    throw ApiError.badRequest('Password confirmation is required');
+  }
+
+  // Validate new password length first
+  if (newPassword.length < 8) {
+    throw ApiError.badRequest('New password must be at least 8 characters');
+  }
+
+  if (newPassword.length > 128) {
+    throw ApiError.badRequest('New password must not exceed 128 characters');
+  }
+
+  // Then validate complexity
+  if (!/(?=.*[a-z])/.test(newPassword)) {
+    throw ApiError.badRequest('New password must contain at least one uppercase letter, one lowercase letter, and one number');
+  }
+
+  if (!/(?=.*[A-Z])/.test(newPassword)) {
+    throw ApiError.badRequest('New password must contain at least one uppercase letter, one lowercase letter, and one number');
+  }
+
+  if (!/(?=.*\d)/.test(newPassword)) {
+    throw ApiError.badRequest('New password must contain at least one uppercase letter, one lowercase letter, and one number');
+  }
+
+  // Validate passwords match
+  if (newPassword !== confirmPassword) {
+    throw ApiError.badRequest('Passwords do not match');
+  }
+
+  // Validate new password is different from current
+  if (newPassword === currentPassword) {
+    throw ApiError.badRequest('New password must be different from current password');
+  }
+
+  await UsersService.changePassword(userId, { currentPassword, newPassword });
+  res.status(200).json(ApiResponse.success(null, 'Password changed successfully'));
+});
+
+/**
  * GET /api/v2/users/me/departments
  * Get departments assigned to current user (staff only)
  */
@@ -146,4 +204,83 @@ export const getMyProgress = asyncHandler(async (req: Request, res: Response) =>
 
   const result = await UsersService.getMyProgress(userId, { timeframe: timeframe as any });
   res.status(200).json(ApiResponse.success(result));
+});
+
+// ============================================================================
+// NEW v2.0.0: Person & Demographics Endpoints
+// ============================================================================
+
+/**
+ * GET /api/v2/users/me/person
+ * Get current user's person data (IPerson Basic)
+ */
+export const getMyPerson = asyncHandler(async (req: Request, res: Response) => {
+  const userId = (req as any).user.userId;
+  const result = await UsersService.getMyPerson(userId);
+  res.status(200).json(ApiResponse.success(result));
+});
+
+/**
+ * PUT /api/v2/users/me/person
+ * Update current user's person data
+ */
+export const updateMyPerson = asyncHandler(async (req: Request, res: Response) => {
+  const userId = (req as any).user.userId;
+  const personData = req.body;
+
+  // TODO: Add comprehensive validation using Zod validator
+  // For now, service layer handles basic validation
+
+  const result = await UsersService.updateMyPerson(userId, personData);
+  res.status(200).json(ApiResponse.success(result, 'Person data updated successfully'));
+});
+
+/**
+ * GET /api/v2/users/me/person/extended
+ * Get current user's extended person data (role-specific)
+ */
+export const getMyPersonExtended = asyncHandler(async (req: Request, res: Response) => {
+  const userId = (req as any).user.userId;
+  const result = await UsersService.getMyPersonExtended(userId);
+  res.status(200).json(ApiResponse.success(result));
+});
+
+/**
+ * PUT /api/v2/users/me/person/extended
+ * Update current user's extended person data
+ */
+export const updateMyPersonExtended = asyncHandler(async (req: Request, res: Response) => {
+  const userId = (req as any).user.userId;
+  const extendedData = req.body;
+
+  // TODO: Add comprehensive validation using Zod validator
+  // For now, service layer handles basic validation
+
+  const result = await UsersService.updateMyPersonExtended(userId, extendedData);
+  res.status(200).json(ApiResponse.success(result, 'Extended person data updated successfully'));
+});
+
+/**
+ * GET /api/v2/users/me/demographics
+ * Get current user's demographics data
+ */
+export const getMyDemographics = asyncHandler(async (req: Request, res: Response) => {
+  const userId = (req as any).user.userId;
+  const result = await UsersService.getMyDemographics(userId);
+  res.status(200).json(ApiResponse.success(result));
+});
+
+/**
+ * PUT /api/v2/users/me/demographics
+ * Update current user's demographics data
+ */
+export const updateMyDemographics = asyncHandler(async (req: Request, res: Response) => {
+  const userId = (req as any).user.userId;
+  const demographicsData = req.body;
+
+  // TODO: Add comprehensive validation using Zod validator
+  // For now, service layer handles basic validation
+
+  const result = await UsersService.updateMyDemographics(userId, demographicsData);
+  res.status(200).json(ApiResponse.success(result, 'Demographics data updated successfully'));
 });

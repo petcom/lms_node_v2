@@ -8,6 +8,7 @@ describe('ApiResponse', () => {
 
       expect(response).toEqual({
         status: 'success',
+        success: true,
         data
       });
     });
@@ -18,6 +19,7 @@ describe('ApiResponse', () => {
 
       expect(response).toEqual({
         status: 'success',
+        success: true,
         message: 'Operation successful',
         data
       });
@@ -28,6 +30,7 @@ describe('ApiResponse', () => {
 
       expect(response).toEqual({
         status: 'success',
+        success: true,
         data: null
       });
     });
@@ -40,6 +43,7 @@ describe('ApiResponse', () => {
 
       expect(response).toEqual({
         status: 'success',
+        success: true,
         data
       });
     });
@@ -50,6 +54,7 @@ describe('ApiResponse', () => {
 
       expect(response).toEqual({
         status: 'success',
+        success: true,
         message: 'Resource created',
         data
       });
@@ -70,6 +75,7 @@ describe('ApiResponse', () => {
 
       expect(response).toEqual({
         status: 'success',
+        success: true,
         data,
         pagination: {
           page: 1,
@@ -125,6 +131,7 @@ describe('ApiResponse', () => {
 
       expect(response).toEqual({
         status: 'error',
+        success: false,
         message: 'Something went wrong'
       });
     });
@@ -139,6 +146,7 @@ describe('ApiResponse', () => {
 
       expect(response).toEqual({
         status: 'error',
+        success: false,
         message: 'Validation failed',
         errors
       });
@@ -149,6 +157,7 @@ describe('ApiResponse', () => {
 
       expect(response).toEqual({
         status: 'error',
+        success: false,
         message: 'Error',
         errors: []
       });

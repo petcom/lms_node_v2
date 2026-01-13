@@ -4,9 +4,12 @@ import { ApiError } from '@/utils/ApiError';
 
 const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
 
+// Allow .local TLD for development environments
+const emailOptions = { tlds: { allow: false } };
+
 export const validateRegisterStaff = (req: Request, _res: Response, next: NextFunction) => {
   const schema = Joi.object({
-    email: Joi.string().email().required().messages({
+    email: Joi.string().email(emailOptions).required().messages({
       'string.email': 'Please provide a valid email address',
       'any.required': 'Email is required'
     }),

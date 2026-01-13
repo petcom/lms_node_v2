@@ -283,7 +283,7 @@ export class ReportsService {
 
           details.push({
             learnerId: learner._id.toString(),
-            learnerName: `${learner.firstName} ${learner.lastName}`,
+            learnerName: `${learner.person.firstName} ${learner.person.lastName}`,
             learnerEmail: user.email,
             courseId: course._id.toString(),
             courseName: course.name,
@@ -552,7 +552,7 @@ export class ReportsService {
 
       performanceMetrics.push({
         learnerId: learner._id.toString(),
-        learnerName: `${learner.firstName} ${learner.lastName}`,
+        learnerName: `${learner.person.firstName} ${learner.person.lastName}`,
         learnerEmail: user.email,
         departmentName: dept?.name || 'Unknown',
         coursesCompleted: enrollments.length,
@@ -904,8 +904,8 @@ export class ReportsService {
       transcript: {
         learner: {
           id: learner._id.toString(),
-          firstName: learner.firstName,
-          lastName: learner.lastName,
+          firstName: learner.person.firstName,
+          lastName: learner.person.lastName,
           email: user.email,
           studentId: (learner as any).studentId || learner._id.toString() || null,
           dateOfBirth: learner.dateOfBirth || null
@@ -963,7 +963,7 @@ export class ReportsService {
     // In a real implementation, this would generate a PDF using a library like pdfkit or puppeteer
     // For now, return metadata about the generated PDF
 
-    const fileName = `transcript-${transcriptData.transcript.learner.firstName.toLowerCase()}-${transcriptData.transcript.learner.lastName.toLowerCase()}-${new Date().toISOString().split('T')[0]}.pdf`;
+    const fileName = `transcript-${transcriptData.transcript.learner.person.firstName.toLowerCase()}-${transcriptData.transcript.learner.person.lastName.toLowerCase()}-${new Date().toISOString().split('T')[0]}.pdf`;
 
     return {
       transcriptId: transcriptData.transcript.transcriptId,
@@ -1165,7 +1165,7 @@ export class ReportsService {
 
       learners.push({
         learnerId: learner._id.toString(),
-        learnerName: `${learner.firstName} ${learner.lastName}`,
+        learnerName: `${learner.person.firstName} ${learner.person.lastName}`,
         learnerEmail: user.email,
         enrolledAt: enrollment.enrollmentDate,
         startedAt,
@@ -1431,7 +1431,7 @@ export class ReportsService {
 
       learnerProgress.push({
         learnerId: learner._id.toString(),
-        learnerName: `${learner.firstName} ${learner.lastName}`,
+        learnerName: `${learner.person.firstName} ${learner.person.lastName}`,
         learnerEmail: user.email,
         enrolledAt: enrollment.enrollmentDate,
         status,

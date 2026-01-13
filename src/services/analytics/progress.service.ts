@@ -263,7 +263,7 @@ export class ProgressService {
       programName: program.name,
       programCode: program.code,
       learnerId: learner._id.toString(),
-      learnerName: `${learner.firstName} ${learner.lastName}`,
+      learnerName: `${learner.person.firstName} ${learner.person.lastName}`,
       enrolledAt: enrollment.enrollmentDate,
       status: enrollmentStatus,
       overallProgress: {
@@ -505,7 +505,7 @@ export class ProgressService {
       courseTitle: course.name,
       courseCode: course.code,
       learnerId: learner._id.toString(),
-      learnerName: `${learner.firstName} ${learner.lastName}`,
+      learnerName: `${learner.person.firstName} ${learner.person.lastName}`,
       enrolledAt: classEnrollment.enrollmentDate,
       startedAt: scormAttempts.length > 0 ? scormAttempts[0].startedAt : null,
       completedAt: status === 'completed' ? classEnrollment.completionDate : null,
@@ -645,7 +645,7 @@ export class ProgressService {
       courseId: course._id.toString(),
       courseTitle: course.name,
       learnerId: learner._id.toString(),
-      learnerName: `${learner.firstName} ${learner.lastName}`,
+      learnerName: `${learner.person.firstName} ${learner.person.lastName}`,
       enrolledAt: enrollment.enrollmentDate,
       status,
       courseProgress: {
@@ -931,7 +931,7 @@ export class ProgressService {
 
     return {
       learnerId: learner._id.toString(),
-      learnerName: `${learner.firstName} ${learner.lastName}`,
+      learnerName: `${learner.person.firstName} ${learner.person.lastName}`,
       learnerEmail: user.email,
       summary: {
         programsEnrolled: programEnrollments.length,
@@ -1054,7 +1054,7 @@ export class ProgressService {
 
         return {
           learnerId: learner._id.toString(),
-          learnerName: `${learner.firstName} ${learner.lastName}`,
+          learnerName: `${learner.person.firstName} ${learner.person.lastName}`,
           learnerEmail: user.email,
           enrolledAt: enrollment.enrollmentDate,
           status,
@@ -1265,7 +1265,7 @@ export class ProgressService {
 
         return {
           learnerId: learner._id.toString(),
-          learnerName: `${learner.firstName} ${learner.lastName}`,
+          learnerName: `${learner.person.firstName} ${learner.person.lastName}`,
           learnerEmail: user.email,
           studentId: null,
           department: {

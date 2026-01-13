@@ -1,26 +1,32 @@
 import mongoose, { Schema, Document } from 'mongoose';
 import { DepartmentMembershipSchema, IDepartmentMembership } from './department-membership.schema';
 import { RoleRegistry } from '@/services/role-registry.service';
+import { IPerson, PersonSchema } from './Person.types';
+import { ILearnerPersonExtended, LearnerPersonExtendedSchema } from './PersonExtended.types';
+import { IDemographics, DemographicsSchema } from './Demographics.types';
 
+/**
+ * Learner Model Interface
+ *
+ * ⚠️ BREAKING CHANGES (v2.0.0):
+ * - person field is now REQUIRED (was optional)
+ * - firstName, lastName, phoneNumber, dateOfBirth, address, emergencyContact REMOVED
+ *   Use person.firstName, person.lastName, person.phones, person.dateOfBirth, person.addresses instead
+ * - emergencyContact → personExtended.emergencyContacts (now array, more robust)
+ * - Added personExtended (ILearnerPersonExtended) for learner-specific data
+ * - Added demographics (IDemographics) for compliance/reporting
+ */
 export interface ILearner extends Document {
   _id: mongoose.Types.ObjectId; // Shared with User
-  firstName: string;
-  lastName: string;
-  dateOfBirth?: Date;
-  phoneNumber?: string;
-  address?: {
-    street?: string;
-    city?: string;
-    state?: string;
-    zipCode?: string;
-    country?: string;
-  };
-  emergencyContact?: {
-    name?: string;
-    relationship?: string;
-    phoneNumber?: string;
-  };
+
+  // Three-layer person architecture
+  person: IPerson;                             // REQUIRED: Basic person data (contact, identity)
+  personExtended?: ILearnerPersonExtended;     // OPTIONAL: Learner-specific data (emergency contacts, accommodations)
+  demographics?: IDemographics;                // OPTIONAL: Compliance/reporting data
+
+  // Learner-specific fields (not personal data)
   departmentMemberships: IDepartmentMembership[];
+
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -36,35 +42,20 @@ const learnerSchema = new Schema<ILearner>(
       type: Schema.Types.ObjectId,
       required: true
     },
-    firstName: {
-      type: String,
-      required: true,
-      trim: true
+    // Three-layer person architecture
+    person: {
+      type: PersonSchema,
+      required: true  // ⚠️ BREAKING CHANGE: Now required (was optional)
     },
-    lastName: {
-      type: String,
-      required: true,
-      trim: true
+    personExtended: {
+      type: LearnerPersonExtendedSchema,
+      required: false
     },
-    dateOfBirth: {
-      type: Date
+    demographics: {
+      type: DemographicsSchema,
+      required: false
     },
-    phoneNumber: {
-      type: String,
-      trim: true
-    },
-    address: {
-      street: String,
-      city: String,
-      state: String,
-      zipCode: String,
-      country: String
-    },
-    emergencyContact: {
-      name: String,
-      relationship: String,
-      phoneNumber: String
-    },
+    // Learner-specific fields (not personal data)
     departmentMemberships: {
       type: [DepartmentMembershipSchema],
       default: [],
@@ -100,8 +91,7 @@ const learnerSchema = new Schema<ILearner>(
   }
 );
 
-// Indexes
-learnerSchema.index({ _id: 1 });
+// Indexes (_id index created automatically by MongoDB)
 learnerSchema.index({ isActive: 1 });
 learnerSchema.index({ 'departmentMemberships.departmentId': 1 });
 

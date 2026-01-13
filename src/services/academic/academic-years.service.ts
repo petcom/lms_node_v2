@@ -959,8 +959,8 @@ export class AcademicYearsService {
         const user = userMap.get(learner._id.toString());
         return {
           id: learner._id.toString(),
-          firstName: learner.firstName,
-          lastName: learner.lastName,
+          firstName: learner.person.firstName,
+          lastName: learner.person.lastName,
           email: user?.email || null,
           studentId: learner._id.toString(), // Using _id as studentId for now
           enrolledAt: learner.createdAt

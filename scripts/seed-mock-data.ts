@@ -235,16 +235,31 @@ async function createUsers() {
     mockData.users.push(user);
     
     const staff = await Staff.create({
-      user: user._id,
-      firstName: data.firstName,
-      lastName: data.lastName,
-      email: data.email,
-      roles: data.roles,
-      department: data.department,
+      _id: user._id,
+      person: {
+        firstName: data.firstName,
+        lastName: data.lastName,
+        emails: [{
+          email: data.email,
+          type: 'institutional',
+          isPrimary: true,
+          verified: true,
+          allowNotifications: true
+        }],
+        phones: [],
+        addresses: [],
+        timezone: 'America/New_York',
+        languagePreference: 'en'
+      },
       title: data.title,
-      permissions: data.permissions,
-      status: 'active',
-      preferences: data.preferences || {}
+      departmentMemberships: [{
+        departmentId: data.department,
+        roles: data.roles,
+        isPrimary: true,
+        isActive: true,
+        joinedAt: new Date()
+      }],
+      isActive: true
     });
     mockData.staff.push(staff);
   }
@@ -275,13 +290,29 @@ async function createUsers() {
     mockData.users.push(user);
     
     const learner = await Learner.create({
-      user: user._id,
-      firstName: data.firstName,
-      lastName: data.lastName,
-      email: data.email,
-      studentId: data.studentId,
-      status: 'active',
-      enrollmentDate: new Date(2025, 0, 1)
+      _id: user._id,
+      person: {
+        firstName: data.firstName,
+        lastName: data.lastName,
+        emails: [{
+          email: data.email,
+          type: 'institutional',
+          isPrimary: true,
+          verified: true,
+          allowNotifications: true
+        }],
+        phones: [],
+        addresses: [],
+        timezone: 'America/New_York',
+        languagePreference: 'en'
+      },
+      personExtended: {
+        studentId: data.studentId,
+        emergencyContacts: [],
+        identifications: []
+      },
+      departmentMemberships: [],
+      isActive: true
     });
     mockData.learners.push(learner);
   }

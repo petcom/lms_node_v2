@@ -9,6 +9,7 @@ import { hashPassword, comparePassword } from '@/utils/password';
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '@/utils/jwt';
 import { ApiError } from '@/utils/ApiError';
 import { Cache } from '@/config/redis';
+import { toUserTypeObjects, UserTypeObject } from '@/utils/user-type.utils';
 
 interface RegisterStaffInput {
   email: string;
@@ -75,7 +76,7 @@ interface LoginResponseV2 {
     expiresIn: number;
     tokenType: 'Bearer' | 'DPoP';
   };
-  userTypes: string[];
+  userTypes: UserTypeObject[];
   defaultDashboard: 'learner' | 'staff';
   canEscalateToAdmin: boolean;
   departmentMemberships: DepartmentMembershipResponse[];
@@ -111,9 +112,27 @@ export class AuthService {
       // Create Staff with same _id
       const staff = await Staff.create({
         _id: userId,
-        firstName: input.firstName,
-        lastName: input.lastName,
-        phoneNumber: input.phoneNumber,
+        person: {
+          firstName: input.firstName,
+          lastName: input.lastName,
+          emails: [{
+            email: input.email,
+            type: 'institutional',
+            isPrimary: true,
+            verified: true,
+            allowNotifications: true
+          }],
+          phones: input.phoneNumber ? [{
+            number: input.phoneNumber,
+            type: 'mobile',
+            isPrimary: true,
+            verified: false,
+            allowNotifications: true
+          }] : [],
+          addresses: [],
+          timezone: 'America/New_York',
+          languagePreference: 'en'
+        },
         title: input.title,
         departmentMemberships: []
       });
@@ -178,10 +197,28 @@ export class AuthService {
       // Create Learner with same _id
       const learner = await Learner.create({
         _id: userId,
-        firstName: input.firstName,
-        lastName: input.lastName,
-        dateOfBirth: input.dateOfBirth,
-        phoneNumber: input.phoneNumber
+        person: {
+          firstName: input.firstName,
+          lastName: input.lastName,
+          emails: [{
+            email: input.email,
+            type: 'institutional',
+            isPrimary: true,
+            verified: true,
+            allowNotifications: true
+          }],
+          phones: input.phoneNumber ? [{
+            number: input.phoneNumber,
+            type: 'mobile',
+            isPrimary: true,
+            verified: false,
+            allowNotifications: true
+          }] : [],
+          addresses: [],
+          timezone: 'America/New_York',
+          languagePreference: 'en',
+          dateOfBirth: input.dateOfBirth
+        }
       });
 
       // Generate tokens
@@ -364,11 +401,11 @@ export class AuthService {
     let lastName = 'User';
 
     if (staff) {
-      firstName = staff.firstName;
-      lastName = staff.lastName;
+      firstName = staff.person.firstName;
+      lastName = staff.person.lastName;
     } else if (learner) {
-      firstName = learner.firstName;
-      lastName = learner.lastName;
+      firstName = learner.person.firstName;
+      lastName = learner.person.lastName;
     }
 
     // Build V2 response
@@ -388,7 +425,7 @@ export class AuthService {
         expiresIn: 3600, // 1 hour in seconds
         tokenType: 'Bearer'
       },
-      userTypes: user.userTypes,
+      userTypes: toUserTypeObjects(user.userTypes),
       defaultDashboard: user.defaultDashboard,
       canEscalateToAdmin,
       departmentMemberships,
@@ -572,11 +609,11 @@ export class AuthService {
     let lastName = 'User';
 
     if (staff) {
-      firstName = staff.firstName;
-      lastName = staff.lastName;
+      firstName = staff.person.firstName;
+      lastName = staff.person.lastName;
     } else if (learner) {
-      firstName = learner.firstName;
-      lastName = learner.lastName;
+      firstName = learner.person.firstName;
+      lastName = learner.person.lastName;
     }
 
     // Build V2 response
@@ -590,7 +627,7 @@ export class AuthService {
         lastLogin: null, // TODO: Track last login timestamp
         createdAt: user.createdAt.toISOString()
       },
-      userTypes: user.userTypes,
+      userTypes: toUserTypeObjects(user.userTypes),
       defaultDashboard: user.defaultDashboard,
       canEscalateToAdmin,
       departmentMemberships,

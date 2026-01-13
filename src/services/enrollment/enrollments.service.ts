@@ -780,8 +780,8 @@ export class EnrollmentsService {
           id: enrollment._id.toString(),
           learner: {
             id: user._id.toString(),
-            firstName: learner.firstName,
-            lastName: learner.lastName,
+            firstName: learner.person.firstName,
+            lastName: learner.person.lastName,
             email: user.email
           },
           status: this.mapModelStatusToContractStatus(enrollment.status),
@@ -877,8 +877,8 @@ export class EnrollmentsService {
           id: enrollment._id.toString(),
           learner: {
             id: user._id.toString(),
-            firstName: learner.firstName,
-            lastName: learner.lastName,
+            firstName: learner.person.firstName,
+            lastName: learner.person.lastName,
             email: user.email
           },
           status: this.mapModelStatusToContractStatus(enrollment.status),
@@ -946,9 +946,9 @@ export class EnrollmentsService {
       query.status = this.mapStatusToClassStatus(filters.status);
     }
 
-    const sortField = filters.sort || 'learner.lastName';
+    const sortField = filters.sort || 'learner.person.lastName';
     const sortOrder = sortField.startsWith('-') ? -1 : 1;
-    const sortKey = sortField.replace(/^-/, '').replace('learner.lastName', 'learnerId');
+    const sortKey = sortField.replace(/^-/, '').replace('learner.person.lastName', 'learnerId');
     const sort: any = { [sortKey]: sortOrder };
 
     const [enrollments, total] = await Promise.all([
@@ -979,8 +979,8 @@ export class EnrollmentsService {
           id: enrollment._id.toString(),
           learner: {
             id: user._id.toString(),
-            firstName: learner.firstName,
-            lastName: learner.lastName,
+            firstName: learner.person.firstName,
+            lastName: learner.person.lastName,
             email: user.email
           },
           status: this.mapModelStatusToContractStatus(enrollment.status),
@@ -1056,8 +1056,8 @@ export class EnrollmentsService {
           type: 'program',
           learner: {
             id: user._id.toString(),
-            firstName: learner.firstName,
-            lastName: learner.lastName,
+            firstName: learner.person.firstName,
+            lastName: learner.person.lastName,
             email: user.email
           },
           target: {
@@ -1105,8 +1105,8 @@ export class EnrollmentsService {
           type: 'class',
           learner: {
             id: user._id.toString(),
-            firstName: learner.firstName,
-            lastName: learner.lastName,
+            firstName: learner.person.firstName,
+            lastName: learner.person.lastName,
             email: user.email
           },
           target: {

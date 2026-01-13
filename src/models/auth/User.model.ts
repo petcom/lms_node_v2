@@ -82,8 +82,7 @@ userSchema.methods.canEscalateToAdmin = function(): boolean {
   return this.userTypes.includes('global-admin');
 };
 
-// Indexes
-userSchema.index({ email: 1 });
+// Indexes (email index created by unique: true)
 userSchema.index({ userTypes: 1 });
 userSchema.index({ isActive: 1 });
 userSchema.index({ lastSelectedDepartment: 1 });

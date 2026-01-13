@@ -235,8 +235,8 @@ export class LearnersService {
       learners.push({
         id: user._id.toString(),
         email: user.email,
-        firstName: learner.firstName,
-        lastName: learner.lastName,
+        firstName: learner.person.firstName,
+        lastName: learner.person.lastName,
         studentId: null, // Will be stored in metadata or custom field
         status: learnerStatus,
         department: departmentInfo,
@@ -342,8 +342,8 @@ export class LearnersService {
         learner: {
           id: user._id.toString(),
           email: user.email,
-          firstName: learner.firstName,
-          lastName: learner.lastName,
+          firstName: learner.person.firstName,
+          lastName: learner.person.lastName,
           studentId: input.studentId || null,
           role: 'learner',
           status: 'active',
@@ -497,8 +497,8 @@ export class LearnersService {
     const learnerData = {
       id: user._id.toString(),
       email: user.email,
-      firstName: learner.firstName,
-      lastName: learner.lastName,
+      firstName: learner.person.firstName,
+      lastName: learner.person.lastName,
       studentId: null, // Would be in metadata
       role: 'learner',
       status: learnerStatus,
@@ -588,10 +588,10 @@ export class LearnersService {
 
     // Update Learner fields
     if (updateData.firstName) {
-      learner.firstName = updateData.firstName;
+      learner.person.firstName = updateData.firstName;
     }
     if (updateData.lastName) {
-      learner.lastName = updateData.lastName;
+      learner.person.lastName = updateData.lastName;
     }
     if (updateData.phone !== undefined) {
       learner.phoneNumber = updateData.phone;
@@ -637,8 +637,8 @@ export class LearnersService {
       learner: {
         id: user._id.toString(),
         email: user.email,
-        firstName: learner.firstName,
-        lastName: learner.lastName,
+        firstName: learner.person.firstName,
+        lastName: learner.person.lastName,
         studentId: updateData.studentId || null,
         role: 'learner',
         status: user.isActive ? 'active' : 'suspended',

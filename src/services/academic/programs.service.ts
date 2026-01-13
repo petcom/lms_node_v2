@@ -688,8 +688,8 @@ export class ProgramsService {
           id: enrollment._id.toString(),
           learner: {
             id: user._id.toString(),
-            firstName: learner.firstName,
-            lastName: learner.lastName,
+            firstName: learner.person.firstName,
+            lastName: learner.person.lastName,
             email: user.email,
             studentId: user._id.toString()
           },

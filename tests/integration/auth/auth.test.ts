@@ -45,7 +45,7 @@ describe('Auth Integration Tests', () => {
       expect(response.body.data).toHaveProperty('accessToken');
       expect(response.body.data).toHaveProperty('refreshToken');
       expect(response.body.data.user.email).toBe(staffData.email);
-      expect(response.body.data.staff.firstName).toBe(staffData.firstName);
+      expect(response.body.data.staff.person.firstName).toBe(staffData.firstName);
     });
 
     it('should return 400 for duplicate email', async () => {
@@ -133,7 +133,7 @@ describe('Auth Integration Tests', () => {
       expect(response.body.data).toHaveProperty('accessToken');
       expect(response.body.data).toHaveProperty('refreshToken');
       expect(response.body.data.user.email).toBe(learnerData.email);
-      expect(response.body.data.learner.firstName).toBe(learnerData.firstName);
+      expect(response.body.data.learner.person.firstName).toBe(learnerData.firstName);
     });
 
     it('should automatically assign learner role', async () => {
@@ -150,7 +150,7 @@ describe('Auth Integration Tests', () => {
         .send(learnerData)
         .expect(201);
 
-      expect(response.body.data.user.roles).toContain('learner');
+      expect(response.body.data.user.userTypes).toContain('learner');
     });
   });
 
@@ -179,8 +179,9 @@ describe('Auth Integration Tests', () => {
 
       expect(response.body.status).toBe('success');
       expect(response.body.data).toHaveProperty('user');
-      expect(response.body.data).toHaveProperty('accessToken');
-      expect(response.body.data).toHaveProperty('refreshToken');
+      expect(response.body.data).toHaveProperty('session');
+      expect(response.body.data.session).toHaveProperty('accessToken');
+      expect(response.body.data.session).toHaveProperty('refreshToken');
       expect(response.body.data.user.email).toBe('login@example.com');
     });
 
@@ -326,8 +327,8 @@ describe('Auth Integration Tests', () => {
           roles: ['instructor']
         });
 
-      accessToken = response.body.data.accessToken;
-      userId = response.body.data.user._id;
+      accessToken = response.body.data.accessToken || response.body.data.session?.accessToken;
+      userId = response.body.data.user._id || response.body.data.user.id;
     });
 
     it('should get current user profile', async () => {
@@ -338,7 +339,7 @@ describe('Auth Integration Tests', () => {
 
       expect(response.body.status).toBe('success');
       expect(response.body.data.user.email).toBe('me@example.com');
-      expect(response.body.data.user._id).toBe(userId);
+      expect(response.body.data.user._id || response.body.data.user.id).toBe(userId);
     });
 
     it('should return 401 without authentication', async () => {

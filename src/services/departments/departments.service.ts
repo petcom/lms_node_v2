@@ -652,9 +652,9 @@ export class DepartmentsService {
       return {
         id: staff._id.toString(),
         email: '', // Would need to join with User model
-        firstName: staff.firstName,
-        lastName: staff.lastName,
-        fullName: `${staff.firstName} ${staff.lastName}`,
+        firstName: staff.person.firstName,
+        lastName: staff.person.lastName,
+        fullName: `${staff.person.firstName} ${staff.person.lastName}`,
         departmentRole,
         status: staff.isActive ? 'active' : 'inactive',
         assignedCourses: 0, // Placeholder - would need to query Class model

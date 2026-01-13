@@ -1,6 +1,8 @@
 import mongoose, { Schema, Document } from 'mongoose';
 import { RoleRegistry } from '@/services/role-registry.service';
-import { validateDepartmentMembershipsArray } from '@/validators/department-membership.validator';
+import { IPerson, PersonSchema } from './Person.types';
+import { IStaffPersonExtended, StaffPersonExtendedSchema } from './PersonExtended.types';
+import { IDemographics, DemographicsSchema } from './Demographics.types';
 
 export interface IDepartmentMembership {
   departmentId: mongoose.Types.ObjectId;
@@ -10,13 +12,27 @@ export interface IDepartmentMembership {
   isActive: boolean;
 }
 
+/**
+ * Staff Model Interface
+ *
+ * ⚠️ BREAKING CHANGES (v2.0.0):
+ * - person field is now REQUIRED (was optional)
+ * - firstName, lastName, phoneNumber REMOVED (use person.firstName, person.lastName, person.phones)
+ * - Added personExtended (IStaffPersonExtended) for staff-specific data
+ * - Added demographics (IDemographics) for compliance/reporting
+ */
 export interface IStaff extends Document {
   _id: mongoose.Types.ObjectId; // Shared with User
-  firstName: string;
-  lastName: string;
-  phoneNumber?: string;
-  title?: string;
+
+  // Three-layer person architecture
+  person: IPerson;                           // REQUIRED: Basic person data (contact, identity)
+  personExtended?: IStaffPersonExtended;     // OPTIONAL: Staff-specific data (credentials, publications, office hours)
+  demographics?: IDemographics;              // OPTIONAL: Compliance/reporting data
+
+  // Staff-specific fields (not personal data)
+  title?: string;                            // Job title (e.g., "Instructor", "Professor")
   departmentMemberships: IDepartmentMembership[];
+
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -49,7 +65,7 @@ const departmentMembershipSchema = new Schema<IDepartmentMembership>(
           }
           return roles.every(role => registry.isValidRoleForUserType('staff', role));
         },
-        message: function(props: any) {
+        message: function() {
           const registry = RoleRegistry.getInstance();
           if (!registry.isInitialized()) {
             return 'Invalid staff role (registry not initialized)';
@@ -81,20 +97,20 @@ const staffSchema = new Schema<IStaff>(
       type: Schema.Types.ObjectId,
       required: true
     },
-    firstName: {
-      type: String,
-      required: true,
-      trim: true
+    // Three-layer person architecture
+    person: {
+      type: PersonSchema,
+      required: true  // ⚠️ BREAKING CHANGE: Now required (was optional)
     },
-    lastName: {
-      type: String,
-      required: true,
-      trim: true
+    personExtended: {
+      type: StaffPersonExtendedSchema,
+      required: false
     },
-    phoneNumber: {
-      type: String,
-      trim: true
+    demographics: {
+      type: DemographicsSchema,
+      required: false
     },
+    // Staff-specific fields (not personal data)
     title: {
       type: String,
       trim: true
@@ -113,8 +129,7 @@ const staffSchema = new Schema<IStaff>(
   }
 );
 
-// Indexes
-staffSchema.index({ _id: 1 });
+// Indexes (_id index created automatically by MongoDB)
 staffSchema.index({ 'departmentMemberships.departmentId': 1 });
 staffSchema.index({ 'departmentMemberships.roles': 1 });
 staffSchema.index({ isActive: 1 });

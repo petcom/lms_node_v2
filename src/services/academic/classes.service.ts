@@ -158,8 +158,8 @@ export class ClassesService {
 
         const instructorsWithRoles = instructorDetails.map((staff: any) => ({
           id: staff._id.toString(),
-          firstName: staff.firstName,
-          lastName: staff.lastName,
+          firstName: staff.person.firstName,
+          lastName: staff.person.lastName,
           email: '', // Would need to join with User model
           role: 'primary' // Default, would need to store this info
         }));
@@ -348,8 +348,8 @@ export class ClassesService {
 
         return {
           id: staff._id.toString(),
-          firstName: staff.firstName,
-          lastName: staff.lastName,
+          firstName: staff.person.firstName,
+          lastName: staff.person.lastName,
           email: user ? user.email : '',
           role: inst.role
         };
@@ -443,8 +443,8 @@ export class ClassesService {
         const user = await User.findById(staff._id);
         return {
           id: staff._id.toString(),
-          firstName: staff.firstName,
-          lastName: staff.lastName,
+          firstName: staff.person.firstName,
+          lastName: staff.person.lastName,
           email: user ? user.email : '',
           role: 'primary', // Default, would need to store this
           profileImage: null
@@ -651,8 +651,8 @@ export class ClassesService {
           id: enrollment._id.toString(),
           learner: {
             id: learner._id.toString(),
-            firstName: learner.firstName || '',
-            lastName: learner.lastName || '',
+            firstName: learner.person.firstName || '',
+            lastName: learner.person.lastName || '',
             email: user ? user.email : '',
             studentId: learner._id.toString()
           },
