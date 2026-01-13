@@ -50,6 +50,129 @@ Any additional context
 
 <!-- Add new issues here in priority order -->
 
+### ISS-007: Consolidate Sidebar Navigation - Remove Duplicate Dashboards
+
+**Priority:** high
+**Type:** bug
+**Status:** pending
+**Assigned:** UI Agent
+**Dependencies:** None
+
+**Description:**
+The sidebar currently shows three different "Dashboard" entries (one for each userType: learner, staff, admin). This creates confusion and clutters the navigation. The sidebar should have a common base set of navigation links that appear for all users, regardless of their userType, followed by the "My Departments" section.
+
+**Current Behavior:**
+- Multiple "Dashboard" links appear (e.g., "Learner Dashboard", "Staff Dashboard", "Admin Dashboard")
+- Navigation items are scattered and context-dependent
+- Users see different navigation structures on different dashboards
+
+**Expected Behavior:**
+All users should see a common base navigation section at the top with these links:
+1. **Dashboard** - Takes user to their primary dashboard based on primaryUserType
+2. **My Profile** - Universal profile page at `/profile`
+3. **My Progress** - Learner-specific, grayed out if user doesn't have learner userType
+4. **Certificates** - Learner-specific certificate view
+
+Below the base navigation, show:
+5. **My Departments** section (collapsible) - Shows available departments with department-specific actions
+
+**Navigation Structure:**
+```
+┌─────────────────────────────┐
+│ NAVIGATION (always visible) │
+├─────────────────────────────┤
+│ 📊 Dashboard                │ ← Primary dashboard
+│ 👤 My Profile               │ ← /profile
+│ 📈 My Progress              │ ← /learner/progress (grayed if no learner userType)
+│ 🎓 Certificates             │ ← /learner/certificates (grayed if no learner userType)
+├─────────────────────────────┤
+│ MY DEPARTMENTS              │
+│   📁 Computer Science       │
+│      → Department Dashboard │
+│      → Manage Staff         │
+│      → Manage Courses       │
+├─────────────────────────────┤
+│ ⚙️ Settings                 │
+└─────────────────────────────┘
+```
+
+**Dashboard Link Behavior:**
+- Clicking "Dashboard" should navigate to the user's primary dashboard:
+  - If `primaryUserType === 'learner'` → `/learner/dashboard`
+  - If `primaryUserType === 'staff'` → `/staff/dashboard`
+  - If `primaryUserType === 'admin'` → `/admin/dashboard`
+- No separate dashboard links per userType
+
+**Acceptance Criteria:**
+
+**Base Navigation:**
+- [ ] Only ONE "Dashboard" link appears at top of sidebar
+- [ ] "Dashboard" link navigates to primary dashboard based on primaryUserType
+- [ ] "My Profile" link goes to `/profile` (universal)
+- [ ] "My Progress" link visible to all users
+  - [ ] Active/clickable if user has learner userType
+  - [ ] Grayed out/disabled if user doesn't have learner userType
+- [ ] "Certificates" link visible to all users
+  - [ ] Active/clickable if user has learner userType
+  - [ ] Grayed out/disabled if user doesn't have learner userType
+- [ ] Base navigation section is ALWAYS visible regardless of which dashboard user is on
+
+**Department Section:**
+- [ ] "My Departments" section appears below base navigation
+- [ ] Department section only shows if user has departments
+- [ ] Selecting a department shows department-specific actions
+- [ ] Department actions are context-appropriate (staff actions for staff, learner actions for learner)
+
+**Visual Consistency:**
+- [ ] Base navigation uses same styling across all dashboards
+- [ ] Disabled links are visually distinct (grayed out, lower opacity)
+- [ ] Active link is clearly highlighted
+- [ ] Smooth transitions between sections
+
+**Testing Requirements:**
+- [ ] Test as learner-only user (should see all base links active)
+- [ ] Test as staff-only user (Progress/Certificates should be disabled)
+- [ ] Test as multi-userType user (learner+staff) (all links active)
+- [ ] Test as system-admin (verify appropriate access)
+- [ ] Test Dashboard link from each dashboard (verify correct navigation)
+- [ ] Verify no duplicate links appear
+- [ ] Verify navigation consistency across all dashboards
+
+**Related Files:**
+- `src/widgets/sidebar/Sidebar.tsx` - Main sidebar component with filtering logic
+- `src/widgets/sidebar/config/navItems.ts` - Navigation items configuration
+- `src/widgets/sidebar/ui/NavLink.tsx` - NavLink component (supports disabled state)
+
+**Implementation Notes:**
+1. Create a `BASE_NAV_ITEMS` array that's always visible:
+   ```typescript
+   const BASE_NAV_ITEMS = [
+     { label: 'Dashboard', path: getDashboardPath(primaryUserType), icon: Home },
+     { label: 'My Profile', path: '/profile', icon: User },
+     { label: 'My Progress', path: '/learner/progress', icon: TrendingUp,
+       userTypes: ['learner'], showDisabled: true },
+     { label: 'Certificates', path: '/learner/certificates', icon: Award,
+       userTypes: ['learner'], showDisabled: true },
+   ];
+   ```
+
+2. Update filtering logic:
+   - Base items always render
+   - Check userType to determine if link should be disabled
+   - Use `disabled` prop on NavLink for items user can't access
+
+3. Remove userType-specific dashboard links from GLOBAL_NAV_ITEMS
+
+4. Keep department-specific actions in separate section
+
+**Notes:**
+- This affects the core navigation UX across the entire application
+- Should improve clarity and reduce confusion for multi-userType users
+- ISS-003 already implemented the disabled link functionality for cross-userType navigation
+- This issue consolidates that work into a cleaner base navigation structure
+
+---
+
 ### ISS-005: Department Dropdown Causes Infinite Loading Loop
 
 **Priority:** high
