@@ -230,8 +230,8 @@ export class AuthController {
         departmentName: child.name,
         roles: child.roles
       })) || [],
-      isDirectMember: true, // Simplified - service validates membership
-      inheritedFrom: null // Could be enhanced to track parent membership
+      isDirectMember: result.isDirectMember !== undefined ? result.isDirectMember : true,
+      inheritedFrom: result.inheritedFrom || null
     };
 
     res.status(200).json(ApiResponse.success(response, 'Department switched successfully'));

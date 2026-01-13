@@ -15,26 +15,27 @@ import { IRoleRegistry } from '@/services/role-registry.interface';
 
 describe('RoleRegistry Service', () => {
   // Mock lookup data matching the contract specification
+  // Note: category uses lowercase to match LookupValue model's lowercase: true setting
   const mockLookupValues = [
     // UserTypes
-    { lookupId: 'userType.learner', category: 'userType', key: 'learner', parentLookupId: null, displayAs: 'Learner', isActive: true, sortOrder: 1 },
-    { lookupId: 'userType.staff', category: 'userType', key: 'staff', parentLookupId: null, displayAs: 'Staff', isActive: true, sortOrder: 2 },
-    { lookupId: 'userType.global-admin', category: 'userType', key: 'global-admin', parentLookupId: null, displayAs: 'System Admin', isActive: true, sortOrder: 3 },
+    { lookupId: 'usertype.learner', category: 'usertype', key: 'learner', parentLookupId: null, displayAs: 'Learner', isActive: true, sortOrder: 1 },
+    { lookupId: 'usertype.staff', category: 'usertype', key: 'staff', parentLookupId: null, displayAs: 'Staff', isActive: true, sortOrder: 2 },
+    { lookupId: 'usertype.global-admin', category: 'usertype', key: 'global-admin', parentLookupId: null, displayAs: 'System Admin', isActive: true, sortOrder: 3 },
     // Staff Roles
-    { lookupId: 'role.instructor', category: 'role', key: 'instructor', parentLookupId: 'userType.staff', displayAs: 'Instructor', isActive: true, sortOrder: 1 },
-    { lookupId: 'role.department-admin', category: 'role', key: 'department-admin', parentLookupId: 'userType.staff', displayAs: 'Department Admin', isActive: true, sortOrder: 2 },
-    { lookupId: 'role.content-admin', category: 'role', key: 'content-admin', parentLookupId: 'userType.staff', displayAs: 'Content Admin', isActive: true, sortOrder: 3 },
-    { lookupId: 'role.billing-admin', category: 'role', key: 'billing-admin', parentLookupId: 'userType.staff', displayAs: 'Billing Admin', isActive: true, sortOrder: 4 },
+    { lookupId: 'role.instructor', category: 'role', key: 'instructor', parentLookupId: 'usertype.staff', displayAs: 'Instructor', isActive: true, sortOrder: 1 },
+    { lookupId: 'role.department-admin', category: 'role', key: 'department-admin', parentLookupId: 'usertype.staff', displayAs: 'Department Admin', isActive: true, sortOrder: 2 },
+    { lookupId: 'role.content-admin', category: 'role', key: 'content-admin', parentLookupId: 'usertype.staff', displayAs: 'Content Admin', isActive: true, sortOrder: 3 },
+    { lookupId: 'role.billing-admin', category: 'role', key: 'billing-admin', parentLookupId: 'usertype.staff', displayAs: 'Billing Admin', isActive: true, sortOrder: 4 },
     // Learner Roles
-    { lookupId: 'role.course-taker', category: 'role', key: 'course-taker', parentLookupId: 'userType.learner', displayAs: 'Course Taker', isActive: true, sortOrder: 1 },
-    { lookupId: 'role.auditor', category: 'role', key: 'auditor', parentLookupId: 'userType.learner', displayAs: 'Auditor', isActive: true, sortOrder: 2 },
-    { lookupId: 'role.learner-supervisor', category: 'role', key: 'learner-supervisor', parentLookupId: 'userType.learner', displayAs: 'Learner Supervisor', isActive: true, sortOrder: 3 },
+    { lookupId: 'role.course-taker', category: 'role', key: 'course-taker', parentLookupId: 'usertype.learner', displayAs: 'Course Taker', isActive: true, sortOrder: 1 },
+    { lookupId: 'role.auditor', category: 'role', key: 'auditor', parentLookupId: 'usertype.learner', displayAs: 'Auditor', isActive: true, sortOrder: 2 },
+    { lookupId: 'role.learner-supervisor', category: 'role', key: 'learner-supervisor', parentLookupId: 'usertype.learner', displayAs: 'Learner Supervisor', isActive: true, sortOrder: 3 },
     // GlobalAdmin Roles
-    { lookupId: 'role.system-admin', category: 'role', key: 'system-admin', parentLookupId: 'userType.global-admin', displayAs: 'System Admin', isActive: true, sortOrder: 1 },
-    { lookupId: 'role.enrollment-admin', category: 'role', key: 'enrollment-admin', parentLookupId: 'userType.global-admin', displayAs: 'Enrollment Admin', isActive: true, sortOrder: 2 },
-    { lookupId: 'role.course-admin', category: 'role', key: 'course-admin', parentLookupId: 'userType.global-admin', displayAs: 'Course Admin', isActive: true, sortOrder: 3 },
-    { lookupId: 'role.theme-admin', category: 'role', key: 'theme-admin', parentLookupId: 'userType.global-admin', displayAs: 'Theme Admin', isActive: true, sortOrder: 4 },
-    { lookupId: 'role.financial-admin', category: 'role', key: 'financial-admin', parentLookupId: 'userType.global-admin', displayAs: 'Financial Admin', isActive: true, sortOrder: 5 },
+    { lookupId: 'role.system-admin', category: 'role', key: 'system-admin', parentLookupId: 'usertype.global-admin', displayAs: 'System Admin', isActive: true, sortOrder: 1 },
+    { lookupId: 'role.enrollment-admin', category: 'role', key: 'enrollment-admin', parentLookupId: 'usertype.global-admin', displayAs: 'Enrollment Admin', isActive: true, sortOrder: 2 },
+    { lookupId: 'role.course-admin', category: 'role', key: 'course-admin', parentLookupId: 'usertype.global-admin', displayAs: 'Course Admin', isActive: true, sortOrder: 3 },
+    { lookupId: 'role.theme-admin', category: 'role', key: 'theme-admin', parentLookupId: 'usertype.global-admin', displayAs: 'Theme Admin', isActive: true, sortOrder: 4 },
+    { lookupId: 'role.financial-admin', category: 'role', key: 'financial-admin', parentLookupId: 'usertype.global-admin', displayAs: 'Financial Admin', isActive: true, sortOrder: 5 },
   ];
 
   let registry: IRoleRegistry;
@@ -84,7 +85,7 @@ describe('RoleRegistry Service', () => {
     it('should skip inactive lookup values', async () => {
       const dataWithInactive = [
         ...mockLookupValues,
-        { lookupId: 'userType.inactive', category: 'userType', key: 'inactive', parentLookupId: null, displayAs: 'Inactive', isActive: false, sortOrder: 99 }
+        { lookupId: 'usertype.inactive', category: 'usertype', key: 'inactive', parentLookupId: null, displayAs: 'Inactive', isActive: false, sortOrder: 99 }
       ];
 
       (registry as any).setDataLoader(async () => dataWithInactive);
@@ -239,8 +240,8 @@ describe('RoleRegistry Service', () => {
     });
 
     it('should return display label for userType lookupId', () => {
-      expect(registry.getDisplayAs('userType.staff')).toBe('Staff');
-      expect(registry.getDisplayAs('userType.learner')).toBe('Learner');
+      expect(registry.getDisplayAs('usertype.staff')).toBe('Staff');
+      expect(registry.getDisplayAs('usertype.learner')).toBe('Learner');
     });
 
     it('should return display label for role lookupId', () => {
@@ -255,7 +256,7 @@ describe('RoleRegistry Service', () => {
     it('should return lookupId if not initialized', () => {
       RoleRegistry.resetInstance();
       const newRegistry = RoleRegistry.getInstance();
-      expect(newRegistry.getDisplayAs('userType.staff')).toBe('userType.staff');
+      expect(newRegistry.getDisplayAs('usertype.staff')).toBe('usertype.staff');
     });
   });
 
@@ -365,7 +366,7 @@ describe('RoleRegistry Service', () => {
 
       // Mock updated data
       const updatedData = [
-        { lookupId: 'userType.new-type', category: 'userType', key: 'new-type', parentLookupId: null, displayAs: 'New Type', isActive: true, sortOrder: 4 }
+        { lookupId: 'usertype.new-type', category: 'usertype', key: 'new-type', parentLookupId: null, displayAs: 'New Type', isActive: true, sortOrder: 4 }
       ];
 
       (registry as any).setDataLoader(async () => updatedData);
@@ -390,7 +391,7 @@ describe('RoleRegistry Service', () => {
     it('should handle roles with no parent lookup gracefully', async () => {
       const dataWithOrphanRole = [
         ...mockLookupValues,
-        { lookupId: 'role.orphan', category: 'role', key: 'orphan', parentLookupId: 'userType.nonexistent', displayAs: 'Orphan', isActive: true, sortOrder: 99 }
+        { lookupId: 'role.orphan', category: 'role', key: 'orphan', parentLookupId: 'usertype.nonexistent', displayAs: 'Orphan', isActive: true, sortOrder: 99 }
       ];
 
       (registry as any).setDataLoader(async () => dataWithOrphanRole);
@@ -403,9 +404,9 @@ describe('RoleRegistry Service', () => {
 
     it('should handle duplicate sortOrder by maintaining insertion order', async () => {
       const dataWithDuplicateSortOrder = [
-        { lookupId: 'userType.staff', category: 'userType', key: 'staff', parentLookupId: null, displayAs: 'Staff', isActive: true, sortOrder: 1 },
-        { lookupId: 'role.first', category: 'role', key: 'first', parentLookupId: 'userType.staff', displayAs: 'First', isActive: true, sortOrder: 1 },
-        { lookupId: 'role.second', category: 'role', key: 'second', parentLookupId: 'userType.staff', displayAs: 'Second', isActive: true, sortOrder: 1 },
+        { lookupId: 'usertype.staff', category: 'usertype', key: 'staff', parentLookupId: null, displayAs: 'Staff', isActive: true, sortOrder: 1 },
+        { lookupId: 'role.first', category: 'role', key: 'first', parentLookupId: 'usertype.staff', displayAs: 'First', isActive: true, sortOrder: 1 },
+        { lookupId: 'role.second', category: 'role', key: 'second', parentLookupId: 'usertype.staff', displayAs: 'Second', isActive: true, sortOrder: 1 },
       ];
 
       (registry as any).setDataLoader(async () => dataWithDuplicateSortOrder);

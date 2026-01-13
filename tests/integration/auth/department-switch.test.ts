@@ -19,7 +19,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import app from '@/app';
 import { User } from '@/models/auth/User.model';
-import Staff from '@/models/auth/Staff.model';
+import { Staff } from '@/models/auth/Staff.model';
 import Department from '@/models/organization/Department.model';
 import { RoleDefinition } from '@/models/RoleDefinition.model';
 import { AccessRight } from '@/models/AccessRight.model';
@@ -124,15 +124,15 @@ describe('Department Switch Integration Tests', () => {
 
     // Seed access rights
     await AccessRight.create([
-      { name: 'content:courses:read', domain: 'content', description: 'Read courses' },
-      { name: 'content:courses:manage', domain: 'content', description: 'Manage courses' },
-      { name: 'content:lessons:read', domain: 'content', description: 'Read lessons' },
-      { name: 'content:lessons:manage', domain: 'content', description: 'Manage lessons' },
-      { name: 'content:materials:manage', domain: 'content', description: 'Manage materials' },
-      { name: 'grades:own-classes:manage', domain: 'grades', description: 'Manage grades' },
-      { name: 'staff:department:manage', domain: 'staff', description: 'Manage department' },
-      { name: 'reports:department:read', domain: 'reports', description: 'Read reports' },
-      { name: 'staff:members:manage', domain: 'staff', description: 'Manage members' }
+      { name: 'content:courses:read', domain: 'content', resource: 'courses', action: 'read', description: 'Read courses' },
+      { name: 'content:courses:manage', domain: 'content', resource: 'courses', action: 'manage', description: 'Manage courses' },
+      { name: 'content:lessons:read', domain: 'content', resource: 'lessons', action: 'read', description: 'Read lessons' },
+      { name: 'content:lessons:manage', domain: 'content', resource: 'lessons', action: 'manage', description: 'Manage lessons' },
+      { name: 'content:materials:manage', domain: 'content', resource: 'materials', action: 'manage', description: 'Manage materials' },
+      { name: 'grades:own-classes:manage', domain: 'grades', resource: 'own-classes', action: 'manage', description: 'Manage grades' },
+      { name: 'staff:department:manage', domain: 'staff', resource: 'department', action: 'manage', description: 'Manage department' },
+      { name: 'reports:department:read', domain: 'reports', resource: 'department', action: 'read', description: 'Read reports' },
+      { name: 'staff:members:manage', domain: 'staff', resource: 'members', action: 'manage', description: 'Manage members' }
     ]);
   });
 
@@ -152,28 +152,48 @@ describe('Department Switch Integration Tests', () => {
     });
 
     await Staff.create({
-      userId: staffUser._id,
-      firstName: 'Test',
-      lastName: 'Staff',
+      _id: staffUser._id,
+      person: {
+        firstName: 'Test',
+        lastName: 'Staff',
+        emails: [{
+          email: staffUser.email,
+          type: 'institutional',
+          isPrimary: true,
+          verified: true,
+          allowNotifications: true
+        }],
+        phones: [],
+        addresses: [],
+        timezone: 'America/New_York',
+        languagePreference: 'en'
+      },
       departmentMemberships: [
         {
           departmentId: testDepartment1._id,
           roles: ['instructor', 'content-admin'],
           isPrimary: true,
-          isActive: true
+          isActive: true,
+          joinedAt: new Date()
         },
         {
           departmentId: testDepartment2._id,
           roles: ['instructor'],
           isPrimary: false,
-          isActive: true
+          isActive: true,
+          joinedAt: new Date()
         }
       ]
     });
 
     // Generate access token
     staffAccessToken = jwt.sign(
-      { userId: staffUser._id.toString(), email: staffUser.email },
+      {
+        userId: staffUser._id.toString(),
+        email: staffUser.email,
+        roles: ['staff'],
+        type: 'access'
+      },
       process.env.JWT_ACCESS_SECRET || 'test-secret',
       { expiresIn: '1h' }
     );
@@ -457,7 +477,7 @@ describe('Department Switch Integration Tests', () => {
 
     it('should allow access to restricted department with explicit membership', async () => {
       // Add explicit membership to restricted department
-      const staff = await Staff.findOne({ userId: staffUser._id });
+      const staff = await Staff.findById(staffUser._id);
       staff!.departmentMemberships.push({
         departmentId: restrictedDepartment._id,
         roles: ['department-admin'],
@@ -527,6 +547,247 @@ describe('Department Switch Integration Tests', () => {
     });
   });
 
+  describe('Master Department visibility (ISS-005)', () => {
+    let masterDepartment: any;
+    let systemAdminUser: any;
+    let systemAdminToken: string;
+    let globalAdminUser: any;
+    let globalAdminToken: string;
+    let regularStaffUser: any;
+    let regularStaffToken: string;
+
+    beforeEach(async () => {
+      // Create Master Department with isVisible: false
+      masterDepartment = await Department.create({
+        name: 'Master Department',
+        code: 'MASTER',
+        slug: 'master-department',
+        isActive: true,
+        isVisible: false, // Hidden by default
+        requireExplicitMembership: false
+      });
+
+      // Seed system-admin role
+      await RoleDefinition.create({
+        name: 'system-admin',
+        userType: 'staff',
+        displayName: 'System Administrator',
+        description: 'Full system access',
+        accessRights: ['staff:department:manage', 'reports:department:read'],
+        isActive: true
+      });
+
+      // Create user with system-admin role
+      const hashedPassword = await bcrypt.hash('Password123!', 10);
+      systemAdminUser = await User.create({
+        email: 'sysadmin@example.com',
+        password: hashedPassword,
+        userTypes: ['staff'],
+        isActive: true
+      });
+
+      await Staff.create({
+        _id: systemAdminUser._id,
+        person: {
+          firstName: 'System',
+          lastName: 'Admin',
+          emails: [{
+            email: systemAdminUser.email,
+            type: 'institutional',
+            isPrimary: true,
+            verified: true,
+            allowNotifications: true
+          }],
+          phones: [],
+          addresses: [],
+          timezone: 'America/New_York',
+          languagePreference: 'en'
+        },
+        departmentMemberships: [
+          {
+            departmentId: masterDepartment._id,
+            roles: ['system-admin'],
+            isPrimary: true,
+            isActive: true,
+            joinedAt: new Date()
+          }
+        ]
+      });
+
+      systemAdminToken = jwt.sign(
+        {
+          userId: systemAdminUser._id.toString(),
+          email: systemAdminUser.email,
+          roles: ['staff'],
+          type: 'access'
+        },
+        process.env.JWT_ACCESS_SECRET || 'test-secret',
+        { expiresIn: '1h' }
+      );
+
+      // Create user with global-admin userType
+      globalAdminUser = await User.create({
+        email: 'globaladmin@example.com',
+        password: hashedPassword,
+        userTypes: ['global-admin'],
+        isActive: true
+      });
+
+      await Staff.create({
+        _id: globalAdminUser._id,
+        person: {
+          firstName: 'Global',
+          lastName: 'Admin',
+          emails: [{
+            email: globalAdminUser.email,
+            type: 'institutional',
+            isPrimary: true,
+            verified: true,
+            allowNotifications: true
+          }],
+          phones: [],
+          addresses: [],
+          timezone: 'America/New_York',
+          languagePreference: 'en'
+        },
+        departmentMemberships: [
+          {
+            departmentId: masterDepartment._id,
+            roles: ['system-admin'],
+            isPrimary: true,
+            isActive: true,
+            joinedAt: new Date()
+          }
+        ]
+      });
+
+      globalAdminToken = jwt.sign(
+        {
+          userId: globalAdminUser._id.toString(),
+          email: globalAdminUser.email,
+          roles: ['global-admin'],
+          type: 'access'
+        },
+        process.env.JWT_ACCESS_SECRET || 'test-secret',
+        { expiresIn: '1h' }
+      );
+
+      // Create regular staff user without system-admin role
+      regularStaffUser = await User.create({
+        email: 'regularstaff@example.com',
+        password: hashedPassword,
+        userTypes: ['staff'],
+        isActive: true
+      });
+
+      await Staff.create({
+        _id: regularStaffUser._id,
+        person: {
+          firstName: 'Regular',
+          lastName: 'Staff',
+          emails: [{
+            email: regularStaffUser.email,
+            type: 'institutional',
+            isPrimary: true,
+            verified: true,
+            allowNotifications: true
+          }],
+          phones: [],
+          addresses: [],
+          timezone: 'America/New_York',
+          languagePreference: 'en'
+        },
+        departmentMemberships: [
+          {
+            departmentId: masterDepartment._id,
+            roles: ['instructor'], // Regular role, not system-admin
+            isPrimary: true,
+            isActive: true,
+            joinedAt: new Date()
+          }
+        ]
+      });
+
+      regularStaffToken = jwt.sign(
+        {
+          userId: regularStaffUser._id.toString(),
+          email: regularStaffUser.email,
+          roles: ['staff'],
+          type: 'access'
+        },
+        process.env.JWT_ACCESS_SECRET || 'test-secret',
+        { expiresIn: '1h' }
+      );
+    });
+
+    afterEach(async () => {
+      // Clean up Master Department test data
+      await Department.deleteOne({ code: 'MASTER' });
+      await RoleDefinition.deleteOne({ name: 'system-admin' });
+      await User.deleteMany({
+        email: { $in: ['sysadmin@example.com', 'globaladmin@example.com', 'regularstaff@example.com'] }
+      });
+      await Staff.deleteMany({
+        _id: { $in: [systemAdminUser?._id, globalAdminUser?._id, regularStaffUser?._id] }
+      });
+    });
+
+    it('should allow system-admin role to access Master Department despite isVisible:false', async () => {
+      const response = await request(app)
+        .post('/api/v2/auth/switch-department')
+        .set('Authorization', `Bearer ${systemAdminToken}`)
+        .send({
+          departmentId: masterDepartment._id.toString()
+        })
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.currentDepartment.departmentName).toBe('Master Department');
+      expect(response.body.data.currentDepartment.roles).toContain('system-admin');
+    });
+
+    it('should allow global-admin userType to access Master Department despite isVisible:false', async () => {
+      const response = await request(app)
+        .post('/api/v2/auth/switch-department')
+        .set('Authorization', `Bearer ${globalAdminToken}`)
+        .send({
+          departmentId: masterDepartment._id.toString()
+        })
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.currentDepartment.departmentName).toBe('Master Department');
+    });
+
+    it('should block regular staff from accessing Master Department when isVisible:false', async () => {
+      const response = await request(app)
+        .post('/api/v2/auth/switch-department')
+        .set('Authorization', `Bearer ${regularStaffToken}`)
+        .send({
+          departmentId: masterDepartment._id.toString()
+        })
+        .expect(404);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toContain('not found or is not accessible');
+    });
+
+    it('should allow regular staff to access visible departments normally', async () => {
+      // Regular departments should work for everyone
+      const response = await request(app)
+        .post('/api/v2/auth/switch-department')
+        .set('Authorization', `Bearer ${regularStaffToken}`)
+        .send({
+          departmentId: testDepartment1._id.toString()
+        });
+
+      // This will fail (403) because regularStaffUser isn't a member,
+      // but it shouldn't be a 404 (department exists and is visible)
+      expect(response.status).toBe(403);
+      expect(response.body.message).not.toContain('not found');
+    });
+  });
+
   describe('Edge cases', () => {
     it('should return 401 when not authenticated', async () => {
       const response = await request(app)
@@ -578,14 +839,32 @@ describe('Department Switch Integration Tests', () => {
       });
 
       await Staff.create({
-        userId: noMemberUser._id,
-        firstName: 'No',
-        lastName: 'Member',
+        _id: noMemberUser._id,
+        person: {
+          firstName: 'No',
+          lastName: 'Member',
+          emails: [{
+            email: noMemberUser.email,
+            type: 'institutional',
+            isPrimary: true,
+            verified: true,
+            allowNotifications: true
+          }],
+          phones: [],
+          addresses: [],
+          timezone: 'America/New_York',
+          languagePreference: 'en'
+        },
         departmentMemberships: []
       });
 
       const noMemberToken = jwt.sign(
-        { userId: noMemberUser._id.toString(), email: noMemberUser.email },
+        {
+          userId: noMemberUser._id.toString(),
+          email: noMemberUser.email,
+          roles: ['staff'],
+          type: 'access'
+        },
         process.env.JWT_ACCESS_SECRET || 'test-secret',
         { expiresIn: '1h' }
       );

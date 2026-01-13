@@ -43,6 +43,12 @@ export interface SwitchDepartmentResponse {
   /** Access rights granted by those roles */
   accessRights: string[];
 
+  /** Whether user has direct membership (true) or inherited via cascading (false) */
+  isDirectMember?: boolean;
+
+  /** Parent department ID if membership is inherited via cascading */
+  inheritedFrom?: string;
+
   /** Child departments where roles cascade (optional) */
   childDepartments?: Array<{
     id: string;
@@ -100,31 +106,27 @@ export class DepartmentSwitchService {
         throw ApiError.notFound('User not found');
       }
 
-      // Step 2: Check if user has special privileges for hidden departments
-      const hasSpecialPrivileges = await this.hasSpecialDepartmentPrivileges(
-        userId,
-        user.userTypes
-      );
-
-      // Step 3: Validate department exists and is active
-      // Apply isVisible filter only if user doesn't have special privileges
-      const departmentQuery: any = {
-        _id: deptId,
-        isActive: true
-      };
-
-      if (!hasSpecialPrivileges) {
-        departmentQuery.isVisible = true;
-      }
-
-      const department = await Department.findOne(departmentQuery);
+      // Step 2: Validate department exists
+      const department = await Department.findById(deptId);
 
       if (!department) {
         throw ApiError.notFound('Department not found or is not accessible', 'DEPARTMENT_NOT_FOUND');
       }
 
-      // Step 3: Check department membership and get roles
-      const { roles, userType } = await this.getUserRolesForDepartment(
+      // Step 3: Check if user has special privileges for hidden departments
+      const hasSpecialPrivileges = await this.hasSpecialDepartmentPrivileges(
+        userId,
+        user.userTypes
+      );
+
+      // Step 4: Check if department is visible (unless user has special privileges)
+      // Return 404 to hide existence of non-visible departments from unauthorized users
+      if (!hasSpecialPrivileges && !department.isVisible) {
+        throw ApiError.notFound('Department not found or is not accessible', 'DEPARTMENT_NOT_FOUND');
+      }
+
+      // Step 5: Check department membership and get roles
+      const { roles, userType, isDirectMember, inheritedFrom } = await this.getUserRolesForDepartment(
         userId,
         deptId,
         user.userTypes
@@ -137,10 +139,18 @@ export class DepartmentSwitchService {
         );
       }
 
-      // Step 4: Get access rights for the roles
+      // Step 6: Check if department is active
+      if (!department.isActive) {
+        throw ApiError.forbidden(
+          'Department is not active',
+          'DEPARTMENT_INACTIVE'
+        );
+      }
+
+      // Step 7: Get access rights for the roles
       const accessRights = await this.getAccessRightsForRoles(roles);
 
-      // Step 5: Get child departments if role cascading is enabled
+      // Step 8: Get child departments if role cascading is enabled
       const childDepartments = await this.getChildDepartments(
         userId,
         deptId,
@@ -149,7 +159,7 @@ export class DepartmentSwitchService {
         department.requireExplicitMembership
       );
 
-      // Step 6: Update User.lastSelectedDepartment
+      // Step 9: Update User.lastSelectedDepartment
       await User.findByIdAndUpdate(userId, {
         lastSelectedDepartment: deptId
       });
@@ -160,6 +170,8 @@ export class DepartmentSwitchService {
         departmentName: department.name,
         roles,
         accessRights,
+        ...(isDirectMember !== undefined && { isDirectMember }),
+        ...(inheritedFrom && { inheritedFrom }),
         ...(childDepartments.length > 0 && { childDepartments })
       };
 
@@ -238,12 +250,12 @@ export class DepartmentSwitchService {
     userId: mongoose.Types.ObjectId,
     deptId: mongoose.Types.ObjectId,
     userTypes: UserType[]
-  ): Promise<{ roles: string[]; userType: UserType | null }> {
+  ): Promise<{ roles: string[]; userType: UserType | null; isDirectMember?: boolean; inheritedFrom?: string }> {
     // Try staff roles first if user has staff or global-admin type
     if (userTypes.includes('staff') || userTypes.includes('global-admin')) {
       const staffRoles = await this.getStaffRolesForDepartment(userId, deptId);
       if (staffRoles.length > 0) {
-        return { roles: staffRoles, userType: 'staff' };
+        return { roles: staffRoles, userType: 'staff', isDirectMember: true };
       }
     }
 
@@ -251,7 +263,7 @@ export class DepartmentSwitchService {
     if (userTypes.includes('learner')) {
       const learnerRoles = await this.getLearnerRolesForDepartment(userId, deptId);
       if (learnerRoles.length > 0) {
-        return { roles: learnerRoles, userType: 'learner' };
+        return { roles: learnerRoles, userType: 'learner', isDirectMember: true };
       }
     }
 
@@ -317,10 +329,15 @@ export class DepartmentSwitchService {
     userId: mongoose.Types.ObjectId,
     deptId: mongoose.Types.ObjectId,
     userTypes: UserType[]
-  ): Promise<{ roles: string[]; userType: UserType | null }> {
+  ): Promise<{ roles: string[]; userType: UserType | null; isDirectMember?: boolean; inheritedFrom?: string }> {
     const department = await Department.findById(deptId).populate('parentDepartmentId');
 
     if (!department || !department.parentDepartmentId) {
+      return { roles: [], userType: null };
+    }
+
+    // Only cascade if CHILD department doesn't require explicit membership
+    if (department.requireExplicitMembership) {
       return { roles: [], userType: null };
     }
 
@@ -329,20 +346,38 @@ export class DepartmentSwitchService {
       return { roles: [], userType: null };
     }
 
-    // Only cascade if parent doesn't require explicit membership
-    if (parent.requireExplicitMembership) {
-      return { roles: [], userType: null };
+    // Check if user has DIRECT roles in parent department
+    // We need to check only direct membership, not cascaded
+    let hasDirectParentMembership = false;
+    let parentRoles: string[] = [];
+    let parentUserType: UserType | null = null;
+
+    if (userTypes.includes('staff') || userTypes.includes('global-admin')) {
+      const staffRoles = await this.getStaffRolesForDepartment(userId, parent._id);
+      if (staffRoles.length > 0) {
+        hasDirectParentMembership = true;
+        parentRoles = staffRoles;
+        parentUserType = 'staff';
+      }
     }
 
-    // Check if user has roles in parent department
-    const parentRoles = await this.getUserRolesForDepartment(
-      userId,
-      parent._id,
-      userTypes
-    );
+    if (!hasDirectParentMembership && userTypes.includes('learner')) {
+      const learnerRoles = await this.getLearnerRolesForDepartment(userId, parent._id);
+      if (learnerRoles.length > 0) {
+        hasDirectParentMembership = true;
+        parentRoles = learnerRoles;
+        parentUserType = 'learner';
+      }
+    }
 
-    if (parentRoles.roles.length > 0) {
-      return parentRoles;
+    if (hasDirectParentMembership) {
+      // Return roles with cascading info - this is inherited, not direct
+      return {
+        roles: parentRoles,
+        userType: parentUserType,
+        isDirectMember: false,
+        inheritedFrom: parent._id.toString()
+      };
     }
 
     // Continue checking up the hierarchy
@@ -408,8 +443,8 @@ export class DepartmentSwitchService {
     userType: UserType | null,
     requireExplicitMembership: boolean
   ): Promise<ChildDepartmentInfo[]> {
-    // Only return child departments if cascading is enabled
-    if (requireExplicitMembership || !userType) {
+    // Don't return children if no userType (shouldn't happen but safety check)
+    if (!userType) {
       return [];
     }
 
@@ -433,8 +468,43 @@ export class DepartmentSwitchService {
 
       const children = await Department.find(childQuery);
 
+      // Get user's direct memberships to check for explicit membership
+      let directMemberships: Set<string> = new Set();
+      if (userType === 'staff') {
+        const staff = await Staff.findById(userId);
+        if (staff) {
+          directMemberships = new Set(
+            staff.departmentMemberships
+              .filter(m => m.isActive)
+              .map(m => m.departmentId.toString())
+          );
+        }
+      } else if (userType === 'learner') {
+        const learner = await Learner.findById(userId);
+        if (learner) {
+          directMemberships = new Set(
+            learner.departmentMemberships
+              .filter(m => m.isActive)
+              .map(m => m.departmentId.toString())
+          );
+        }
+      }
+
+      // Filter children based on requireExplicitMembership flag
+      const accessibleChildren = children.filter(child => {
+        const childId = child._id.toString();
+
+        // If child requires explicit membership, only include if user has direct membership
+        if (child.requireExplicitMembership) {
+          return directMemberships.has(childId);
+        }
+
+        // Otherwise, roles cascade from parent
+        return true;
+      });
+
       // Map to child department info
-      return children.map(child => ({
+      return accessibleChildren.map(child => ({
         id: child._id.toString(),
         name: child.name,
         roles // Same roles cascade down
