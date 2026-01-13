@@ -24,6 +24,7 @@ import { Staff } from '@/models/auth/Staff.model';
 import GlobalAdmin from '@/models/GlobalAdmin.model';
 import Department from '@/models/organization/Department.model';
 import { RoleDefinition } from '@/models/RoleDefinition.model';
+import { AccessRight } from '@/models/AccessRight.model';
 
 describe('Escalation Integration Tests', () => {
   let mongoServer: MongoMemoryServer;
@@ -57,6 +58,16 @@ describe('Escalation Integration Tests', () => {
       slug: 'test-dept',
       isActive: true
     });
+
+    // Seed access rights
+    await AccessRight.create([
+      { name: 'content:courses:read', domain: 'content', resource: 'courses', action: 'read', description: 'Read courses' },
+      { name: 'grades:own-classes:manage', domain: 'grades', resource: 'own-classes', action: 'manage', description: 'Manage grades' },
+      { name: 'system:*', domain: 'system', resource: '*', action: '*', description: 'Full system access' },
+      { name: 'content:*', domain: 'content', resource: '*', action: '*', description: 'Full content access' },
+      { name: 'enrollment:*', domain: 'enrollment', resource: '*', action: '*', description: 'Full enrollment access' },
+      { name: 'reports:enrollment:read', domain: 'reports', resource: 'enrollment', action: 'read', description: 'Read enrollment reports' }
+    ]);
 
     // Seed role definitions
     await RoleDefinition.create([
@@ -146,7 +157,7 @@ describe('Escalation Integration Tests', () => {
       {
         userId: adminUser._id.toString(),
         email: adminUser.email,
-        roles: ['instructor', 'system-admin', 'enrollment-admin'],
+        roles: ['staff', 'global-admin'],
         type: 'access'
       },
       process.env.JWT_ACCESS_SECRET || 'test-secret',
@@ -193,7 +204,7 @@ describe('Escalation Integration Tests', () => {
       {
         userId: staffUser._id.toString(),
         email: staffUser.email,
-        roles: ['instructor'],
+        roles: ['staff'],
         type: 'access'
       },
       process.env.JWT_ACCESS_SECRET || 'test-secret',
