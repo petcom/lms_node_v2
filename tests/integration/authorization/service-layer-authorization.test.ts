@@ -148,13 +148,27 @@ describe('Service Layer Authorization Integration Tests', () => {
 
     instructorStaff = await Staff.create({
       _id: instructorUser._id,
-      firstName: 'Test',
-      lastName: 'Instructor',
+      person: {
+        firstName: 'Test',
+        lastName: 'Instructor',
+        emails: [{
+          email: instructorUser.email,
+          type: 'institutional',
+          isPrimary: true,
+          verified: true,
+          allowNotifications: true
+        }],
+        phones: [],
+        addresses: [],
+        timezone: 'America/New_York',
+        languagePreference: 'en'
+      },
       departmentMemberships: [{
         departmentId: topLevelDepartment._id,
         roles: ['instructor'],
         isPrimary: true,
-        isActive: true
+        isActive: true,
+        joinedAt: new Date()
       }]
     });
 
@@ -168,13 +182,27 @@ describe('Service Layer Authorization Integration Tests', () => {
 
     contentAdminStaff = await Staff.create({
       _id: contentAdminUser._id,
-      firstName: 'Content',
-      lastName: 'Admin',
+      person: {
+        firstName: 'Content',
+        lastName: 'Admin',
+        emails: [{
+          email: contentAdminUser.email,
+          type: 'institutional',
+          isPrimary: true,
+          verified: true,
+          allowNotifications: true
+        }],
+        phones: [],
+        addresses: [],
+        timezone: 'America/New_York',
+        languagePreference: 'en'
+      },
       departmentMemberships: [{
         departmentId: topLevelDepartment._id,
         roles: ['content-admin'],
         isPrimary: true,
-        isActive: true
+        isActive: true,
+        joinedAt: new Date()
       }]
     });
 
@@ -188,13 +216,27 @@ describe('Service Layer Authorization Integration Tests', () => {
 
     deptAdminStaff = await Staff.create({
       _id: deptAdminUser._id,
-      firstName: 'Dept',
-      lastName: 'Admin',
+      person: {
+        firstName: 'Dept',
+        lastName: 'Admin',
+        emails: [{
+          email: deptAdminUser.email,
+          type: 'institutional',
+          isPrimary: true,
+          verified: true,
+          allowNotifications: true
+        }],
+        phones: [],
+        addresses: [],
+        timezone: 'America/New_York',
+        languagePreference: 'en'
+      },
       departmentMemberships: [{
         departmentId: topLevelDepartment._id,
         roles: ['department-admin'],
         isPrimary: true,
-        isActive: true
+        isActive: true,
+        joinedAt: new Date()
       }]
     });
 
@@ -208,13 +250,27 @@ describe('Service Layer Authorization Integration Tests', () => {
 
     systemAdminStaff = await Staff.create({
       _id: systemAdminUser._id,
-      firstName: 'System',
-      lastName: 'Admin',
+      person: {
+        firstName: 'System',
+        lastName: 'Admin',
+        emails: [{
+          email: systemAdminUser.email,
+          type: 'institutional',
+          isPrimary: true,
+          verified: true,
+          allowNotifications: true
+        }],
+        phones: [],
+        addresses: [],
+        timezone: 'America/New_York',
+        languagePreference: 'en'
+      },
       departmentMemberships: [{
         departmentId: topLevelDepartment._id,
         roles: ['system-admin'],
         isPrimary: true,
-        isActive: true
+        isActive: true,
+        joinedAt: new Date()
       }]
     });
 
@@ -228,13 +284,27 @@ describe('Service Layer Authorization Integration Tests', () => {
 
     enrollmentAdminStaff = await Staff.create({
       _id: enrollmentAdminUser._id,
-      firstName: 'Enrollment',
-      lastName: 'Admin',
+      person: {
+        firstName: 'Enrollment',
+        lastName: 'Admin',
+        emails: [{
+          email: enrollmentAdminUser.email,
+          type: 'institutional',
+          isPrimary: true,
+          verified: true,
+          allowNotifications: true
+        }],
+        phones: [],
+        addresses: [],
+        timezone: 'America/New_York',
+        languagePreference: 'en'
+      },
       departmentMemberships: [{
         departmentId: topLevelDepartment._id,
         roles: ['enrollment-admin'],
         isPrimary: true,
-        isActive: true
+        isActive: true,
+        joinedAt: new Date()
       }]
     });
 
@@ -248,9 +318,23 @@ describe('Service Layer Authorization Integration Tests', () => {
 
     learner1 = await Learner.create({
       _id: learner1User._id,
-      firstName: 'Test',
-      lastName: 'Learner',
-      dateOfBirth: new Date('2000-01-01')
+      person: {
+        firstName: 'Test',
+        lastName: 'Learner',
+        emails: [{
+          email: learner1User.email,
+          type: 'institutional',
+          isPrimary: true,
+          verified: true,
+          allowNotifications: true
+        }],
+        phones: [],
+        addresses: [],
+        timezone: 'America/New_York',
+        languagePreference: 'en',
+        dateOfBirth: new Date('2000-01-01')
+      },
+      departmentMemberships: []
     });
 
     // Create class enrollment

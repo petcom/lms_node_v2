@@ -240,13 +240,27 @@ describe('E2E Authorization API Tests', () => {
 
     instructorStaff = await Staff.create({
       _id: instructorUser._id,
-      firstName: 'John',
-      lastName: 'Instructor',
+      person: {
+        firstName: 'John',
+        lastName: 'Instructor',
+        emails: [{
+          email: instructorUser.email,
+          type: 'institutional',
+          isPrimary: true,
+          verified: true,
+          allowNotifications: true
+        }],
+        phones: [],
+        addresses: [],
+        timezone: 'America/New_York',
+        languagePreference: 'en'
+      },
       departmentMemberships: [{
         departmentId: topLevelDepartment._id,
         roles: ['instructor'],
         isPrimary: true,
-        isActive: true
+        isActive: true,
+        joinedAt: new Date()
       }]
     });
 
@@ -279,13 +293,27 @@ describe('E2E Authorization API Tests', () => {
 
     contentAdminStaff = await Staff.create({
       _id: contentAdminUser._id,
-      firstName: 'Jane',
-      lastName: 'ContentAdmin',
+      person: {
+        firstName: 'Jane',
+        lastName: 'ContentAdmin',
+        emails: [{
+          email: contentAdminUser.email,
+          type: 'institutional',
+          isPrimary: true,
+          verified: true,
+          allowNotifications: true
+        }],
+        phones: [],
+        addresses: [],
+        timezone: 'America/New_York',
+        languagePreference: 'en'
+      },
       departmentMemberships: [{
         departmentId: topLevelDepartment._id,
         roles: ['content-admin'],
         isPrimary: true,
-        isActive: true
+        isActive: true,
+        joinedAt: new Date()
       }]
     });
 
@@ -312,13 +340,27 @@ describe('E2E Authorization API Tests', () => {
 
     deptAdminStaff = await Staff.create({
       _id: deptAdminUser._id,
-      firstName: 'Bob',
-      lastName: 'DeptAdmin',
+      person: {
+        firstName: 'Bob',
+        lastName: 'DeptAdmin',
+        emails: [{
+          email: deptAdminUser.email,
+          type: 'institutional',
+          isPrimary: true,
+          verified: true,
+          allowNotifications: true
+        }],
+        phones: [],
+        addresses: [],
+        timezone: 'America/New_York',
+        languagePreference: 'en'
+      },
       departmentMemberships: [{
         departmentId: topLevelDepartment._id,
         roles: ['department-admin'],
         isPrimary: true,
-        isActive: true
+        isActive: true,
+        joinedAt: new Date()
       }]
     });
 
@@ -345,13 +387,27 @@ describe('E2E Authorization API Tests', () => {
 
     enrollmentAdminStaff = await Staff.create({
       _id: enrollmentAdminUser._id,
-      firstName: 'Alice',
-      lastName: 'EnrollAdmin',
+      person: {
+        firstName: 'Alice',
+        lastName: 'EnrollAdmin',
+        emails: [{
+          email: enrollmentAdminUser.email,
+          type: 'institutional',
+          isPrimary: true,
+          verified: true,
+          allowNotifications: true
+        }],
+        phones: [],
+        addresses: [],
+        timezone: 'America/New_York',
+        languagePreference: 'en'
+      },
       departmentMemberships: [{
         departmentId: topLevelDepartment._id,
         roles: ['enrollment-admin'],
         isPrimary: true,
-        isActive: true
+        isActive: true,
+        joinedAt: new Date()
       }]
     });
 
@@ -378,13 +434,27 @@ describe('E2E Authorization API Tests', () => {
 
     systemAdminStaff = await Staff.create({
       _id: systemAdminUser._id,
-      firstName: 'Admin',
-      lastName: 'System',
+      person: {
+        firstName: 'Admin',
+        lastName: 'System',
+        emails: [{
+          email: systemAdminUser.email,
+          type: 'institutional',
+          isPrimary: true,
+          verified: true,
+          allowNotifications: true
+        }],
+        phones: [],
+        addresses: [],
+        timezone: 'America/New_York',
+        languagePreference: 'en'
+      },
       departmentMemberships: [{
         departmentId: masterDepartment._id,
         roles: ['system-admin'],
         isPrimary: true,
-        isActive: true
+        isActive: true,
+        joinedAt: new Date()
       }]
     });
 
@@ -437,9 +507,23 @@ describe('E2E Authorization API Tests', () => {
 
     learner1 = await Learner.create({
       _id: learner1User._id,
-      firstName: 'Sarah',
-      lastName: 'Student',
-      dateOfBirth: new Date('2000-01-01')
+      person: {
+        firstName: 'Sarah',
+        lastName: 'Student',
+        emails: [{
+          email: learner1User.email,
+          type: 'institutional',
+          isPrimary: true,
+          verified: true,
+          allowNotifications: true
+        }],
+        phones: [],
+        addresses: [],
+        timezone: 'America/New_York',
+        languagePreference: 'en',
+        dateOfBirth: new Date('2000-01-01')
+      },
+      departmentMemberships: []
     });
 
     learner1Token = jwt.sign(
@@ -494,13 +578,27 @@ describe('E2E Authorization API Tests', () => {
 
         await Staff.create({
           _id: otherUser._id,
-          firstName: 'Other',
-          lastName: 'User',
+          person: {
+            firstName: 'Other',
+            lastName: 'User',
+            emails: [{
+              email: otherUser.email,
+              type: 'institutional',
+              isPrimary: true,
+              verified: true,
+              allowNotifications: true
+            }],
+            phones: [],
+            addresses: [],
+            timezone: 'America/New_York',
+            languagePreference: 'en'
+          },
           departmentMemberships: [{
             departmentId: otherDepartment._id,
             roles: ['instructor'],
             isPrimary: true,
-            isActive: true
+            isActive: true,
+            joinedAt: new Date()
           }]
         });
 
@@ -554,13 +652,27 @@ describe('E2E Authorization API Tests', () => {
 
         await Staff.create({
           _id: otherUser._id,
-          firstName: 'Other2',
-          lastName: 'User2',
+          person: {
+            firstName: 'Other2',
+            lastName: 'User2',
+            emails: [{
+              email: otherUser.email,
+              type: 'institutional',
+              isPrimary: true,
+              verified: true,
+              allowNotifications: true
+            }],
+            phones: [],
+            addresses: [],
+            timezone: 'America/New_York',
+            languagePreference: 'en'
+          },
           departmentMemberships: [{
             departmentId: otherDepartment._id,
             roles: ['instructor'],
             isPrimary: true,
-            isActive: true
+            isActive: true,
+            joinedAt: new Date()
           }]
         });
 
@@ -861,13 +973,27 @@ describe('E2E Authorization API Tests', () => {
 
       await Staff.create({
         _id: otherUser._id,
-        firstName: 'Other',
-        lastName: 'Dept',
+        person: {
+          firstName: 'Other',
+          lastName: 'Dept',
+          emails: [{
+            email: otherUser.email,
+            type: 'institutional',
+            isPrimary: true,
+            verified: true,
+            allowNotifications: true
+          }],
+          phones: [],
+          addresses: [],
+          timezone: 'America/New_York',
+          languagePreference: 'en'
+        },
         departmentMemberships: [{
           departmentId: otherDepartment._id,
           roles: ['instructor'],
           isPrimary: true,
-          isActive: true
+          isActive: true,
+          joinedAt: new Date()
         }]
       });
 
