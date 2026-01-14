@@ -33,7 +33,8 @@ export const ACCESS_RIGHT_DOMAINS = [
   'billing',
   'audit',
   'grades',
-  'department'
+  'department',
+  'academic'
 ] as const;
 
 export type AccessRightDomain = typeof ACCESS_RIGHT_DOMAINS[number];

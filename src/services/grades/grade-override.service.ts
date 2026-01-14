@@ -196,6 +196,13 @@ export class GradeOverrideService {
     enrollmentId: string,
     filters?: { startDate?: Date; endDate?: Date }
   ): Promise<any[]> {
+    // 1. Verify enrollment exists
+    const enrollment = await ClassEnrollment.findById(enrollmentId).exec();
+    if (!enrollment) {
+      throw new ApiError(404, 'Enrollment not found');
+    }
+
+    // 2. Query grade change logs
     const query: any = { enrollmentId };
 
     if (filters?.startDate || filters?.endDate) {
