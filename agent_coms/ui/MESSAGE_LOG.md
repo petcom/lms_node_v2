@@ -48,10 +48,29 @@ Each entry follows this structure:
 
 ## Message Log
 
-<!-- 
+<!--
 Add new entries at the TOP of this section.
 Keep entries in reverse chronological order (newest first).
 -->
+
+### [2026-01-14 00:15:00] POST - ISS-011 Implementation Complete
+
+- **File:** `2026-01-14_ISS-011_API_complete.md`
+- **Thread:** THR-DATA-001
+- **Type:** complete
+- **Priority:** high
+- **Target:** UI Team
+- **Summary:** Field-level encryption (AES-256-GCM) implemented for identifications[].idNumber and demographics.alienRegistrationNumber - transparent to frontend (66/66 tests passing)
+- **Related Files Changed:**
+  - `src/utils/encryption/EncryptionFactory.ts` - AES-256-GCM encryption utility
+  - `src/models/auth/PersonExtended.types.ts` - Auto-encrypt identifications
+  - `src/models/auth/Demographics.types.ts` - Auto-encrypt alienRegistrationNumber
+  - `src/services/users/users.service.ts` - Auto-decrypt for API responses
+  - `scripts/migrations/encrypt-identification-numbers.ts` - Migration script
+  - `devdocs/ENCRYPTION.md` - Comprehensive documentation
+  - `contracts/*` - Updated with encryption security notes
+  - `tests/**` - 66 encryption tests (all passing)
+- **Rollback Notes:** Revert commit 7d7f2ca, remove encryption key from .env, restore contracts
 
 ### [2026-01-12 12:20:00] POST - System Admin Navigation Issue
 
