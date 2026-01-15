@@ -25,6 +25,19 @@ const BUILT_IN_ROLES = {
       'permissions:read', 'permissions:write', 'permissions:delete'
     ]
   },
+  'financial-admin': {
+    level: 95,
+    description: 'Financial administrator with full revenue configuration access',
+    permissions: [
+      'users:read',
+      'courses:read',
+      'enrollments:read',
+      'reports:read', 'reports:write', 'reports:manage',
+      'revenue:read', 'revenue:write', 'revenue:manage',
+      'payouts:read', 'payouts:write', 'payouts:manage',
+      'settings:read', 'settings:write'
+    ]
+  },
   'department-admin': {
     level: 80,
     description: 'Department administrator with department-scoped permissions',
@@ -66,7 +79,8 @@ const BUILT_IN_ROLES = {
       'users:read',
       'courses:read',
       'enrollments:read',
-      'reports:read', 'reports:write'
+      'reports:read', 'reports:write',
+      'revenue:read'
     ]
   },
   'enrollment-admin': {

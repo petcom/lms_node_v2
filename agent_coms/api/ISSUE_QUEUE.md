@@ -21,58 +21,81 @@
 
 ## Initiatives (Large Multi-Phase Projects)
 
-### INIT-001: Billing & Auto-Registration System
+### INIT-001: Commerce & Payout Platform
 
 **Priority:** high
 **Type:** initiative
-**Status:** 📋 PLANNING
+**Status:** 📋 ARCHITECTURE COMPLETE - Ready for Implementation
 **Assigned:** API Team
-**Estimated Effort:** 8-12 weeks (phased)
+**Estimated Effort:** 12-16 weeks (phased, across 3 systems)
 
-**Description:**
-Comprehensive billing, registration, and certification system enabling:
-- Course/program catalog with pricing
-- Shopping cart and checkout
-- Payment processing (Stripe, Square, GPay, Elavon)
-- Registration with optional admin approval
-- Auto-enrollment on approval
-- Certificate generation on completion
+**🔷 KEY DECISION: INDEPENDENT SYSTEMS**
 
-**Core Flow:**
+This initiative consists of **three independent systems** with separate codebases:
+
+| System | Repository | Purpose | Money Flow |
+|--------|------------|---------|------------|
+| **Commerce Platform** | `cadence-commerce-api` | Catalog, cart, checkout, orders | IN |
+| **Cadence LMS** | `cadence-lms-api` (current) | Learning, enrollments, progress | - |
+| **Payout Platform** | `cadence-payout-api` | Revenue splits, payouts | OUT |
+
 ```
-Catalog → Cart → Payment → Registration → Approval → Enrollment → Completion → Certificate
+┌─────────────────────────────────────────────────────────────────┐
+│              COMMERCE PLATFORM (cadence-commerce-api)           │
+│  Catalog → Cart → Checkout → Payment → Order → Revenue Ledger  │
+└──────────────────────────────┬──────────────────────────────────┘
+                               │ Connector (enrollment request)
+                               ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                CADENCE LMS (cadence-lms-api)                    │
+│  Pending Enrollment → Approval → Active → Progress → Completion │
+└──────────────────────────────┬──────────────────────────────────┘
+                               │ Completion event
+                               ▼
+┌─────────────────────────────────────────────────────────────────┐
+│               PAYOUT PLATFORM (cadence-payout-api)              │
+│  Revenue Split → Pending Earnings → Confirmed → Payout Queue   │
+│  Content Creator Payments │ Instructor Payments │ Platform Fee  │
+└─────────────────────────────────────────────────────────────────┘
 ```
+
+**Key Principles:**
+- All enrollments start as **PENDING** (even if auto-approved)
+- Revenue tracked **per course, per content creator, per instructor**
+- Instructor must **interact with learner** to earn share
+- Payments OUT are separate from payments IN
 
 **Planning Documents:**
-- `agent_coms/api/BILLING_REGISTRATION_SYSTEM_SPEC.md` - Full architecture
+- `agent_coms/api/SYSTEM_BOUNDARIES.md` - System separation architecture
+- `agent_coms/api/BILLING_REGISTRATION_SYSTEM_SPEC.md` - Commerce Platform
+- `agent_coms/api/INSTRUCTOR_CONTENT_PAYMENT_SYSTEM.md` - Payout Platform
 - `agent_coms/api/BILLING_USER_STORIES.md` - User stories & tasks
 
-**Epics:**
-| Epic | Description | Priority | Est. Points |
-|------|-------------|----------|-------------|
-| E-001 | Catalog & Pricing Management | High | 35 |
-| E-002 | Shopping Cart & Checkout | High | 32 |
-| E-003 | Payment Processing | Critical | 55 |
-| E-004 | Registration & Approval | High | 28 |
-| E-005 | Auto-Enrollment | High | 8 |
-| E-006 | Progress & Completion Tracking | High | 16 |
-| E-007 | Certificate Generation | High | 25 |
-| E-008 | Subscriptions (Future) | Medium | 35 |
+**Revenue Distribution Model:**
+| Recipient | Default Share | Confirmed When |
+|-----------|--------------|----------------|
+| Platform | 30% | Enrollment approved |
+| Content Creator | 40% | Learner completes course |
+| Instructor | 30% | Learner completes + interaction verified |
 
-**MVP Scope (Phase 1):** ~37 points
-- Course pricing, catalog, cart, Stripe checkout, auto-registration, enrollment, basic certificates
-
-**Open Questions (Needs Human Input):**
-1. Refund policy: Full only? Partial? Time limits?
-2. Tax calculation: TaxJar/Avalara integration or manual?
-3. Multi-currency support needed?
-4. Guest checkout allowed?
-5. Primary payment processor preference?
+**Decisions Made (2025-01-14):**
+| Decision | Answer | Notes |
+|----------|--------|-------|
+| System Architecture | Independent systems | Separate repos, APIs, UIs |
+| Refund Policy | Admin approval required | No automatic refunds |
+| Tax Calculation | TaxJar | Extensible interface |
+| Multi-Currency | Yes, USD settlement | Display multiple, settle in USD |
+| Guest Checkout | No | Login required |
+| Payment Processor | Stripe (default) | Extensible IPaymentProcessor |
+| PDF Generation | PDFKit | Lightweight, pure Node.js |
+| Email Provider | SendGrid (default) | Mailgun planned, IEmailProvider |
 
 **Next Steps:**
-1. Human answers open questions
-2. Create API-ISS issues for Phase 1 (MVP)
-3. Begin CoursePricing and Cart model implementation
+1. ~~Define system boundaries~~ ✅ DONE
+2. ~~Answer open questions~~ ✅ DONE
+3. Create new repositories: `cadence-commerce-api`, `cadence-payout-api`
+4. Begin Commerce Platform Phase 1 (MVP)
+5. Implement LMS connector endpoint in current repo
 
 ---
 

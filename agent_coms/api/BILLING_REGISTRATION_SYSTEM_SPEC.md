@@ -1,27 +1,219 @@
-# Billing & Auto-Registration System Specification
+# Commerce Platform Specification (Billing System)
 
 **Date:** 2026-01-14  
-**Status:** 📋 DRAFT - Architecture & Planning  
+**Status:** ✅ DECISIONS MADE - Ready for Implementation  
 **Owner:** API Team  
 **Priority:** High  
-**Estimated Effort:** 8-12 weeks (phased)
+**Estimated Effort:** 8-12 weeks (phased)  
+**System Type:** 🔷 INDEPENDENT SYSTEM (Separate Codebase)
+
+---
+
+## Architecture Overview
+
+> **KEY DECISION:** This is an **independent system** with its own API, codebase, and UI.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    COMMERCE PLATFORM (This Doc)                 │
+│                                                                 │
+│  • Separate repo: cadence-commerce-api                         │
+│  • Separate UI: cadence-commerce-ui                            │
+│  • Separate DB: commerce_db (Postgres)                         │
+│                                                                 │
+│  Responsibilities:                                              │
+│  ├── Course/Program Catalog (pricing)                          │
+│  ├── Shopping Cart                                             │
+│  ├── Checkout & Payment Processing (money IN)                  │
+│  ├── Order Management                                          │
+│  ├── Revenue Tracking (per course/creator/instructor)          │
+│  └── Enrollment Request → LMS (always pending initially)       │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              │ Connector (Webhook)
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                        CADENCE LMS                              │
+│  • Current repo: cadence-lms-api                               │
+│  • Receives: Pending enrollment requests                        │
+│  • Manages: Learning, progress, completion                      │
+│  • Sends: Completion events → Payout Platform                  │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              │ Completion Event
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                      PAYOUT PLATFORM                            │
+│  • See: INSTRUCTOR_CONTENT_PAYMENT_SYSTEM.md                   │
+│  • Manages: Revenue splits, payouts (money OUT)                │
+│  • Pays: Content creators, instructors                         │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### What This System DOES
+
+| Responsibility | Description |
+|---------------|-------------|
+| Catalog Management | Course/program pricing, descriptions, availability |
+| Cart & Checkout | Shopping cart, checkout flow |
+| Payment Processing | Collect payments (Stripe, Square, etc.) |
+| Order Management | Order history, status tracking |
+| Revenue Ledger | Track revenue per course, per creator, per instructor |
+| LMS Connector | Send enrollment requests to LMS |
+
+### What This System DOES NOT DO
+
+| Not Responsible | Handled By |
+|-----------------|------------|
+| User authentication | LMS (shared SSO) |
+| Course content | LMS |
+| Learning progress | LMS |
+| Enrollments (actual) | LMS |
+| Revenue payouts | Payout Platform |
+| Creator/Instructor payments | Payout Platform |
 
 ---
 
 ## Table of Contents
 
 1. [Executive Summary](#executive-summary)
-2. [System Overview](#system-overview)
-3. [User Journey Maps](#user-journey-maps)
-4. [Epic & User Stories](#epic--user-stories)
-5. [Data Models](#data-models)
-6. [API Endpoints](#api-endpoints)
-7. [Payment Processor Integration](#payment-processor-integration)
-8. [Workflow State Machines](#workflow-state-machines)
-9. [Certificate Generation](#certificate-generation)
-10. [Phase Breakdown](#phase-breakdown)
-11. [Security Considerations](#security-considerations)
-12. [Open Questions](#open-questions)
+2. [Architectural Decisions](#architectural-decisions)
+3. [System Overview](#system-overview)
+4. [User Journey Maps](#user-journey-maps)
+5. [Epic & User Stories](#epic--user-stories)
+6. [Data Models](#data-models)
+7. [API Endpoints](#api-endpoints)
+8. [Payment Processor Integration](#payment-processor-integration)
+9. [Email Provider Integration](#email-provider-integration)
+10. [LMS Connector](#lms-connector)
+11. [Payout Platform Connector](#payout-platform-connector)
+12. [Workflow State Machines](#workflow-state-machines)
+13. [Certificate Generation](#certificate-generation)
+14. [Phase Breakdown](#phase-breakdown)
+15. [Security Considerations](#security-considerations)
+
+---
+
+## Architectural Decisions
+
+> **Status:** ✅ APPROVED (2026-01-14)
+
+### ADR-001: Refund Policy
+**Decision:** Refunds require admin approval  
+**Rationale:** Prevents abuse, allows case-by-case review  
+**Implementation:**
+- No automatic refunds
+- Refund requests go to `billing-admin` queue
+- Approval creates refund in payment processor
+- Rejection sends notification with reason
+
+### ADR-002: Tax Calculation
+**Decision:** Use TaxJar for automated tax calculation  
+**Rationale:** Industry standard, excellent API, handles nexus complexity, automatic rate updates  
+**Implementation:**
+- TaxJar API integration for tax calculation
+- Fallback: Manual tax rate configuration per department/region
+- Tax exempt status support for organizations
+
+**Alternatives Considered:**
+- Avalara (more enterprise, higher cost)
+- Manual configuration (maintenance burden)
+
+### ADR-003: Multi-Currency Support
+**Decision:** Base settlement currency + multi-currency display  
+**Rationale:** Allows international learners, simplifies accounting  
+**Implementation:**
+- **Settlement Currency:** USD (configurable per deployment)
+- All reconciliation and reporting in settlement currency
+- Display prices in local currencies (conversion at checkout)
+- Payment processor handles currency conversion
+- Store both `displayAmount`/`displayCurrency` and `settlementAmount`/`settlementCurrency`
+
+```typescript
+interface IOrderAmount {
+  // What the learner sees/pays
+  displayAmount: number;        // e.g., 8500 (€85.00)
+  displayCurrency: string;      // e.g., "EUR"
+  
+  // What we reconcile/report in
+  settlementAmount: number;     // e.g., 9200 (USD $92.00)
+  settlementCurrency: string;   // e.g., "USD"
+  
+  // Exchange rate at time of transaction
+  exchangeRate: number;         // e.g., 1.0823
+  exchangeRateTimestamp: Date;
+}
+```
+
+### ADR-004: Guest Checkout
+**Decision:** Login required  
+**Rationale:** Users need accounts to access purchased courses  
+**Implementation:**
+- Redirect to login/register before checkout
+- Cart persists via session ID, merged to account on login
+- Registration email sent on account creation
+
+### ADR-005: Payment Processor
+**Decision:** Stripe as default, extensible architecture  
+**Rationale:** Best developer experience, widest payment method support  
+**Implementation:**
+- Abstract `IPaymentProcessor` interface
+- `PaymentProcessorFactory` for processor selection
+- Configuration-driven processor selection per department
+- Default: Stripe
+- Future: Square, GPay (via Stripe), Elavon
+
+### ADR-006: PDF Generation
+**Decision:** PDFKit (lightweight, pure Node.js)  
+**Rationale:** No external dependencies, fast, sufficient for certificates  
+**Implementation:**
+- PDFKit for certificate generation
+- Template-based design with customization
+- Generate on-demand (not stored as files)
+- Cache generated PDFs in S3 with TTL
+
+**Alternatives Considered:**
+- Puppeteer (heavier, requires Chrome, better for complex layouts)
+- wkhtmltopdf (external binary dependency)
+
+### ADR-007: Email Provider
+**Decision:** SendGrid as default, extensible architecture  
+**Rationale:** Reliable, good deliverability, reasonable pricing  
+**Implementation:**
+- Abstract `IEmailProvider` interface
+- `EmailProviderFactory` for provider selection
+- Default: SendGrid
+- Planned: Mailgun
+- Template system with variable substitution
+
+```typescript
+interface IEmailProvider {
+  name: 'sendgrid' | 'mailgun' | 'ses';
+  
+  sendEmail(params: SendEmailParams): Promise<EmailResult>;
+  sendTemplateEmail(params: TemplateEmailParams): Promise<EmailResult>;
+  
+  // Webhook handling
+  verifyWebhook?(payload: string, signature: string): boolean;
+}
+
+interface SendEmailParams {
+  to: string | string[];
+  subject: string;
+  html?: string;
+  text?: string;
+  from?: string;
+  replyTo?: string;
+  attachments?: EmailAttachment[];
+}
+
+interface TemplateEmailParams {
+  to: string | string[];
+  templateId: string;
+  variables: Record<string, any>;
+  from?: string;
+}
+```
 
 ---
 
@@ -1171,45 +1363,463 @@ interface ICertificateTemplate {
 
 ---
 
-## Open Questions
+## Email Provider Integration
 
-### Business Questions
+### Architecture: Email Provider Abstraction
 
-1. **Refund Policy** - Full refund only? Partial? Time limits?
-2. **Tax Calculation** - Use TaxJar/Avalara? Manual configuration?
-3. **Multi-Currency** - Support or single currency?
-4. **Invoicing** - Need formal invoices for business customers?
-5. **Payment Plans** - Allow installment payments?
+```typescript
+/**
+ * Email Provider Interface
+ * All email providers must implement this interface
+ */
+interface IEmailProvider {
+  name: 'sendgrid' | 'mailgun' | 'ses' | 'smtp';
+  
+  /**
+   * Send a simple email
+   */
+  sendEmail(params: SendEmailParams): Promise<EmailResult>;
+  
+  /**
+   * Send a templated email
+   */
+  sendTemplateEmail(params: TemplateEmailParams): Promise<EmailResult>;
+  
+  /**
+   * Send bulk emails
+   */
+  sendBulkEmail?(params: BulkEmailParams): Promise<BulkEmailResult>;
+  
+  /**
+   * Verify webhook signature (for delivery/bounce tracking)
+   */
+  verifyWebhook?(payload: string, signature: string): boolean;
+}
 
-### Technical Questions
+interface SendEmailParams {
+  to: string | string[];
+  subject: string;
+  html?: string;
+  text?: string;
+  from?: string;           // Default from config
+  replyTo?: string;
+  attachments?: EmailAttachment[];
+  tags?: string[];         // For analytics
+}
 
-1. **PDF Generation** - Server-side (PDFKit) vs headless browser (Puppeteer)?
-2. **Email Provider** - SendGrid? AWS SES? Existing solution?
-3. **Background Jobs** - Bull? Agenda? For async processing
-4. **Primary Processor** - Start with Stripe as default?
-5. **Reporting** - Build in-house or integrate with analytics platform?
+interface TemplateEmailParams {
+  to: string | string[];
+  templateId: string;      // Provider's template ID
+  variables: Record<string, any>;
+  from?: string;
+}
 
-### Scope Questions
+interface EmailResult {
+  success: boolean;
+  messageId?: string;
+  error?: string;
+}
 
-1. **Guest Checkout** - Allow or require account first?
-2. **Corporate/Bulk Purchases** - Support for group enrollments?
-3. **Gift Purchases** - Buy for someone else?
-4. **Waitlist** - Capacity-limited courses?
+interface EmailAttachment {
+  filename: string;
+  content: Buffer | string;  // Base64 or Buffer
+  contentType: string;
+}
+```
+
+### Email Templates Required
+
+| Template ID | Trigger | Variables |
+|-------------|---------|-----------|
+| `order-confirmation` | Payment success | order, items, total, user |
+| `registration-pending` | Requires approval | registration, course, user |
+| `registration-approved` | Admin approval | registration, course, enrollmentUrl |
+| `registration-rejected` | Admin rejection | registration, course, reason |
+| `enrollment-welcome` | Auto-enrolled | enrollment, course, startUrl |
+| `refund-requested` | Refund submitted | order, amount, user |
+| `refund-approved` | Refund processed | order, amount, user |
+| `refund-rejected` | Refund denied | order, reason, user |
+| `certificate-earned` | Completion | certificate, course, downloadUrl |
+| `payment-failed` | Payment failure | order, reason, retryUrl |
+
+### Provider Implementations
+
+```
+src/services/email/
+├── email.service.ts              # Main service (uses providers)
+├── email-provider.interface.ts
+├── providers/
+│   ├── sendgrid.provider.ts      # Default
+│   └── mailgun.provider.ts       # Alternative
+└── email-provider.factory.ts     # Factory pattern
+```
+
+### Configuration
+
+```typescript
+// Environment variables
+EMAIL_PROVIDER=sendgrid          // or 'mailgun'
+EMAIL_FROM_ADDRESS=noreply@lms.edu
+EMAIL_FROM_NAME=Cadence LMS
+
+// SendGrid
+SENDGRID_API_KEY=SG.xxxxx
+
+// Mailgun
+MAILGUN_API_KEY=key-xxxxx
+MAILGUN_DOMAIN=mg.yourdomain.com
+```
+
+---
+
+## LMS Connector
+
+> Sends enrollment requests to Cadence LMS after successful payment.
+> **All enrollments start as PENDING** even if auto-approved.
+
+### Connector Flow
+
+```
+Commerce Platform                         Cadence LMS
+     │                                        │
+     │  1. POST /api/v2/connectors/           │
+     │     enrollment-request                 │
+     │────────────────────────────────────────>
+     │                                        │
+     │                               2. Create enrollment
+     │                                  (status: pending)
+     │                                        │
+     │                               3. If autoApprove:
+     │                                  Run approval workflow
+     │                                        │
+     │  4. Response: enrollmentId,           │
+     │     status: pending                    │
+     │<───────────────────────────────────────│
+     │                                        │
+     │                               5. Approval completes
+     │                                        │
+     │  6. Webhook: enrollment.approved       │
+     │<───────────────────────────────────────│
+```
+
+### Request Payload
+
+```typescript
+interface EnrollmentRequestPayload {
+  source: 'commerce-platform';
+  apiKey: string;               // Connector API key
+  payload: {
+    // Order reference
+    orderId: string;
+    orderItemId: string;
+    
+    // Who is enrolling
+    userId: string;             // LMS user ID
+    
+    // What course
+    courseId: string;           // LMS course ID
+    
+    // Instructor assignment (optional)
+    instructorId?: string;      // Pre-assigned instructor
+    
+    // Approval settings
+    approvalStatus: 'pending';  // Always pending initially
+    autoApprove: boolean;       // Should LMS auto-approve?
+    
+    // Purchase metadata (for revenue tracking)
+    purchaseMetadata: {
+      grossAmount: number;
+      netAmount: number;        // After processor fees
+      currency: string;
+      contentCreatorId: string; // Course author
+      purchaseDate: Date;
+    };
+  };
+}
+```
+
+### Response
+
+```typescript
+interface EnrollmentRequestResponse {
+  success: boolean;
+  enrollmentId?: string;
+  status: 'pending' | 'error';
+  message: string;
+  errors?: string[];
+}
+```
+
+### Webhook: Enrollment Status Update
+
+LMS sends back status changes:
+
+```typescript
+// LMS → Commerce
+POST /api/v1/webhooks/enrollment-status
+
+{
+  source: 'cadence-lms',
+  event: 'enrollment.approved' | 'enrollment.rejected',
+  payload: {
+    enrollmentId: string;
+    orderId: string;
+    orderItemId: string;
+    status: 'approved' | 'rejected';
+    processedAt: Date;
+    processedBy: string;       // 'auto-approval' or admin ID
+    rejectionReason?: string;
+  }
+}
+```
+
+---
+
+## Payout Platform Connector
+
+> Sends revenue data to Payout Platform for creator/instructor payments.
+> See [INSTRUCTOR_CONTENT_PAYMENT_SYSTEM.md](INSTRUCTOR_CONTENT_PAYMENT_SYSTEM.md) for full details.
+
+### Revenue Recording Flow
+
+```
+Commerce Platform                        Payout Platform
+     │                                        │
+     │  1. Payment successful                 │
+     │                                        │
+     │  2. POST /api/v1/webhooks/             │
+     │     revenue-recorded                   │
+     │────────────────────────────────────────>
+     │                                        │
+     │                               3. Create ledger entry
+     │                               4. Create pending earnings
+     │                                  (creator, instructor)
+     │                                        │
+     │  5. Response: ledgerEntryId            │
+     │<───────────────────────────────────────│
+```
+
+### Revenue Recorded Payload
+
+```typescript
+interface RevenueRecordedPayload {
+  source: 'commerce-platform';
+  event: 'payment.completed';
+  payload: {
+    // Order reference
+    orderId: string;
+    orderItemId: string;
+    transactionId: string;     // Payment processor tx ID
+    
+    // Course info
+    courseId: string;
+    courseName: string;
+    
+    // Stakeholders
+    learnerId: string;
+    learnerName: string;
+    instructorId: string;      // Assigned instructor
+    contentCreatorId: string;  // Course author
+    
+    // Amounts
+    grossAmount: number;
+    processorFee: number;      // Stripe/Square fee
+    netAmount: number;         // After processor fees
+    currency: string;
+    
+    // Timestamp
+    paidAt: Date;
+  };
+}
+```
+
+### Refund Webhook
+
+```typescript
+interface RefundIssuedPayload {
+  source: 'commerce-platform';
+  event: 'refund.issued';
+  payload: {
+    orderId: string;
+    orderItemId: string;
+    refundAmount: number;
+    fullRefund: boolean;
+    refundedAt: Date;
+    reason: string;
+  };
+}
+```
+
+---
+
+## Revenue Tracking (Local Ledger)
+
+> Commerce Platform maintains its own revenue ledger for reporting.
+> This syncs to Payout Platform for actual payouts.
+
+### Revenue Ledger Entry (Commerce Side)
+
+```typescript
+interface IRevenueLedgerEntry {
+  _id: ObjectId;
+  
+  // Order reference
+  orderId: ObjectId;
+  orderItemId: ObjectId;
+  transactionId: string;
+  
+  // Course
+  courseId: string;            // LMS course ID
+  courseName: string;
+  departmentId: ObjectId;
+  
+  // Stakeholders
+  learnerId: string;
+  instructorId: string;
+  contentCreatorId: string;
+  
+  // Amounts
+  grossAmount: number;         // What customer paid
+  processorFee: number;        // Stripe/Square fee
+  netAmount: number;           // After processor fees
+  currency: string;
+  
+  // Calculated splits (for reporting)
+  breakdown: {
+    platformAmount: number;
+    platformShare: number;     // e.g., 0.30
+    creatorAmount: number;
+    creatorShare: number;      // e.g., 0.40
+    instructorAmount: number;
+    instructorShare: number;   // e.g., 0.30
+  };
+  
+  // Status
+  status: 'recorded' | 'synced-to-payout' | 'cancelled';
+  syncedToPayoutAt?: Date;
+  
+  // Lifecycle
+  recordedAt: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
+
+### Revenue Reports
+
+```typescript
+// GET /api/v1/revenue/by-course/:courseId
+interface CourseRevenueReport {
+  courseId: string;
+  courseName: string;
+  period: { start: Date; end: Date };
+  
+  totals: {
+    grossRevenue: number;
+    netRevenue: number;
+    enrollments: number;
+    completionRate: number;
+  };
+  
+  byMonth: {
+    month: string;
+    grossRevenue: number;
+    enrollments: number;
+  }[];
+}
+
+// GET /api/v1/revenue/by-creator/:creatorId
+interface CreatorRevenueReport {
+  creatorId: string;
+  creatorName: string;
+  period: { start: Date; end: Date };
+  
+  totals: {
+    totalRevenue: number;
+    creatorShare: number;
+    courseCount: number;
+    totalEnrollments: number;
+  };
+  
+  byCourse: {
+    courseId: string;
+    courseName: string;
+    revenue: number;
+    enrollments: number;
+  }[];
+}
+
+// GET /api/v1/revenue/by-instructor/:instructorId
+interface InstructorRevenueReport {
+  instructorId: string;
+  instructorName: string;
+  period: { start: Date; end: Date };
+  
+  totals: {
+    totalRevenue: number;
+    instructorShare: number;
+    activeLearners: number;
+    completedLearners: number;
+  };
+  
+  byCourse: {
+    courseId: string;
+    courseName: string;
+    revenue: number;
+    learnerCount: number;
+  }[];
+}
+```
+
+---
+
+## Decisions Summary
+
+> All open questions have been answered. See [Architectural Decisions](#architectural-decisions) for full details.
+
+| Question | Decision |
+|----------|----------|
+| Refund Policy | Admin approval required |
+| Tax Calculation | TaxJar (recommended) |
+| Multi-Currency | Yes - base settlement currency + display currencies |
+| Guest Checkout | No - login required |
+| Payment Processor | Stripe default, extensible |
+| PDF Generation | PDFKit (lightweight) |
+| Email Provider | SendGrid default, extensible (Mailgun planned) |
+
+### Remaining Scope Questions (Future Phases)
+
+| Question | Status | Notes |
+|----------|--------|-------|
+| Invoicing for B2B | Deferred | Phase 3+ |
+| Payment Plans/Installments | Deferred | Phase 3+ |
+| Corporate/Bulk Purchases | Deferred | Phase 2+ |
+| Gift Purchases | Deferred | Phase 3+ |
+| Waitlist | Deferred | Phase 2+ |
 
 ---
 
 ## Related Documents
 
+- [SYSTEM_BOUNDARIES.md](./SYSTEM_BOUNDARIES.md) - System separation architecture
+- [INSTRUCTOR_CONTENT_PAYMENT_SYSTEM.md](./INSTRUCTOR_CONTENT_PAYMENT_SYSTEM.md) - Payout Platform spec
 - [COURSE_ROLE_FUNCTION_MATRIX.md](../ui/specs/COURSE_ROLE_FUNCTION_MATRIX.md) - Role permissions for billing-admin
 - [API-ISS-021](./ISSUE_QUEUE.md) - billing-admin course view access
+- [BILLING_USER_STORIES.md](./BILLING_USER_STORIES.md) - Detailed user stories
 - Contracts: TBD
 
 ---
 
-**Document Status:** DRAFT - Pending Review
+**Document Status:** ✅ DECISIONS APPROVED - Ready for Implementation  
+**System Type:** 🔷 INDEPENDENT SYSTEM (cadence-commerce-api)
 
 **Next Steps:**
-1. Review and answer open questions
-2. Prioritize Phase 1 stories
-3. Create API-ISS-XXX issues for implementation
-4. Design UI mockups for checkout flow
+1. ~~Review and answer open questions~~ ✅ DONE
+2. Create new repository: `cadence-commerce-api`
+3. Create API-ISS issues for Phase 1 (MVP)
+4. Implement core models: CoursePricing, Cart, Order, Payment, RevenueLedger
+5. Implement LMS connector (enrollment requests)
+6. Implement Payout Platform connector (revenue sync)
+7. Integrate Stripe payment processor
+8. Integrate SendGrid email provider
+9. Design UI mockups for checkout flow
