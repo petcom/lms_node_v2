@@ -6,6 +6,7 @@ import Class from '@/models/academic/Class.model';
 import Course from '@/models/academic/Course.model';
 import Department from '@/models/organization/Department.model';
 import AcademicYear from '@/models/academic/AcademicYear.model';
+import { LookupValue } from '@/models/LookupValue.model';
 
 describe('LearningEvent Model', () => {
   let mongoServer: MongoMemoryServer;
@@ -16,9 +17,27 @@ describe('LearningEvent Model', () => {
   beforeAll(async () => {
     mongoServer = await MongoMemoryServer.create();
     await mongoose.connect(mongoServer.getUri());
+
+    // Seed activity event LookupValues
+    await LookupValue.create([
+      { category: 'activity-event', key: 'content-viewed', displayAs: 'Content Viewed', isActive: true },
+      { category: 'activity-event', key: 'content-started', displayAs: 'Content Started', isActive: true },
+      { category: 'activity-event', key: 'content-completed', displayAs: 'Content Completed', isActive: true },
+      { category: 'activity-event', key: 'exam-started', displayAs: 'Exam Started', isActive: true },
+      { category: 'activity-event', key: 'exam-submitted', displayAs: 'Exam Submitted', isActive: true },
+      { category: 'activity-event', key: 'video-played', displayAs: 'Video Played', isActive: true },
+      { category: 'activity-event', key: 'video-paused', displayAs: 'Video Paused', isActive: true },
+      { category: 'activity-event', key: 'video-completed', displayAs: 'Video Completed', isActive: true },
+      { category: 'activity-event', key: 'assignment-submitted', displayAs: 'Assignment Submitted', isActive: true },
+      { category: 'activity-event', key: 'scorm-launched', displayAs: 'SCORM Launched', isActive: true },
+      { category: 'activity-event', key: 'scorm-exited', displayAs: 'SCORM Exited', isActive: true },
+      { category: 'activity-event', key: 'login', displayAs: 'Login', isActive: true },
+      { category: 'activity-event', key: 'logout', displayAs: 'Logout', isActive: true }
+    ]);
   });
 
   afterAll(async () => {
+    await LookupValue.deleteMany({});
     await mongoose.disconnect();
     await mongoServer.stop();
   });
