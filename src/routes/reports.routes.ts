@@ -1,7 +1,7 @@
 import { Router } from 'express';
-import { authenticate } from '@/middlewares/authenticate';
-import { requireAccessRight } from '@/middlewares/require-access-right';
-import { requireEscalation } from '@/middlewares/require-escalation';
+import { isAuthenticated } from '@/middlewares/isAuthenticated';
+import { requireAccessRight } from '@/middlewares/requireAccessRight';
+import { requireEscalation } from '@/middlewares/requireEscalation';
 import * as reportsController from '@/controllers/reporting/reports.controller';
 import reportJobsRoutes from './reports/report-jobs.routes';
 import reportTemplatesRoutes from './reports/report-templates.routes';
@@ -18,7 +18,7 @@ const router = Router();
  */
 
 // Apply authentication middleware to all routes
-router.use(authenticate);
+router.use(isAuthenticated);
 
 // Mount new queue-based report system sub-routers
 router.use('/jobs', reportJobsRoutes);

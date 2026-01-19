@@ -7,6 +7,7 @@ import { User } from '@/models/auth/User.model';
 import { Staff } from '@/models/auth/Staff.model';
 import { Learner } from '@/models/auth/Learner.model';
 import { hashPassword } from '@/utils/password';
+import { describeIfMongo } from '../../helpers/mongo-guard';
 
 /**
  * ISS-001 Tests: Password Change Endpoint
@@ -20,7 +21,7 @@ import { hashPassword } from '@/utils/password';
  * - Password confirmation must match new password
  */
 
-describe('POST /api/v2/users/me/password - Password Change (ISS-001)', () => {
+describeIfMongo('POST /api/v2/users/me/password - Password Change (ISS-001)', () => {
   let mongoServer: MongoMemoryServer;
   let testUser: any;
   let testStaff: any;

@@ -297,7 +297,7 @@ describe('Department Hierarchy Utility', () => {
 
     it('should handle ObjectId input', async () => {
       const userDeptIds = [new Types.ObjectId('111111111111111111111111')];
-      const userId = new Types.ObjectId('user123user123user12');
+      const userId = new Types.ObjectId('111111111111111111111112');
       const result = await getDepartmentIdsForQuery(userDeptIds, userId);
 
       expect(result.length).toBe(4);

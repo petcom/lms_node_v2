@@ -1,6 +1,6 @@
 # API Authorization Reference
-**Version:** 2.0.0
-**Date:** 2026-01-11
+**Version:** 2.1.0
+**Date:** 2026-01-16
 **Status:** Ready for Implementation
 **Audience:** Both Backend and Frontend Teams
 
@@ -124,12 +124,45 @@ This document provides a quick reference for authorization requirements across a
 |----------|--------|------|---------------|-------|
 | `/api/v2/reports/completion` | GET | 🔒🔑🏢 | `reports:department:read` | Authorization scoping applied |
 | `/api/v2/reports/performance` | GET | 🔒🔑🏢 | `reports:department:read` | Authorization scoping + masking |
-| `/api/v2/reports/learner/:id/transcript` | GET | 🔒🔑 | `learner:transcripts:read` OR own | FERPA-protected |
-| `/api/v2/reports/learner/:id/transcript/pdf` | POST | 🔒🔑 | `learner:transcripts:read` OR own | FERPA-protected |
+| `/api/v2/reports/transcript/:id` | GET | 🔒🔑 | `learner:transcripts:read` OR own | FERPA-protected |
+| `/api/v2/reports/transcript/:id/generate` | POST | 🔒⚠️🔑 | `learner:transcripts:read` | PDF generation, escalation required |
 | `/api/v2/reports/course/:id` | GET | 🔒🔑🏢 | `reports:department:read` | Authorization scoping applied |
 | `/api/v2/reports/program/:id` | GET | 🔒🔑🏢 | `reports:department:read` | Authorization scoping applied |
 | `/api/v2/reports/department/:id` | GET | 🔒🔑🏢 | `reports:department:read` | Authorization scoping applied |
-| `/api/v2/reports/export` | POST | 🔒🔑 | `reports:department:export` | Export permissions required |
+| `/api/v2/reports/export` | GET | 🔒🔑 | `reports:department:read` | Export to CSV/XLSX/PDF |
+
+### Queue-Based Reports (NEW)
+
+| Endpoint | Method | Auth | Access Rights | Notes |
+|----------|--------|------|---------------|-------|
+| `/api/v2/reports/jobs` | GET | 🔒🔑 | `reports:jobs:read` | List report jobs |
+| `/api/v2/reports/jobs` | POST | 🔒🔑 | `reports:jobs:create` | Create report job |
+| `/api/v2/reports/jobs/:id` | GET | 🔒🔑 | `reports:jobs:read` | Get job status |
+| `/api/v2/reports/jobs/:id/cancel` | POST | 🔒🔑 | `reports:jobs:cancel` | Cancel pending/running job |
+| `/api/v2/reports/jobs/:id/download` | GET | 🔒🔑 | `reports:jobs:read` | Download completed report |
+| `/api/v2/reports/jobs/:id/retry` | POST | 🔒🔑 | `reports:jobs:create` | Retry failed job |
+
+### Report Templates
+
+| Endpoint | Method | Auth | Access Rights | Notes |
+|----------|--------|------|---------------|-------|
+| `/api/v2/reports/templates` | GET | 🔒🔑 | `reports:templates:read` | List templates |
+| `/api/v2/reports/templates` | POST | 🔒🔑 | `reports:templates:create` | Create template |
+| `/api/v2/reports/templates/:id` | GET | 🔒🔑 | `reports:templates:read` | Get template |
+| `/api/v2/reports/templates/:id` | PUT | 🔒🔑 | `reports:templates:update` | Update template |
+| `/api/v2/reports/templates/:id` | DELETE | 🔒🔑 | `reports:templates:delete` | Delete template |
+| `/api/v2/reports/templates/:id/clone` | POST | 🔒🔑 | `reports:templates:create` | Clone template |
+
+### Report Schedules
+
+| Endpoint | Method | Auth | Access Rights | Notes |
+|----------|--------|------|---------------|-------|
+| `/api/v2/reports/schedules` | GET | 🔒🔑 | `reports:schedules:read` | List schedules |
+| `/api/v2/reports/schedules` | POST | 🔒🔑 | `reports:schedules:create` | Create schedule |
+| `/api/v2/reports/schedules/:id` | GET | 🔒🔑 | `reports:schedules:read` | Get schedule |
+| `/api/v2/reports/schedules/:id` | PUT | 🔒🔑 | `reports:schedules:update` | Update schedule |
+| `/api/v2/reports/schedules/:id/pause` | POST | 🔒🔑 | `reports:schedules:update` | Pause schedule |
+| `/api/v2/reports/schedules/:id/resume` | POST | 🔒🔑 | `reports:schedules:update` | Resume schedule |
 
 **Authorization Scoping:**
 - System admins: See all data
@@ -501,6 +534,6 @@ hasAllAccessRights(userRights, ['content:courses:manage', 'content:lessons:manag
 
 ---
 
-**Last Updated:** 2026-01-11
+**Last Updated:** 2026-01-16
 **Maintained By:** Backend & API Team
 **Questions?** See `/contracts/README.md` for contact info

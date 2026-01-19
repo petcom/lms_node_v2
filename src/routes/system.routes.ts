@@ -7,7 +7,8 @@ import {
   getStats,
   toggleMaintenance
 } from '@/controllers/system/system.controller';
-import { authenticate, authorize } from '@/middlewares/authenticate';
+import { authorize } from '@/middlewares/authenticate';
+import { isAuthenticated } from '@/middlewares/isAuthenticated';
 
 const router = Router();
 
@@ -21,9 +22,9 @@ router.get('/health', getHealth);
 router.get('/version', getVersion);
 
 // ADMIN-ONLY endpoints
-router.get('/status', authenticate, authorize('system-admin', 'global-admin'), getStatus);
-router.get('/metrics', authenticate, authorize('system-admin', 'global-admin'), getMetrics);
-router.get('/stats', authenticate, authorize('system-admin', 'global-admin'), getStats);
-router.post('/maintenance', authenticate, authorize('system-admin', 'global-admin'), toggleMaintenance);
+router.get('/status', isAuthenticated, authorize('system-admin', 'global-admin'), getStatus);
+router.get('/metrics', isAuthenticated, authorize('system-admin', 'global-admin'), getMetrics);
+router.get('/stats', isAuthenticated, authorize('system-admin', 'global-admin'), getStats);
+router.post('/maintenance', isAuthenticated, authorize('system-admin', 'global-admin'), toggleMaintenance);
 
 export default router;

@@ -9,8 +9,9 @@ import Department from '@/models/organization/Department.model';
 import Course from '@/models/academic/Course.model';
 import Class from '@/models/academic/Class.model';
 import { hashPassword } from '@/utils/password';
+import { describeIfMongo } from '../../helpers/mongo-guard';
 
-describe('GradeOverrideService - Unit Tests', () => {
+describeIfMongo('GradeOverrideService - Unit Tests', () => {
   let mongoServer: MongoMemoryServer;
   let gradeOverrideService: GradeOverrideService;
 

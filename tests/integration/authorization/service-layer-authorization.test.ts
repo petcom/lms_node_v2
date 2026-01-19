@@ -26,8 +26,9 @@ import { Staff } from '@/models/auth/Staff.model';
 import { Learner } from '@/models/auth/Learner.model';
 import Class from '@/models/academic/Class.model';
 import ClassEnrollment from '@/models/enrollment/ClassEnrollment.model';
+import { describeIfMongo } from '../../helpers/mongo-guard';
 
-describe('Service Layer Authorization Integration Tests', () => {
+describeIfMongo('Service Layer Authorization Integration Tests', () => {
   let mongoServer: MongoMemoryServer;
   let topLevelDepartment: any;
   let subDepartment: any;

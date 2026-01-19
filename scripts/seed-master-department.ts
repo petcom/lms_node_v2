@@ -23,10 +23,10 @@
  */
 
 import mongoose from 'mongoose';
-import * as dotenv from 'dotenv';
+import { loadEnv } from './utils/load-env';
 
 // Load environment variables
-dotenv.config();
+loadEnv();
 
 // Import Department model and constants
 import Department from '../src/models/organization/Department.model';

@@ -40,7 +40,8 @@
       "@routes/*": ["routes/*"],
       "@utils/*": ["utils/*"],
       "@types/*": ["types/*"],
-      "@validators/*": ["validators/*"]
+      "@validators/*": ["validators/*"],
+      "@contracts/*": ["../contracts/*"]
     }
   },
   "include": ["src/**/*"],

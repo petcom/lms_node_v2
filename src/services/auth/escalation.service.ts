@@ -265,6 +265,10 @@ export class EscalationService {
    */
   static async isAdminSessionActive(userId: Types.ObjectId): Promise<boolean> {
     try {
+      if (config.env === 'development' && config.redis.disabled) {
+        return true;
+      }
+
       const userIdStr = userId.toString();
       const cacheKey = `${ADMIN_SESSION_PREFIX}${userIdStr}`;
 

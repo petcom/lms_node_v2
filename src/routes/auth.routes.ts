@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { AuthController } from '@/controllers/auth/auth.controller';
 import { PasswordController } from '@/controllers/auth/password.controller';
-import { authenticate } from '@/middlewares/authenticate';
+import { isAuthenticated } from '@/middlewares/isAuthenticated';
 import {
   validateRegisterStaff,
   validateRegisterLearner,
@@ -20,20 +20,20 @@ router.post('/register/learner', validateRegisterLearner, AuthController.registe
 // Authentication
 router.post('/login', validateLogin, AuthController.login);
 router.post('/refresh', validateRefresh, AuthController.refresh);
-router.post('/logout', authenticate, AuthController.logout);
+router.post('/logout', isAuthenticated, AuthController.logout);
 
 // Current user
-router.get('/me', authenticate, AuthController.getCurrentUser);
+router.get('/me', isAuthenticated, AuthController.getCurrentUser);
 
 // Role System V2 - Session Management
-router.post('/escalate', authenticate, AuthController.escalate);
-router.post('/deescalate', authenticate, AuthController.deescalate);
-router.post('/switch-department', authenticate, AuthController.switchDepartment);
-router.post('/continue', authenticate, AuthController.continue);
+router.post('/escalate', isAuthenticated, AuthController.escalate);
+router.post('/deescalate', isAuthenticated, AuthController.deescalate);
+router.post('/switch-department', isAuthenticated, AuthController.switchDepartment);
+router.post('/continue', isAuthenticated, AuthController.continue);
 
 // Password management
 router.post('/password/forgot', validateForgotPassword, PasswordController.forgotPassword);
 router.put('/password/reset/:token', PasswordController.resetPassword);
-router.put('/password/change', authenticate, validatePasswordChange, PasswordController.changePassword);
+router.put('/password/change', isAuthenticated, validatePasswordChange, PasswordController.changePassword);
 
 export default router;

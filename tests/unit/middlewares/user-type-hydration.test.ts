@@ -16,7 +16,7 @@ import {
   areUserTypesHydrated,
   getUserTypeStrings,
   IRoleRegistry
-} from '@/middlewares/user-type-hydration';
+} from '@/middlewares/userTypeHydration';
 import { UserTypeObject } from '@contracts/api/lookup-values.contract';
 import { UserType } from '@/models/auth/User.model';
 

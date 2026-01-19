@@ -1,8 +1,9 @@
 import mongoose from 'mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import Department from '@/models/organization/Department.model';
+import { describeIfMongo } from '../../helpers/mongo-guard';
 
-describe('Department Model', () => {
+describeIfMongo('Department Model', () => {
   let mongoServer: MongoMemoryServer;
 
   beforeAll(async () => {

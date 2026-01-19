@@ -29,7 +29,7 @@
  *
  * Phase 5, Task 5.5 - Full Implementation
  *
- * @module middlewares/require-access-right
+ * @module middlewares/requireAccessRight
  */
 
 import { Request, Response, NextFunction } from 'express';

@@ -5,18 +5,21 @@
 
 import request from 'supertest';
 import mongoose from 'mongoose';
+import { MongoMemoryServer } from 'mongodb-memory-server';
 import app from '@/app';
-import { connectDatabase, disconnectDatabase } from '@/config/database';
 import { LookupValue } from '@/models/LookupValue.model';
 import User from '@/models/auth/User.model';
 import { ReportJob } from '@/models/reports/ReportJob.model';
+import { describeIfMongo } from '../../helpers/mongo-guard';
 
-describe('Report Jobs API Integration Tests', () => {
+describeIfMongo('Report Jobs API Integration Tests', () => {
   let authToken: string;
   let userId: string;
+  let mongoServer: MongoMemoryServer;
 
   beforeAll(async () => {
-    await connectDatabase();
+    mongoServer = await MongoMemoryServer.create();
+    await mongoose.connect(mongoServer.getUri());
 
     // Seed LookupValues
     await LookupValue.create([
@@ -44,7 +47,8 @@ describe('Report Jobs API Integration Tests', () => {
     await LookupValue.deleteMany({});
     await User.deleteMany({});
     await ReportJob.deleteMany({});
-    await disconnectDatabase();
+    await mongoose.disconnect();
+    await mongoServer.stop();
   });
 
   afterEach(async () => {

@@ -8,6 +8,7 @@ import { User } from '@/models/auth/User.model';
 import { Staff } from '@/models/auth/Staff.model';
 import Content, { ContentType } from '@/models/content/Content.model';
 import { Cache } from '@/config/redis';
+import { describeIfMongo } from '../../../helpers/mongo-guard';
 
 jest.mock('@/config/redis', () => ({
   Cache: {
@@ -19,7 +20,7 @@ jest.mock('@/config/redis', () => ({
 
 let mongoServer: MongoMemoryServer;
 
-describe('ResolverService', () => {
+describeIfMongo('ResolverService', () => {
   let testDepartment: any;
   let testProgram: any;
   let testUser: any;

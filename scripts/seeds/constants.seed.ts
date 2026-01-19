@@ -36,11 +36,11 @@
  */
 
 import mongoose from 'mongoose';
-import dotenv from 'dotenv';
+import { loadEnv } from '../utils/load-env';
 import { LookupValue } from '../../src/models/LookupValue.model';
 
 // Load environment variables
-dotenv.config();
+loadEnv();
 
 // Configuration
 const config = {

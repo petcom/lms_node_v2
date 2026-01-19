@@ -128,7 +128,9 @@ const ROLE_DEFINITIONS = [
       'content:lessons:manage',
       'content:exams:manage',
       'content:scorm:manage',
-      'reports:content:read'
+      'reports:content:read',
+      'analytics:courses:read',
+      'analytics:courses:export'
     ],
     isDefault: false,
     sortOrder: 2
@@ -146,7 +148,9 @@ const ROLE_DEFINITIONS = [
       'enrollment:department:manage',
       'reports:department:read',
       'reports:department:export',
-      'settings:department:manage'
+      'settings:department:manage',
+      'analytics:courses:read',
+      'analytics:courses:export'
     ],
     isDefault: false,
     sortOrder: 3

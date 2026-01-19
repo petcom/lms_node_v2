@@ -35,11 +35,11 @@
  */
 
 import mongoose from 'mongoose';
-import dotenv from 'dotenv';
+import { loadEnv } from './utils/load-env';
 import bcrypt from 'bcryptjs';
 
 // Load environment variables
-dotenv.config();
+loadEnv();
 
 // Import models
 import { User } from '../src/models/auth/User.model';

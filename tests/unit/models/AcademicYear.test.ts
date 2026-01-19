@@ -1,8 +1,9 @@
 import mongoose from 'mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import AcademicYear from '@/models/academic/AcademicYear.model';
+import { describeIfMongo } from '../../helpers/mongo-guard';
 
-describe('AcademicYear Model', () => {
+describeIfMongo('AcademicYear Model', () => {
   let mongoServer: MongoMemoryServer;
 
   beforeAll(async () => {

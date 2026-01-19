@@ -1,25 +1,28 @@
 /**
- * Mock Data Seeding Script for LMS V2
- * 
- * Creates comprehensive test data in lms_v2_mockdata database:
- * - 6 Users (4 staff, 2 learners)
- * - 3 Departments with hierarchy
- * - 1 Academic Year + 2 Terms
- * - 20 Courses with segments
- * - 15 Exams with 4 questions each
- * - Programs and enrollments
- * - Learning activity data
- * - SCORM packages
- * - Settings and permissions
+ * Mock Data Seeding Script (Current LMS V2 Schema)
+ *
+ * Populates a disposable mock database with realistic data for development.
+ * Uses ENV_FILE to switch between .env and .env.mock.
  */
 
 import mongoose from 'mongoose';
-import * as bcrypt from 'bcryptjs';
+import bcrypt from 'bcryptjs';
 
-// Import models - mix of default and named exports
+import { loadEnv } from './utils/load-env';
+import { seedLookupValues } from './seeds/constants.seed';
+import {
+  createAdminLearner,
+  createAdminStaff,
+  createAdminUser,
+  createGlobalAdmin,
+  createMasterDepartment,
+  seedAccessRights,
+  seedRoleDefinitions
+} from './seed-admin';
+
 import { User } from '../src/models/auth/User.model';
-import { Learner } from '../src/models/auth/Learner.model';
 import { Staff } from '../src/models/auth/Staff.model';
+import { Learner } from '../src/models/auth/Learner.model';
 import Department from '../src/models/organization/Department.model';
 import AcademicYear from '../src/models/academic/AcademicYear.model';
 import Course from '../src/models/academic/Course.model';
@@ -35,914 +38,1396 @@ import ContentAttempt from '../src/models/content/ContentAttempt.model';
 import LearningEvent from '../src/models/activity/LearningEvent.model';
 import ExamResult from '../src/models/activity/ExamResult.model';
 import ScormAttempt from '../src/models/activity/ScormAttempt.model';
-import Setting from '../src/models/system/Setting.model';
-import Permission from '../src/models/system/Permission.model';
-import RolePermission from '../src/models/system/RolePermission.model';
-import { AuditLog } from '../src/models/system/AuditLog.model';
-import { Report } from '../src/models/system/Report.model';
 
-// Database connection
-const MOCK_DB_URI = process.env.MOCK_DB_URI || 'mongodb://localhost:27017/lms_v2_mockdata';
+loadEnv();
 
-// Data storage
-const mockData = {
-  users: [] as any[],
-  staff: [] as any[],
-  learners: [] as any[],
-  departments: [] as any[],
-  academicYears: [] as any[],
-  courses: [] as any[],
-  programs: [] as any[],
-  classes: [] as any[],
-  content: [] as any[],
-  courseContent: [] as any[],
-  questionBanks: [] as any[],
-  questions: [] as any[],
-  enrollments: [] as any[],
-  classEnrollments: [] as any[],
-  contentAttempts: [] as any[],
-  learningEvents: [] as any[],
-  examResults: [] as any[],
-  scormAttempts: [] as any[]
+const DB_URI =
+  process.env.MONGO_URI ||
+  process.env.MONGODB_URI ||
+  process.env.MOCK_DB_URI ||
+  'mongodb://localhost:27017/lms_mock';
+
+const DEFAULT_PASSWORD = process.env.MOCK_USER_PASSWORD || 'Password123!';
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@lms.edu';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'Admin123!';
+
+const randomInt = (min: number, max: number) =>
+  Math.floor(Math.random() * (max - min + 1)) + min;
+
+const randomDateWithinDays = (daysBack: number) => {
+  const now = Date.now();
+  const offset = randomInt(0, daysBack) * 24 * 60 * 60 * 1000;
+  return new Date(now - offset);
 };
 
-// Utility functions
-const randomElement = <T>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
-const randomElements = <T>(arr: T[], count: number): T[] => {
-  const shuffled = [...arr].sort(() => 0.5 - Math.random());
-  return shuffled.slice(0, count);
-};
-const randomInt = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
-const randomDate = (start: Date, end: Date) => new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
+const buildPerson = (firstName: string, lastName: string, email: string) => ({
+  firstName,
+  lastName,
+  emails: [
+    {
+      email,
+      type: 'institutional',
+      isPrimary: true,
+      verified: true,
+      allowNotifications: true
+    }
+  ],
+  phones: [],
+  addresses: [],
+  timezone: 'America/New_York',
+  languagePreference: 'en'
+});
 
 async function connectDB() {
   try {
-    await mongoose.connect(MOCK_DB_URI);
-    console.log(`✓ Connected to mock database: ${MOCK_DB_URI}`);
+    await mongoose.connect(DB_URI);
+    console.log(`Connected to database: ${DB_URI}`);
   } catch (error) {
-    console.error('✗ Database connection failed:', error);
+    console.error('Database connection failed:', error);
     process.exit(1);
   }
 }
 
-async function createDepartments() {
-  console.log('\n📁 Creating departments...');
-  
-  // Master department (required by system)
-  const masterDept = await Department.create({
-    name: 'Master Department',
-    description: 'Root department for the organization',
-    status: 'active',
-    settings: {
-      allowCourseCreation: true,
-      allowEnrollment: true,
-      requireApproval: false
+async function dropLegacyIndexes() {
+  try {
+    const staffIndexes = await Staff.collection.indexes();
+    if (staffIndexes.some(index => index.name === 'instructorId_1')) {
+      await Staff.collection.dropIndex('instructorId_1');
+      console.log('Dropped legacy staff index: instructorId_1');
     }
-  });
-  mockData.departments.push(masterDept);
-  
-  // Main department 1: Cognitive Therapy
-  const cognitiveDept = await Department.create({
-    name: 'Cognitive Therapy',
-    code: 'CTHERAPY',
-    description: 'Cognitive Behavioral Therapy and related treatments',
-    parentDepartment: masterDept._id,
-    status: 'active',
-    settings: {
-      allowCourseCreation: true,
-      allowEnrollment: true,
-      requireApproval: false
+  } catch (error) {
+    console.log('Skipping staff legacy index check:', error);
+  }
+
+  try {
+    const learnerIndexes = await Learner.collection.indexes();
+    if (learnerIndexes.some(index => index.name === 'studentId_1')) {
+      await Learner.collection.dropIndex('studentId_1');
+      console.log('Dropped legacy learner index: studentId_1');
     }
-  });
-  mockData.departments.push(cognitiveDept);
-  
-  // Main department 2: EMDR
-  const emdrDept = await Department.create({
-    name: 'EMDR',
-    code: 'EMDR',
-    description: 'Eye Movement Desensitization and Reprocessing',
-    parentDepartment: masterDept._id,
-    status: 'active',
-    settings: {
-      allowCourseCreation: true,
-      allowEnrollment: true,
-      requireApproval: false
+    if (learnerIndexes.some(index => index.name === 'learnerId_1')) {
+      await Learner.collection.dropIndex('learnerId_1');
+      console.log('Dropped legacy learner index: learnerId_1');
     }
-  });
-  mockData.departments.push(emdrDept);
-  
-  // Main department 3: Basic Therapy (with subdepartments)
-  const basicDept = await Department.create({
-    name: 'Basic Therapy',
-    code: 'BASIC',
-    description: 'Foundational therapy techniques and practices',
-    parentDepartment: masterDept._id,
-    status: 'active',
-    settings: {
-      allowCourseCreation: true,
-      allowEnrollment: true,
-      requireApproval: false
+  } catch (error) {
+    console.log('Skipping learner legacy index check:', error);
+  }
+
+  try {
+    const courseContentIndexes = await CourseContent.collection.indexes();
+    if (courseContentIndexes.some(index => index.name === 'course_1_order_1')) {
+      await CourseContent.collection.dropIndex('course_1_order_1');
+      console.log('Dropped legacy course content index: course_1_order_1');
     }
-  });
-  mockData.departments.push(basicDept);
-  
-  // Subdepartment 1: Basic Therapy - Counseling
-  const counselingDept = await Department.create({
-    name: 'Counseling Services',
-    code: 'COUNSEL',
-    description: 'Individual and group counseling',
-    parentDepartment: basicDept._id,
-    status: 'active',
-    settings: {
-      allowCourseCreation: true,
-      allowEnrollment: true,
-      requireApproval: true
+  } catch (error) {
+    console.log('Skipping course content legacy index check:', error);
+  }
+
+  try {
+    const classEnrollmentIndexes = await ClassEnrollment.collection.indexes();
+    if (classEnrollmentIndexes.some(index => index.name === 'learner_1_class_1')) {
+      await ClassEnrollment.collection.dropIndex('learner_1_class_1');
+      console.log('Dropped legacy class enrollment index: learner_1_class_1');
     }
-  });
-  mockData.departments.push(counselingDept);
-  
-  // Subdepartment 2: Basic Therapy - Crisis Intervention
-  const crisisDept = await Department.create({
-    name: 'Crisis Intervention',
-    code: 'CRISIS',
-    description: 'Emergency mental health response and crisis management',
-    parentDepartment: basicDept._id,
-    status: 'active',
-    settings: {
-      allowCourseCreation: true,
-      allowEnrollment: true,
-      requireApproval: true
+  } catch (error) {
+    console.log('Skipping class enrollment legacy index check:', error);
+  }
+
+  try {
+    const examResultIndexes = await ExamResult.collection.indexes();
+    if (examResultIndexes.some(index => index.name === 'learner_1_exam_1')) {
+      await ExamResult.collection.dropIndex('learner_1_exam_1');
+      console.log('Dropped legacy exam result index: learner_1_exam_1');
     }
-  });
-  mockData.departments.push(crisisDept);
-  
-  console.log(`✓ Created ${mockData.departments.length} departments (including Master)`);
+  } catch (error) {
+    console.log('Skipping exam result legacy index check:', error);
+  }
 }
 
-async function createUsers() {
-  console.log('\n👥 Creating users...');
-  
-  const hashedPassword = await bcrypt.hash('Password123!', 10);
-  
-  // Staff users
-  const staffData = [
-    {
-      email: 'admin@lms.com',
-      firstName: 'Sarah',
-      lastName: 'Anderson',
-      roles: ['system-admin'],
-      title: 'System Administrator',
-      department: mockData.departments[0]._id, // Master
-      permissions: ['system:manage', 'users:manage', 'departments:manage'],
-      preferences: { defaultDashboard: 'system-admin' }
-    },
-    {
-      email: 'john.smith@lms.com',
-      firstName: 'John',
-      lastName: 'Smith',
-      roles: ['system-admin', 'content-admin', 'department-admin'],
-      title: 'Lead Instructor & Admin',
-      department: mockData.departments[1]._id, // Cognitive Therapy
-      permissions: ['system:manage', 'content:manage', 'department:manage']
-    },
-    {
-      email: 'emily.jones@lms.com',
-      firstName: 'Emily',
-      lastName: 'Jones',
-      roles: ['system-admin', 'content-admin'],
-      title: 'Content Manager',
-      department: mockData.departments[2]._id, // EMDR
-      permissions: ['system:manage', 'content:manage']
-    },
-    {
-      email: 'michael.brown@lms.com',
-      firstName: 'Michael',
-      lastName: 'Brown',
-      roles: ['content-admin', 'department-admin'],
-      title: 'Department Head',
-      department: mockData.departments[3]._id, // Basic Therapy
-      permissions: ['content:manage', 'department:manage']
+async function ensureDepartment(data: {
+  name: string;
+  code: string;
+  description?: string;
+  parentDepartmentId?: mongoose.Types.ObjectId | null;
+  isVisible?: boolean;
+  requireExplicitMembership?: boolean;
+}): Promise<any> {
+  const existing = await Department.findOne({ code: data.code.toUpperCase() });
+  if (existing) {
+    existing.name = data.name;
+    existing.description = data.description;
+    existing.parentDepartmentId = data.parentDepartmentId || undefined;
+    if (typeof data.isVisible === 'boolean') {
+      existing.isVisible = data.isVisible;
     }
-  ];
-  
-  for (const data of staffData) {
-    const user = await User.create({
-      email: data.email,
-      password: hashedPassword,
-      role: 'staff',
-      isEmailVerified: true
-    });
-    mockData.users.push(user);
-    
-    const staff = await Staff.create({
-      _id: user._id,
-      person: {
-        firstName: data.firstName,
-        lastName: data.lastName,
-        emails: [{
-          email: data.email,
-          type: 'institutional',
-          isPrimary: true,
-          verified: true,
-          allowNotifications: true
-        }],
-        phones: [],
-        addresses: [],
-        timezone: 'America/New_York',
-        languagePreference: 'en'
-      },
-      title: data.title,
-      departmentMemberships: [{
-        departmentId: data.department,
-        roles: data.roles,
-        isPrimary: true,
-        isActive: true,
-        joinedAt: new Date()
-      }],
-      isActive: true
-    });
-    mockData.staff.push(staff);
-  }
-  
-  // Learner users
-  const learnerData = [
-    {
-      email: 'alice.student@lms.com',
-      firstName: 'Alice',
-      lastName: 'Johnson',
-      studentId: 'STU001'
-    },
-    {
-      email: 'bob.learner@lms.com',
-      firstName: 'Bob',
-      lastName: 'Williams',
-      studentId: 'STU002'
+    if (typeof data.requireExplicitMembership === 'boolean') {
+      existing.requireExplicitMembership = data.requireExplicitMembership;
     }
-  ];
-  
-  for (const data of learnerData) {
-    const user = await User.create({
-      email: data.email,
-      password: hashedPassword,
-      role: 'learner',
-      isEmailVerified: true
-    });
-    mockData.users.push(user);
-    
-    const learner = await Learner.create({
-      _id: user._id,
-      person: {
-        firstName: data.firstName,
-        lastName: data.lastName,
-        emails: [{
-          email: data.email,
-          type: 'institutional',
-          isPrimary: true,
-          verified: true,
-          allowNotifications: true
-        }],
-        phones: [],
-        addresses: [],
-        timezone: 'America/New_York',
-        languagePreference: 'en'
-      },
-      personExtended: {
-        studentId: data.studentId,
-        emergencyContacts: [],
-        identifications: []
-      },
-      departmentMemberships: [],
-      isActive: true
-    });
-    mockData.learners.push(learner);
+    existing.isActive = true;
+    await existing.save();
+    return existing;
   }
-  
-  console.log(`✓ Created ${mockData.staff.length} staff and ${mockData.learners.length} learners`);
+
+  const department = new Department({
+    name: data.name,
+    code: data.code,
+    description: data.description,
+    parentDepartmentId: data.parentDepartmentId || undefined,
+    isVisible: data.isVisible ?? true,
+    requireExplicitMembership: data.requireExplicitMembership ?? false,
+    isActive: true
+  });
+
+  await department.save();
+  return department;
 }
 
-async function createAcademicYear() {
-  console.log('\n📅 Creating academic year...');
-  
-  const academicYear = await AcademicYear.create({
+async function ensureUser(data: {
+  email: string;
+  userTypes: Array<'learner' | 'staff' | 'global-admin'>;
+  passwordHash: string;
+}): Promise<any> {
+  const existing = await User.findOne({ email: data.email });
+  if (existing) {
+    existing.userTypes = data.userTypes;
+    existing.password = data.passwordHash;
+    existing.isActive = true;
+    await existing.save();
+    return existing;
+  }
+
+  return User.create({
+    email: data.email,
+    password: data.passwordHash,
+    userTypes: data.userTypes,
+    isActive: true
+  });
+}
+
+async function ensureStaffRecord(data: {
+  userId: mongoose.Types.ObjectId;
+  person: any;
+  title?: string;
+  memberships: Array<{
+    departmentId: mongoose.Types.ObjectId;
+    roles: string[];
+    isPrimary: boolean;
+  }>;
+}): Promise<any> {
+  const existing = await Staff.findById(data.userId);
+  if (existing) {
+    existing.person = data.person;
+    existing.title = data.title;
+    existing.departmentMemberships = data.memberships.map(m => ({
+      ...m,
+      isActive: true,
+      joinedAt: new Date()
+    }));
+    existing.isActive = true;
+    await existing.save();
+    return existing;
+  }
+
+  return Staff.create({
+    _id: data.userId,
+    person: data.person,
+    title: data.title,
+    departmentMemberships: data.memberships.map(m => ({
+      ...m,
+      isActive: true,
+      joinedAt: new Date()
+    })),
+    isActive: true
+  });
+}
+
+async function ensureLearnerRecord(data: {
+  userId: mongoose.Types.ObjectId;
+  person: any;
+  personExtended?: any;
+  memberships: Array<{
+    departmentId: mongoose.Types.ObjectId;
+    roles: string[];
+    isPrimary: boolean;
+  }>;
+}): Promise<any> {
+  const existing = await Learner.findById(data.userId);
+  if (existing) {
+    existing.person = data.person;
+    existing.personExtended = data.personExtended;
+    existing.departmentMemberships = data.memberships.map(m => ({
+      ...m,
+      isActive: true,
+      joinedAt: new Date()
+    }));
+    existing.isActive = true;
+    await existing.save();
+    return existing;
+  }
+
+  return Learner.create({
+    _id: data.userId,
+    person: data.person,
+    personExtended: data.personExtended,
+    departmentMemberships: data.memberships.map(m => ({
+      ...m,
+      isActive: true,
+      joinedAt: new Date()
+    })),
+    isActive: true
+  });
+}
+
+async function ensureAcademicYear(): Promise<any> {
+  const existing = await AcademicYear.findOne({ name: '2025-2026' });
+  if (existing) {
+    existing.startDate = new Date('2025-09-01');
+    existing.endDate = new Date('2026-06-30');
+    existing.isCurrent = true;
+    existing.isActive = true;
+    await existing.save();
+    return existing;
+  }
+
+  return AcademicYear.create({
     name: '2025-2026',
-    code: 'AY2025',
-    startDate: new Date(2025, 8, 1), // September 1, 2025
-    endDate: new Date(2026, 5, 30), // June 30, 2026
-    status: 'active',
-    terms: [
-      {
-        name: 'Fall 2025',
-        code: 'FALL2025',
-        startDate: new Date(2025, 8, 1),
-        endDate: new Date(2025, 11, 20),
-        status: 'active'
-      },
-      {
-        name: 'Spring 2026',
-        code: 'SPRING2026',
-        startDate: new Date(2026, 0, 10),
-        endDate: new Date(2026, 4, 25),
-        status: 'active'
-      }
-    ]
+    startDate: new Date('2025-09-01'),
+    endDate: new Date('2026-06-30'),
+    isCurrent: true,
+    isActive: true
   });
-  mockData.academicYears.push(academicYear);
-  
-  console.log('✓ Created academic year with 2 terms');
 }
 
-async function createCourses() {
-  console.log('\n📚 Creating 20 courses...');
-  
-  const courseTemplates = [
-    { prefix: 'CBT', name: 'Cognitive Behavioral Therapy', dept: 1 },
-    { prefix: 'EMDR', name: 'EMDR Therapy', dept: 2 },
-    { prefix: 'BASIC', name: 'Basic Therapy', dept: 3 },
-    { prefix: 'COUNSEL', name: 'Counseling', dept: 4 },
-    { prefix: 'CRISIS', name: 'Crisis Management', dept: 5 }
-  ];
-  
-  const levels = ['Introduction to', 'Fundamentals of', 'Advanced', 'Practical'];
-  const topics = ['Techniques', 'Applications', 'Theory', 'Practice'];
-  
-  for (let i = 0; i < 20; i++) {
-    const template = courseTemplates[i % courseTemplates.length];
-    const level = levels[Math.floor(i / 5) % levels.length];
-    const topic = topics[i % topics.length];
-    
-    const course = await Course.create({
-      title: `${level} ${template.name} ${topic}`,
-      code: `${template.prefix}${(101 + i).toString()}`,
-      description: `Comprehensive course covering ${level.toLowerCase()} ${template.name.toLowerCase()} ${topic.toLowerCase()}`,
-      credits: randomInt(2, 4),
-      department: mockData.departments[template.dept]._id,
-      academicYear: mockData.academicYears[0]._id,
-      status: 'published',
-      duration: randomInt(4, 12),
-      difficulty: randomElement(['beginner', 'intermediate', 'advanced']),
-      enrollmentSettings: {
-        maxEnrollments: randomInt(20, 50),
-        allowWaitlist: true,
-        autoEnroll: false
-      },
-      prerequisites: i > 5 ? [mockData.courses[randomInt(0, i - 1)]?._id].filter(Boolean) : []
-    });
-    mockData.courses.push(course);
+async function ensureCourse(data: {
+  name: string;
+  code: string;
+  departmentId: mongoose.Types.ObjectId;
+  credits: number;
+  prerequisites?: mongoose.Types.ObjectId[];
+  status?: 'draft' | 'published' | 'archived';
+  createdBy?: mongoose.Types.ObjectId;
+}): Promise<any> {
+  const existing = await Course.findOne({
+    departmentId: data.departmentId,
+    code: data.code
+  });
+
+  if (existing) {
+    existing.name = data.name;
+    existing.credits = data.credits;
+    existing.prerequisites = data.prerequisites || [];
+    existing.status = data.status || 'published';
+    existing.createdBy = data.createdBy;
+    existing.isActive = true;
+    await existing.save();
+    return existing;
   }
-  
-  // Assign 5 courses to multiple departments
-  const multiDeptCourses = randomElements(mockData.courses, 5);
-  for (const course of multiDeptCourses) {
-    const extraDept = randomElement(mockData.departments.slice(1)); // Exclude master
-    course.additionalDepartments = [extraDept._id];
-    await course.save();
-  }
-  
-  console.log(`✓ Created ${mockData.courses.length} courses (5 assigned to multiple departments)`);
+
+  return Course.create({
+    name: data.name,
+    code: data.code,
+    departmentId: data.departmentId,
+    credits: data.credits,
+    prerequisites: data.prerequisites || [],
+    status: data.status || 'published',
+    createdBy: data.createdBy,
+    isActive: true
+  });
 }
 
-async function createCourseContent() {
-  console.log('\n📄 Creating course content (1-3 segments per course)...');
-  
-  let totalSegments = 0;
-  
-  for (const course of mockData.courses) {
-    const numSegments = randomInt(1, 3);
-    
-    for (let i = 0; i < numSegments; i++) {
-      const content = await Content.create({
-        title: `${course.title} - Module ${i + 1}`,
-        type: randomElement(['video', 'document', 'presentation', 'interactive']),
-        description: `Learning module ${i + 1} for ${course.title}`,
-        fileUrl: `https://cdn.example.com/content/${course.code}-module-${i + 1}`,
-        duration: randomInt(30, 120),
-        status: 'published',
-        metadata: {
-          fileSize: randomInt(1000000, 50000000),
-          mimeType: randomElement(['video/mp4', 'application/pdf', 'application/vnd.ms-powerpoint'])
-        }
-      });
-      mockData.content.push(content);
-      
-      const courseContent = await CourseContent.create({
-        course: course._id,
-        content: content._id,
-        orderIndex: i + 1,
-        isRequired: i === 0, // First module is required
-        passScore: 70
-      });
-      mockData.courseContent.push(courseContent);
-      totalSegments++;
-    }
+async function ensureProgram(data: {
+  name: string;
+  code: string;
+  departmentId: mongoose.Types.ObjectId;
+  type: 'certificate' | 'continuing-education';
+}): Promise<any> {
+  const existing = await Program.findOne({
+    departmentId: data.departmentId,
+    code: data.code
+  });
+
+  if (existing) {
+    existing.name = data.name;
+    existing.type = data.type;
+    existing.isActive = true;
+    await existing.save();
+    return existing;
   }
-  
-  console.log(`✓ Created ${totalSegments} content segments across ${mockData.courses.length} courses`);
+
+  const program = new Program({
+    name: data.name,
+    code: data.code,
+    departmentId: data.departmentId,
+    type: data.type,
+    isActive: true
+  });
+
+  await program.save();
+  return program;
 }
 
-async function createExamsAndQuestions() {
-  console.log('\n📝 Creating 15 exams with 4 questions each...');
-  
-  const examCourses = randomElements(mockData.courses, 15);
-  let totalQuestions = 0;
-  
-  for (const course of examCourses) {
-    // Create question bank
-    const questionBank = await QuestionBank.create({
-      name: `${course.code} Final Exam`,
-      description: `Final examination for ${course.title}`,
-      course: course._id,
-      department: course.department,
-      status: 'published',
-      tags: ['final-exam', course.code.toLowerCase()]
-    });
-    mockData.questionBanks.push(questionBank);
-    
-    // Create 4 questions
-    const questionTypes = ['multiple-choice', 'true-false', 'short-answer', 'essay'];
-    
-    for (let i = 0; i < 4; i++) {
-      const qType = questionTypes[i % questionTypes.length];
-      
-      let question: any = {
-        questionBank: questionBank._id,
-        type: qType,
-        questionText: `Question ${i + 1}: What is the primary concept in ${course.title}?`,
-        points: 25,
-        difficulty: randomElement(['easy', 'medium', 'hard']),
-        tags: [course.code.toLowerCase(), 'final-exam']
-      };
-      
-      // Add type-specific fields
-      if (qType === 'multiple-choice') {
-        question.options = [
-          { text: 'Correct answer', isCorrect: true },
-          { text: 'Incorrect option 1', isCorrect: false },
-          { text: 'Incorrect option 2', isCorrect: false },
-          { text: 'Incorrect option 3', isCorrect: false }
-        ];
-        question.correctAnswer = 'Correct answer';
-      } else if (qType === 'true-false') {
-        question.options = [
-          { text: 'True', isCorrect: true },
-          { text: 'False', isCorrect: false }
-        ];
-        question.correctAnswer = 'True';
-      } else {
-        question.correctAnswer = 'Sample correct answer for evaluation';
-      }
-      
-      const createdQuestion = await Question.create(question);
-      mockData.questions.push(createdQuestion);
-      totalQuestions++;
-    }
+async function ensureClass(data: {
+  name: string;
+  courseId: mongoose.Types.ObjectId;
+  academicYearId: mongoose.Types.ObjectId;
+  termCode: string;
+  startDate: Date;
+  endDate: Date;
+  instructorIds: mongoose.Types.ObjectId[];
+  maxEnrollment: number;
+}): Promise<any> {
+  const existing = await Class.findOne({
+    courseId: data.courseId,
+    academicYearId: data.academicYearId,
+    termCode: data.termCode
+  });
+
+  if (existing) {
+    existing.name = data.name;
+    existing.startDate = data.startDate;
+    existing.endDate = data.endDate;
+    existing.instructorIds = data.instructorIds;
+    existing.maxEnrollment = data.maxEnrollment;
+    existing.isActive = true;
+    await existing.save();
+    return existing;
   }
-  
-  console.log(`✓ Created 15 exams with ${totalQuestions} questions total`);
+
+  return Class.create({
+    name: data.name,
+    courseId: data.courseId,
+    academicYearId: data.academicYearId,
+    termCode: data.termCode,
+    startDate: data.startDate,
+    endDate: data.endDate,
+    instructorIds: data.instructorIds,
+    maxEnrollment: data.maxEnrollment,
+    currentEnrollment: 0,
+    isActive: true
+  });
 }
 
-async function createPrograms() {
-  console.log('\n🎓 Creating programs...');
-  
-  const programs = [
-    {
-      name: 'Cognitive Therapy Certification',
-      code: 'CERT-CBT',
-      department: mockData.departments[1]._id,
-      courses: mockData.courses.filter(c => c.code.startsWith('CBT')).slice(0, 3)
-    },
-    {
-      name: 'EMDR Practitioner Program',
-      code: 'CERT-EMDR',
-      department: mockData.departments[2]._id,
-      courses: mockData.courses.filter(c => c.code.startsWith('EMDR')).slice(0, 3)
-    },
-    {
-      name: 'Basic Therapy Foundations',
-      code: 'CERT-BASIC',
-      department: mockData.departments[3]._id,
-      courses: mockData.courses.filter(c => c.code.startsWith('BASIC')).slice(0, 4)
-    }
-  ];
-  
-  for (const data of programs) {
-    const program = await Program.create({
-      name: data.name,
-      code: data.code,
-      description: `Comprehensive ${data.name} program`,
-      department: data.department,
-      academicYear: mockData.academicYears[0]._id,
-      status: 'published',
-      duration: 6,
-      credits: data.courses.reduce((sum, c) => sum + (c.credits || 0), 0),
-      requirements: {
-        requiredCourses: data.courses.map(c => c._id),
-        minimumGPA: 3.0,
-        totalCredits: data.courses.reduce((sum, c) => sum + (c.credits || 0), 0)
-      }
-    });
-    mockData.programs.push(program);
+async function ensureContent(data: {
+  title: string;
+  description?: string;
+  type: 'video' | 'quiz' | 'scorm' | 'document';
+  courseId: mongoose.Types.ObjectId;
+  createdBy?: mongoose.Types.ObjectId;
+}): Promise<any> {
+  const existing = await Content.findOne({ title: data.title });
+  if (existing) {
+    existing.description = data.description;
+    existing.type = data.type;
+    existing.createdBy = data.createdBy;
+    existing.isActive = true;
+    await existing.save();
+    return existing;
   }
-  
-  console.log(`✓ Created ${mockData.programs.length} programs`);
-}
 
-async function createClasses() {
-  console.log('\n🏫 Creating class instances...');
-  
-  // Create 2 classes for some courses
-  const classCoursesCount = Math.min(10, mockData.courses.length);
-  
-  for (let i = 0; i < classCoursesCount; i++) {
-    const course = mockData.courses[i];
-    const term = mockData.academicYears[0].terms[i % 2];
-    
-    const classInstance = await Class.create({
-      course: course._id,
-      term: {
-        name: term.name,
-        code: term.code,
-        startDate: term.startDate,
-        endDate: term.endDate,
-        status: term.status
-      },
-      section: `${String.fromCharCode(65 + (i % 3))}`, // A, B, C
-      instructor: mockData.staff[i % mockData.staff.length]._id,
-      schedule: {
-        days: randomElements(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'], 2),
-        startTime: '09:00',
-        endTime: '10:30',
-        location: `Room ${100 + i}`
-      },
-      capacity: randomInt(20, 40),
-      status: 'published'
-    });
-    mockData.classes.push(classInstance);
-  }
-  
-  console.log(`✓ Created ${mockData.classes.length} class instances`);
-}
-
-async function createEnrollments() {
-  console.log('\n📋 Creating enrollments...');
-  
-  const learner1 = mockData.learners[0];
-  const learner2 = mockData.learners[1];
-  
-  // Enroll learner 1 in 2 programs
-  const learner1Programs = randomElements(mockData.programs, 2);
-  for (const program of learner1Programs) {
-    // Get courses from program
-    const programCourses = mockData.courses.filter(c => 
-      program.requirements.requiredCourses.some((rc: any) => rc.equals(c._id))
-    );
-    
-    for (const course of programCourses) {
-      const enrollment = await Enrollment.create({
-        courseId: course._id,
-        learnerId: learner1._id,
-        status: randomElement(['active', 'completed']),
-        progress: randomInt(60, 100),
-        enrolledAt: new Date(2025, 8, randomInt(1, 15)),
-        completedAt: Math.random() > 0.5 ? new Date(2025, 11, randomInt(1, 20)) : undefined,
-        finalGrade: Math.random() > 0.3 ? randomInt(75, 98) : undefined
-      });
-      mockData.enrollments.push(enrollment);
-    }
-  }
-  
-  // Enroll learner 2 in 1 program
-  const learner2Program = randomElement(mockData.programs);
-  const programCourses = mockData.courses.filter(c => 
-    learner2Program.requirements.requiredCourses.some((rc: any) => rc.equals(c._id))
-  );
-  
-  for (const course of programCourses) {
-    const enrollment = await Enrollment.create({
-      courseId: course._id,
-      learnerId: learner2._id,
-      status: randomElement(['active', 'completed']),
-      progress: randomInt(40, 100),
-      enrolledAt: new Date(2025, 8, randomInt(1, 15)),
-      completedAt: Math.random() > 0.5 ? new Date(2025, 11, randomInt(1, 20)) : undefined,
-      finalGrade: Math.random() > 0.3 ? randomInt(70, 95) : undefined
-    });
-    mockData.enrollments.push(enrollment);
-  }
-  
-  // Add standalone course enrollments for both learners
-  const standaloneCourses1 = randomElements(mockData.courses.filter(c => 
-    !mockData.enrollments.some((e: any) => e.courseId.equals(c._id) && e.learnerId.equals(learner1._id))
-  ), 3);
-  
-  const standaloneCourses2 = randomElements(mockData.courses.filter(c => 
-    !mockData.enrollments.some((e: any) => e.courseId.equals(c._id) && e.learnerId.equals(learner2._id))
-  ), 3);
-  
-  for (const course of standaloneCourses1) {
-    const enrollment = await Enrollment.create({
-      courseId: course._id,
-      learnerId: learner1._id,
-      status: randomElement(['active', 'completed', 'waitlisted']),
-      progress: randomInt(0, 100),
-      enrolledAt: new Date(2025, 9, randomInt(1, 30)),
-      finalGrade: Math.random() > 0.5 ? randomInt(70, 95) : undefined
-    });
-    mockData.enrollments.push(enrollment);
-  }
-  
-  for (const course of standaloneCourses2) {
-    const enrollment = await Enrollment.create({
-      courseId: course._id,
-      learnerId: learner2._id,
-      status: randomElement(['active', 'completed']),
-      progress: randomInt(0, 100),
-      enrolledAt: new Date(2025, 9, randomInt(1, 30)),
-      finalGrade: Math.random() > 0.5 ? randomInt(65, 92) : undefined
-    });
-    mockData.enrollments.push(enrollment);
-  }
-  
-  console.log(`✓ Created ${mockData.enrollments.length} course enrollments`);
-}
-
-async function createLearningActivity() {
-  console.log('\n📊 Creating learning activity data...');
-  
-  let contentAttempts = 0, learningEvents = 0, examResults = 0;
-  
-  for (const enrollment of mockData.enrollments) {
-    // Get course content
-    const courseContentItems = mockData.courseContent.filter((cc: any) => 
-      cc.course.equals(enrollment.courseId)
-    );
-    
-    // Create content attempts
-    for (const cc of courseContentItems) {
-      if (Math.random() > 0.3) { // 70% chance of attempt
-        const attempt = await ContentAttempt.create({
-          content: cc.content,
-          learner: enrollment.learnerId,
-          course: enrollment.courseId,
-          status: randomElement(['completed', 'in-progress', 'not-started']),
-          progress: randomInt(0, 100),
-          timeSpent: randomInt(300, 3600),
-          startedAt: randomDate(new Date(2025, 8, 1), new Date()),
-          completedAt: Math.random() > 0.4 ? randomDate(new Date(2025, 8, 1), new Date()) : undefined,
-          score: Math.random() > 0.3 ? randomInt(70, 100) : undefined
-        });
-        mockData.contentAttempts.push(attempt);
-        contentAttempts++;
-      }
-    }
-    
-    // Create learning events
-    if (Math.random() > 0.5) {
-      const event = await LearningEvent.create({
-        learner: enrollment.learnerId,
-        course: enrollment.courseId,
-        eventType: randomElement(['course_started', 'lesson_completed', 'quiz_passed', 'assignment_submitted']),
-        eventData: {
-          action: 'completed',
-          result: 'success'
-        },
-        timestamp: randomDate(new Date(2025, 8, 1), new Date())
-      });
-      mockData.learningEvents.push(event);
-      learningEvents++;
-    }
-    
-    // Create exam results if course has exam
-    const hasExam = mockData.questionBanks.some((qb: any) => qb.course.equals(enrollment.courseId));
-    if (hasExam && Math.random() > 0.3) {
-      const questionBank = mockData.questionBanks.find((qb: any) => qb.course.equals(enrollment.courseId));
-      const examQuestions = mockData.questions.filter((q: any) => q.questionBank.equals(questionBank._id));
-      
-      const result = await ExamResult.create({
-        learner: enrollment.learnerId,
-        course: enrollment.courseId,
-        questionBank: questionBank._id,
-        score: randomInt(65, 100),
-        totalPoints: 100,
-        passed: true,
-        attempts: randomInt(1, 2),
-        timeSpent: randomInt(1800, 5400),
-        startedAt: randomDate(new Date(2025, 10, 1), new Date()),
-        completedAt: randomDate(new Date(2025, 10, 1), new Date()),
-        answers: examQuestions.map((q: any) => ({
-          question: q._id,
-          answer: q.correctAnswer,
-          isCorrect: Math.random() > 0.2,
-          points: Math.random() > 0.2 ? q.points : randomInt(0, q.points)
-        }))
-      });
-      mockData.examResults.push(result);
-      examResults++;
-    }
-  }
-  
-  console.log(`✓ Created ${contentAttempts} content attempts, ${learningEvents} learning events, ${examResults} exam results`);
-}
-
-async function createScormAttempts() {
-  console.log('\n📦 Creating SCORM attempts...');
-  
-  // Select 5 random content items to be SCORM content
-  const scormContent = randomElements(mockData.content, Math.min(5, mockData.content.length));
-  let totalAttempts = 0;
-  
-  for (const content of scormContent) {
-    // Find course for this content
-    const courseContent = mockData.courseContent.find((cc: any) => cc.content.equals(content._id));
-    if (!courseContent) continue;
-    
-    // Find learners enrolled in this course
-    const enrolledLearners = mockData.enrollments
-      .filter((e: any) => e.courseId.equals(courseContent.course))
-      .map((e: any) => e.learnerId);
-    
-    for (const learnerId of enrolledLearners) {
-      if (Math.random() > 0.4) { // 60% chance of SCORM attempt
-        const attempt = await ScormAttempt.create({
-          contentId: content._id,
-          learnerId: learnerId,
-          attemptNumber: 1,
-          scormVersion: randomElement(['1.2', '2004']),
-          status: randomElement(['completed', 'incomplete', 'passed', 'failed']),
-          scoreRaw: randomInt(60, 100),
-          scoreMin: 0,
-          scoreMax: 100,
-          scoreScaled: randomInt(60, 100) / 100,
-          sessionTime: randomInt(1200, 6000),
-          totalTime: randomInt(1200, 6000),
-          progressMeasure: randomInt(50, 100) / 100,
-          completionStatus: randomElement(['completed', 'incomplete']),
-          successStatus: randomElement(['passed', 'failed', 'unknown']),
-          startedAt: randomDate(new Date(2025, 9, 1), new Date()),
-          lastAccessedAt: new Date(),
-          completedAt: Math.random() > 0.3 ? randomDate(new Date(2025, 9, 1), new Date()) : undefined,
-          cmiData: {
-            'cmi.core.lesson_status': randomElement(['completed', 'incomplete', 'passed']),
-            'cmi.core.score.raw': randomInt(60, 100).toString(),
-            'cmi.core.session_time': `00:${randomInt(10, 60)}:${randomInt(10, 59)}`
+  return Content.create({
+    title: data.title,
+    description: data.description,
+    type: data.type,
+    fileUrl: `https://cdn.example.com/content/${data.courseId.toString()}/${data.type}`,
+    mimeType: data.type === 'document' ? 'application/pdf' : undefined,
+    fileSize: data.type === 'document' ? randomInt(500000, 4000000) : undefined,
+    duration: data.type === 'video' ? randomInt(20, 60) : undefined,
+    quizData:
+      data.type === 'quiz'
+        ? {
+            passingScore: 70,
+            timeLimit: 30,
+            randomizeQuestions: true,
+            showCorrectAnswers: true
           }
-        });
-        mockData.scormAttempts.push(attempt);
-        totalAttempts++;
-      }
-    }
-  }
-  
-  console.log(`✓ Created ${totalAttempts} SCORM attempts for ${scormContent.length} SCORM content items`);
+        : undefined,
+    scormData:
+      data.type === 'scorm'
+        ? {
+            version: '1.2',
+            manifestPath: 'imsmanifest.xml',
+            launchPath: 'index.html',
+            masteryScore: 80
+          }
+        : undefined,
+    createdBy: data.createdBy,
+    isActive: true
+  });
 }
 
-async function createSystemSettings() {
-  console.log('\n⚙️ Creating system settings...');
-  
-  const settings = [
-    {
-      key: 'system.name',
-      value: 'LMS V2 - Mock Data System',
-      type: 'string',
-      category: 'system',
-      description: 'System name'
-    },
-    {
-      key: 'enrollment.autoApprove',
-      value: true,
-      type: 'boolean',
-      category: 'enrollment',
-      description: 'Auto-approve enrollments'
-    },
-    {
-      key: 'course.maxEnrollment',
-      value: 50,
-      type: 'number',
-      category: 'course',
-      description: 'Maximum enrollments per course'
-    },
-    {
-      key: 'assessment.passingGrade',
-      value: 70,
-      type: 'number',
-      category: 'assessment',
-      description: 'Default passing grade percentage'
-    }
-  ];
-  
-  for (const data of settings) {
-    await Setting.create(data);
+async function ensureCourseContent(data: {
+  courseId: mongoose.Types.ObjectId;
+  contentId: mongoose.Types.ObjectId;
+  sequence: number;
+  moduleNumber?: number;
+  isRequired?: boolean;
+}): Promise<any> {
+  const existing = await CourseContent.findOne({
+    courseId: data.courseId,
+    contentId: data.contentId
+  });
+
+  if (existing) {
+    existing.sequence = data.sequence;
+    existing.moduleNumber = data.moduleNumber;
+    existing.isRequired = data.isRequired ?? false;
+    existing.isActive = true;
+    await existing.save();
+    return existing;
   }
-  
-  console.log(`✓ Created ${settings.length} system settings`);
+
+  return CourseContent.create({
+    courseId: data.courseId,
+    contentId: data.contentId,
+    sequence: data.sequence,
+    moduleNumber: data.moduleNumber,
+    isRequired: data.isRequired ?? false,
+    isActive: true
+  });
 }
 
-async function createAuditLogs() {
-  console.log('\n📜 Creating sample audit logs...');
-  
-  const actions = [
-    'user.login',
-    'course.created',
-    'enrollment.created',
-    'content.viewed',
-    'exam.submitted'
-  ];
-  
-  for (let i = 0; i < 20; i++) {
-    await AuditLog.create({
-      userId: randomElement(mockData.users)._id,
-      action: randomElement(actions),
-      entityType: randomElement(['User', 'Course', 'Enrollment', 'Content']),
-      entityId: randomElement(mockData.courses)._id,
-      changes: {
-        field: 'status',
-        oldValue: 'draft',
-        newValue: 'published'
-      },
-      ipAddress: `192.168.1.${randomInt(1, 254)}`,
-      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-      timestamp: randomDate(new Date(2025, 8, 1), new Date())
-    });
+async function ensureQuestionBank(data: {
+  name: string;
+  description?: string;
+  departmentId: mongoose.Types.ObjectId;
+  tags?: string[];
+}): Promise<any> {
+  const existing = await QuestionBank.findOne({ name: data.name });
+  if (existing) {
+    existing.description = data.description;
+    existing.departmentId = data.departmentId;
+    existing.tags = data.tags || [];
+    existing.isActive = true;
+    await existing.save();
+    return existing;
   }
-  
-  console.log('✓ Created 20 audit log entries');
+
+  return QuestionBank.create({
+    name: data.name,
+    description: data.description,
+    departmentId: data.departmentId,
+    tags: data.tags || [],
+    questionIds: [],
+    isActive: true
+  });
 }
 
-async function displaySummary() {
-  console.log('\n' + '='.repeat(60));
-  console.log('📊 MOCK DATA GENERATION SUMMARY');
-  console.log('='.repeat(60));
-  
-  console.log('\n🏢 Organization:');
-  console.log(`   Departments: ${mockData.departments.length} (including 2 subdepartments)`);
-  
-  console.log('\n👥 Users:');
-  console.log(`   Total Users: ${mockData.users.length}`);
-  console.log(`   Staff: ${mockData.staff.length}`);
-  console.log(`   Learners: ${mockData.learners.length}`);
-  
-  console.log('\n📚 Academic:');
-  console.log(`   Academic Years: ${mockData.academicYears.length}`);
-  console.log(`   Courses: ${mockData.courses.length}`);
-  console.log(`   Programs: ${mockData.programs.length}`);
-  console.log(`   Classes: ${mockData.classes.length}`);
-  
-  console.log('\n📄 Content & Assessment:');
-  console.log(`   Content Items: ${mockData.content.length}`);
-  console.log(`   Course-Content Links: ${mockData.courseContent.length}`);
-  console.log(`   Question Banks: ${mockData.questionBanks.length}`);
-  console.log(`   Questions: ${mockData.questions.length}`);
-  
-  console.log('\n📋 Enrollments:');
-  console.log(`   Course Enrollments: ${mockData.enrollments.length}`);
-  console.log(`   Class Enrollments: ${mockData.classEnrollments.length}`);
-  
-  console.log('\n📊 Activity:');
-  console.log(`   Content Attempts: ${mockData.contentAttempts.length}`);
-  console.log(`   Learning Events: ${mockData.learningEvents.length}`);
-  console.log(`   Exam Results: ${mockData.examResults.length}`);
-  
-  console.log('\n📦 SCORM:');
-  console.log(`   SCORM Attempts: ${mockData.scormAttempts.length}`);
-  
-  console.log('\n👤 Login Credentials (all passwords: Password123!):');
-  console.log('   System Admin: admin@lms.com');
-  console.log('   Staff Members: john.smith@lms.com, emily.jones@lms.com, michael.brown@lms.com');
-  console.log('   Learners: alice.student@lms.com, bob.learner@lms.com');
-  
-  console.log('\n✅ Mock data generation completed successfully!');
-  console.log('='.repeat(60) + '\n');
+async function ensureEnrollment(data: {
+  learnerId: mongoose.Types.ObjectId;
+  programId: mongoose.Types.ObjectId;
+  academicYearId: mongoose.Types.ObjectId;
+  status: 'active' | 'pending';
+}): Promise<any> {
+  const existing = await Enrollment.findOne({
+    learnerId: data.learnerId,
+    programId: data.programId,
+    academicYearId: data.academicYearId
+  });
+
+  if (existing) {
+    existing.status = data.status;
+    existing.enrollmentDate = new Date();
+    await existing.save();
+    return existing;
+  }
+
+  return Enrollment.create({
+    learnerId: data.learnerId,
+    programId: data.programId,
+    academicYearId: data.academicYearId,
+    status: data.status,
+    enrollmentDate: new Date(),
+    startDate: new Date(),
+    totalCreditsEarned: 0
+  });
+}
+
+async function ensureClassEnrollment(data: {
+  learnerId: mongoose.Types.ObjectId;
+  classId: mongoose.Types.ObjectId;
+  status: 'enrolled' | 'active';
+}): Promise<any> {
+  const existing = await ClassEnrollment.findOne({
+    learnerId: data.learnerId,
+    classId: data.classId
+  });
+
+  if (existing) {
+    existing.status = data.status;
+    existing.enrollmentDate = new Date();
+    await existing.save();
+    return existing;
+  }
+
+  return ClassEnrollment.create({
+    learnerId: data.learnerId,
+    classId: data.classId,
+    status: data.status,
+    enrollmentDate: new Date()
+  });
 }
 
 async function main() {
+  console.log('Mock Data Seed Script (Current LMS V2 Schema)');
+  console.log('');
+
   try {
-    console.log('🚀 Starting mock data generation for LMS V2...\n');
-    
     await connectDB();
-    
-    await createDepartments();
-    await createUsers();
-    await createAcademicYear();
-    await createCourses();
-    await createCourseContent();
-    await createExamsAndQuestions();
-    await createPrograms();
-    await createClasses();
-    await createEnrollments();
-    await createLearningActivity();
-    await createScormAttempts();
-    await createSystemSettings();
-    await createAuditLogs();
-    
-    await displaySummary();
-    
-    process.exit(0);
+    await dropLegacyIndexes();
+
+    console.log('Seeding lookup values...');
+    await seedLookupValues();
+
+    console.log('Seeding access rights and role definitions...');
+    await seedAccessRights();
+    await seedRoleDefinitions();
+
+    console.log('Ensuring master department and admin user...');
+    await createMasterDepartment();
+    const adminUserId = await createAdminUser();
+    await createAdminStaff(adminUserId);
+    await createAdminLearner(adminUserId);
+    await createGlobalAdmin(adminUserId);
+
+    console.log('Creating departments...');
+    const masterDept = await Department.findOne({ code: 'MASTER' });
+    if (!masterDept) {
+      throw new Error('Master department not found after seed.');
+    }
+
+    const behavioral = await ensureDepartment({
+      name: 'Behavioral Health',
+      code: 'BEHAV',
+      description: 'Behavioral health training and interventions',
+      parentDepartmentId: masterDept._id
+    });
+
+    const cognitive = await ensureDepartment({
+      name: 'Cognitive Therapy',
+      code: 'COG',
+      description: 'Cognitive therapy methods and practice',
+      parentDepartmentId: masterDept._id
+    });
+
+    const emdr = await ensureDepartment({
+      name: 'EMDR',
+      code: 'EMDR',
+      description: 'EMDR therapy techniques and supervision',
+      parentDepartmentId: masterDept._id
+    });
+
+    const cbtFundamentals = await ensureDepartment({
+      name: 'CBT Fundamentals',
+      code: 'CBT',
+      description: 'Foundations of cognitive behavioral therapy',
+      parentDepartmentId: cognitive._id
+    });
+
+    const crisis = await ensureDepartment({
+      name: 'Crisis Intervention',
+      code: 'CRISIS',
+      description: 'Crisis response and stabilization',
+      parentDepartmentId: behavioral._id
+    });
+
+    console.log('Creating staff users...');
+    const staffPasswordHash = await bcrypt.hash(DEFAULT_PASSWORD, 10);
+
+    const instructorUser = await ensureUser({
+      email: 'john.instructor@lms.edu',
+      userTypes: ['staff'],
+      passwordHash: staffPasswordHash
+    });
+
+    const contentUser = await ensureUser({
+      email: 'maria.content@lms.edu',
+      userTypes: ['staff'],
+      passwordHash: staffPasswordHash
+    });
+
+    const deptAdminUser = await ensureUser({
+      email: 'sam.department@lms.edu',
+      userTypes: ['staff'],
+      passwordHash: staffPasswordHash
+    });
+
+    const leadInstructorUser = await ensureUser({
+      email: 'riley.instructor@lms.edu',
+      userTypes: ['staff'],
+      passwordHash: staffPasswordHash
+    });
+
+    const billingUser = await ensureUser({
+      email: 'taylor.billing@lms.edu',
+      userTypes: ['staff'],
+      passwordHash: staffPasswordHash
+    });
+
+    const instructorStaff = await ensureStaffRecord({
+      userId: instructorUser._id,
+      person: buildPerson('John', 'Instructor', instructorUser.email),
+      title: 'Senior Instructor',
+      memberships: [
+        {
+          departmentId: behavioral._id,
+          roles: ['instructor'],
+          isPrimary: true
+        },
+        {
+          departmentId: crisis._id,
+          roles: ['instructor'],
+          isPrimary: false
+        }
+      ]
+    });
+
+    const contentStaff = await ensureStaffRecord({
+      userId: contentUser._id,
+      person: buildPerson('Maria', 'Content', contentUser.email),
+      title: 'Content Lead',
+      memberships: [
+        {
+          departmentId: cognitive._id,
+          roles: ['content-admin'],
+          isPrimary: true
+        }
+      ]
+    });
+
+    const deptAdminStaff = await ensureStaffRecord({
+      userId: deptAdminUser._id,
+      person: buildPerson('Sam', 'Department', deptAdminUser.email),
+      title: 'Department Manager',
+      memberships: [
+        {
+          departmentId: emdr._id,
+          roles: ['department-admin', 'billing-admin'],
+          isPrimary: true
+        }
+      ]
+    });
+
+    const leadInstructorStaff = await ensureStaffRecord({
+      userId: leadInstructorUser._id,
+      person: buildPerson('Riley', 'Instructor', leadInstructorUser.email),
+      title: 'Lead Instructor',
+      memberships: [
+        {
+          departmentId: cognitive._id,
+          roles: ['instructor'],
+          isPrimary: true
+        },
+        {
+          departmentId: cbtFundamentals._id,
+          roles: ['instructor'],
+          isPrimary: false
+        }
+      ]
+    });
+
+    const billingStaff = await ensureStaffRecord({
+      userId: billingUser._id,
+      person: buildPerson('Taylor', 'Billing', billingUser.email),
+      title: 'Billing Specialist',
+      memberships: [
+        {
+          departmentId: behavioral._id,
+          roles: ['billing-admin'],
+          isPrimary: true
+        }
+      ]
+    });
+
+    console.log('Creating learner users...');
+    const learnerPasswordHash = await bcrypt.hash(DEFAULT_PASSWORD, 10);
+
+    const learnerOneUser = await ensureUser({
+      email: 'alex.learner@lms.edu',
+      userTypes: ['learner'],
+      passwordHash: learnerPasswordHash
+    });
+
+    const learnerTwoUser = await ensureUser({
+      email: 'jordan.student@lms.edu',
+      userTypes: ['learner'],
+      passwordHash: learnerPasswordHash
+    });
+
+    const learnerThreeUser = await ensureUser({
+      email: 'casey.learner@lms.edu',
+      userTypes: ['learner'],
+      passwordHash: learnerPasswordHash
+    });
+
+    const learnerFourUser = await ensureUser({
+      email: 'jamie.student@lms.edu',
+      userTypes: ['learner'],
+      passwordHash: learnerPasswordHash
+    });
+
+    const learnerOne = await ensureLearnerRecord({
+      userId: learnerOneUser._id,
+      person: buildPerson('Alex', 'Learner', learnerOneUser.email),
+      personExtended: {
+        studentId: 'STU-1001',
+        emergencyContacts: [],
+        identifications: []
+      },
+      memberships: [
+        {
+          departmentId: cognitive._id,
+          roles: ['course-taker'],
+          isPrimary: true
+        }
+      ]
+    });
+
+    const learnerTwo = await ensureLearnerRecord({
+      userId: learnerTwoUser._id,
+      person: buildPerson('Jordan', 'Student', learnerTwoUser.email),
+      personExtended: {
+        studentId: 'STU-1002',
+        emergencyContacts: [],
+        identifications: []
+      },
+      memberships: [
+        {
+          departmentId: behavioral._id,
+          roles: ['auditor'],
+          isPrimary: true
+        }
+      ]
+    });
+
+    const learnerThree = await ensureLearnerRecord({
+      userId: learnerThreeUser._id,
+      person: buildPerson('Casey', 'Learner', learnerThreeUser.email),
+      personExtended: {
+        studentId: 'STU-1003',
+        emergencyContacts: [],
+        identifications: []
+      },
+      memberships: [
+        {
+          departmentId: emdr._id,
+          roles: ['course-taker'],
+          isPrimary: true
+        }
+      ]
+    });
+
+    const learnerFour = await ensureLearnerRecord({
+      userId: learnerFourUser._id,
+      person: buildPerson('Jamie', 'Student', learnerFourUser.email),
+      personExtended: {
+        studentId: 'STU-1004',
+        emergencyContacts: [],
+        identifications: []
+      },
+      memberships: [
+        {
+          departmentId: behavioral._id,
+          roles: ['course-taker'],
+          isPrimary: true
+        }
+      ]
+    });
+
+    console.log('Creating academic year...');
+    const academicYear = await ensureAcademicYear();
+
+    console.log('Creating courses...');
+    const courseBH101 = await ensureCourse({
+      name: 'Behavioral Health Basics',
+      code: 'BH101',
+      departmentId: behavioral._id,
+      credits: 3
+    });
+
+    const courseBH201 = await ensureCourse({
+      name: 'Behavioral Health Applied Practice',
+      code: 'BH201',
+      departmentId: behavioral._id,
+      credits: 3,
+      prerequisites: [courseBH101._id]
+    });
+
+    const courseCBT101 = await ensureCourse({
+      name: 'CBT Foundations',
+      code: 'CBT101',
+      departmentId: cbtFundamentals._id,
+      credits: 2
+    });
+
+    const courseCBT201 = await ensureCourse({
+      name: 'CBT Advanced Skills',
+      code: 'CBT201',
+      departmentId: cognitive._id,
+      credits: 3,
+      prerequisites: [courseCBT101._id]
+    });
+
+    const courseEMDR101 = await ensureCourse({
+      name: 'EMDR Introduction',
+      code: 'EMDR101',
+      departmentId: emdr._id,
+      credits: 3
+    });
+
+    const courseEMDR201 = await ensureCourse({
+      name: 'EMDR Practicum',
+      code: 'EMDR201',
+      departmentId: emdr._id,
+      credits: 4,
+      prerequisites: [courseEMDR101._id]
+    });
+
+    console.log('Creating programs...');
+    const programCBT = await ensureProgram({
+      name: 'CBT Certificate',
+      code: 'CBT-CERT',
+      departmentId: cognitive._id,
+      type: 'certificate'
+    });
+
+    const programEMDR = await ensureProgram({
+      name: 'EMDR Continuing Education',
+      code: 'EMDR-CE',
+      departmentId: emdr._id,
+      type: 'continuing-education'
+    });
+
+    console.log('Creating classes...');
+    const classBH101 = await ensureClass({
+      name: 'BH101 - Fall Cohort',
+      courseId: courseBH101._id,
+      academicYearId: academicYear._id,
+      termCode: 'FALL2025',
+      startDate: new Date('2025-09-10'),
+      endDate: new Date('2025-12-05'),
+      instructorIds: [instructorStaff._id],
+      maxEnrollment: 30
+    });
+
+    const classBH201 = await ensureClass({
+      name: 'BH201 - Fall Cohort',
+      courseId: courseBH201._id,
+      academicYearId: academicYear._id,
+      termCode: 'FALL2025',
+      startDate: new Date('2025-09-12'),
+      endDate: new Date('2025-12-07'),
+      instructorIds: [instructorStaff._id],
+      maxEnrollment: 24
+    });
+
+    const classCBT101 = await ensureClass({
+      name: 'CBT101 - Fall Cohort',
+      courseId: courseCBT101._id,
+      academicYearId: academicYear._id,
+      termCode: 'FALL2025',
+      startDate: new Date('2025-09-12'),
+      endDate: new Date('2025-12-10'),
+      instructorIds: [contentStaff._id, leadInstructorStaff._id],
+      maxEnrollment: 25
+    });
+
+    const classCBT201 = await ensureClass({
+      name: 'CBT201 - Fall Cohort',
+      courseId: courseCBT201._id,
+      academicYearId: academicYear._id,
+      termCode: 'FALL2025',
+      startDate: new Date('2025-09-16'),
+      endDate: new Date('2025-12-12'),
+      instructorIds: [leadInstructorStaff._id],
+      maxEnrollment: 20
+    });
+
+    const classEMDR101 = await ensureClass({
+      name: 'EMDR101 - Fall Cohort',
+      courseId: courseEMDR101._id,
+      academicYearId: academicYear._id,
+      termCode: 'FALL2025',
+      startDate: new Date('2025-09-15'),
+      endDate: new Date('2025-12-12'),
+      instructorIds: [deptAdminStaff._id],
+      maxEnrollment: 20
+    });
+
+    const classEMDR201 = await ensureClass({
+      name: 'EMDR201 - Fall Cohort',
+      courseId: courseEMDR201._id,
+      academicYearId: academicYear._id,
+      termCode: 'FALL2025',
+      startDate: new Date('2025-09-18'),
+      endDate: new Date('2025-12-15'),
+      instructorIds: [deptAdminStaff._id],
+      maxEnrollment: 18
+    });
+
+    console.log('Creating content and course modules...');
+    const courseList = [
+      courseBH101,
+      courseBH201,
+      courseCBT101,
+      courseCBT201,
+      courseEMDR101,
+      courseEMDR201
+    ];
+
+    const moduleTemplates = [
+      {
+        title: 'Foundations',
+        types: ['video', 'document', 'quiz'] as const
+      },
+      {
+        title: 'Applied Practice',
+        types: ['video', 'document', 'quiz'] as const
+      },
+      {
+        title: 'Case Lab',
+        types: ['video', 'quiz'] as const
+      }
+    ];
+
+    const contentLabels: Record<string, string> = {
+      video: 'Video Lesson',
+      document: 'Reading',
+      quiz: 'Knowledge Check',
+      scorm: 'SCORM Lab'
+    };
+
+    const contentByCourse: Record<string, any[]> = {};
+    const modulesByCourse: Record<
+      string,
+      Array<{
+        moduleNumber: number;
+        title: string;
+        contents: any[];
+      }>
+    > = {};
+
+    for (const course of courseList) {
+      const owner =
+        course.departmentId.toString() === behavioral._id.toString()
+          ? instructorStaff._id
+          : course.departmentId.toString() === emdr._id.toString()
+            ? deptAdminStaff._id
+            : contentStaff._id;
+
+      const courseModules: Array<{
+        moduleNumber: number;
+        title: string;
+        contents: any[];
+      }> = [];
+      const allContent: any[] = [];
+      let sequence = 1;
+
+      for (const [moduleIndex, moduleTemplate] of moduleTemplates.entries()) {
+        const moduleNumber = moduleIndex + 1;
+        const moduleContents: any[] = [];
+        let sectionNumber = 1;
+
+        for (const contentType of moduleTemplate.types) {
+          const content = await ensureContent({
+            title: `${course.code} M${moduleNumber} ${moduleTemplate.title} - ${contentLabels[contentType]}`,
+            description: `${moduleTemplate.title} content for ${course.name}`,
+            type: contentType,
+            courseId: course._id,
+            createdBy: owner
+          });
+
+          await ensureCourseContent({
+            courseId: course._id,
+            contentId: content._id,
+            sequence,
+            moduleNumber,
+            sectionNumber,
+            isRequired: contentType !== 'document'
+          });
+
+          moduleContents.push(content);
+          allContent.push(content);
+          sequence += 1;
+          sectionNumber += 1;
+        }
+
+        if (course.code === 'CBT101' && moduleNumber === 3) {
+          const scorm = await ensureContent({
+            title: `${course.code} M${moduleNumber} ${moduleTemplate.title} - ${contentLabels.scorm}`,
+            description: `Interactive SCORM lab for ${course.name}`,
+            type: 'scorm',
+            courseId: course._id,
+            createdBy: owner
+          });
+
+          await ensureCourseContent({
+            courseId: course._id,
+            contentId: scorm._id,
+            sequence,
+            moduleNumber,
+            sectionNumber,
+            isRequired: true
+          });
+
+          moduleContents.push(scorm);
+          allContent.push(scorm);
+          sequence += 1;
+        }
+
+        courseModules.push({
+          moduleNumber,
+          title: moduleTemplate.title,
+          contents: moduleContents
+        });
+      }
+
+      contentByCourse[course._id.toString()] = allContent;
+      modulesByCourse[course._id.toString()] = courseModules;
+    }
+
+    console.log('Creating question banks and questions...');
+    for (const course of courseList) {
+      const bank = await ensureQuestionBank({
+        name: `${course.code} Assessment Bank`,
+        description: `Question bank for ${course.name}`,
+        departmentId: course.departmentId,
+        tags: [course.code.toLowerCase(), 'assessment']
+      });
+
+      if (bank.questionIds && bank.questionIds.length >= 12) {
+        continue;
+      }
+
+      const createdQuestions = [] as mongoose.Types.ObjectId[];
+      for (let index = 0; index < 12; index += 1) {
+        const moduleNumber = (index % moduleTemplates.length) + 1;
+        const questionType = index % 3 === 0 ? 'multiple-choice' : index % 3 === 1 ? 'true-false' : 'short-answer';
+        const options =
+          questionType === 'multiple-choice'
+            ? ['Option A', 'Option B', 'Option C', 'Option D']
+            : questionType === 'true-false'
+              ? ['True', 'False']
+              : undefined;
+
+        const question = await Question.create({
+          questionText: `Module ${moduleNumber} question ${index + 1} for ${course.code}`,
+          questionType,
+          departmentId: course.departmentId,
+          points: 10,
+          options,
+          correctAnswer: questionType === 'multiple-choice' ? 'Option A' : questionType === 'true-false' ? 'True' : 'Sample answer',
+          difficulty: 'medium',
+          tags: [course.code.toLowerCase(), `module-${moduleNumber}`, 'seeded']
+        });
+        createdQuestions.push(question._id);
+      }
+
+      bank.questionIds = createdQuestions;
+      await bank.save();
+    }
+
+    console.log('Creating enrollments...');
+    await ensureEnrollment({
+      learnerId: learnerOne._id,
+      programId: programCBT._id,
+      academicYearId: academicYear._id,
+      status: 'active'
+    });
+
+    await ensureEnrollment({
+      learnerId: learnerTwo._id,
+      programId: programEMDR._id,
+      academicYearId: academicYear._id,
+      status: 'active'
+    });
+
+    await ensureEnrollment({
+      learnerId: learnerThree._id,
+      programId: programEMDR._id,
+      academicYearId: academicYear._id,
+      status: 'active'
+    });
+
+    await ensureEnrollment({
+      learnerId: learnerFour._id,
+      programId: programCBT._id,
+      academicYearId: academicYear._id,
+      status: 'active'
+    });
+
+    console.log('Creating class enrollments...');
+    const classEnrollmentAssignments = [
+      { learner: learnerOne, classItem: classCBT101 },
+      { learner: learnerOne, classItem: classBH101 },
+      { learner: learnerOne, classItem: classCBT201 },
+      { learner: learnerTwo, classItem: classBH101 },
+      { learner: learnerTwo, classItem: classEMDR101 },
+      { learner: learnerTwo, classItem: classBH201 },
+      { learner: learnerThree, classItem: classEMDR101 },
+      { learner: learnerThree, classItem: classEMDR201 },
+      { learner: learnerThree, classItem: classCBT101 },
+      { learner: learnerFour, classItem: classBH101 },
+      { learner: learnerFour, classItem: classBH201 },
+      { learner: learnerFour, classItem: classCBT101 }
+    ];
+
+    const enrollmentCounts = new Map<string, number>();
+
+    for (const assignment of classEnrollmentAssignments) {
+      await ensureClassEnrollment({
+        learnerId: assignment.learner._id,
+        classId: assignment.classItem._id,
+        status: 'active'
+      });
+
+      const key = assignment.classItem._id.toString();
+      enrollmentCounts.set(key, (enrollmentCounts.get(key) || 0) + 1);
+    }
+
+    for (const classItem of [
+      classBH101,
+      classBH201,
+      classCBT101,
+      classCBT201,
+      classEMDR101,
+      classEMDR201
+    ]) {
+      classItem.currentEnrollment = enrollmentCounts.get(classItem._id.toString()) || 0;
+      await classItem.save();
+    }
+
+    console.log('Creating learning activity...');
+    const learners = [learnerOne, learnerTwo, learnerThree, learnerFour];
+    const classes = [
+      classBH101,
+      classBH201,
+      classCBT101,
+      classCBT201,
+      classEMDR101,
+      classEMDR201
+    ];
+    const courseById = new Map(courseList.map(course => [course._id.toString(), course]));
+    const classByCourseId = new Map(classes.map(classItem => [classItem.courseId.toString(), classItem]));
+    const coursesByLearner = new Map<string, Set<string>>();
+
+    for (const assignment of classEnrollmentAssignments) {
+      const key = assignment.learner._id.toString();
+      const courseId = assignment.classItem.courseId.toString();
+      if (!coursesByLearner.has(key)) {
+        coursesByLearner.set(key, new Set());
+      }
+      coursesByLearner.get(key)!.add(courseId);
+    }
+
+    for (const learner of learners) {
+      const learnerCourseIds = Array.from(coursesByLearner.get(learner._id.toString()) || []);
+
+      for (const courseId of learnerCourseIds) {
+        const course = courseById.get(courseId);
+        if (!course) {
+          continue;
+        }
+
+        const classItem = classByCourseId.get(courseId);
+        const modules = modulesByCourse[courseId] || [];
+        const completedModules = randomInt(1, modules.length);
+
+        await LearningEvent.create({
+          learnerId: learner._id,
+          eventType: 'course-started',
+          classId: classItem?._id,
+          courseId: course._id,
+          departmentId: course.departmentId,
+          timestamp: randomDateWithinDays(30)
+        });
+
+        for (const module of modules) {
+          const moduleStartedAt = randomDateWithinDays(20);
+          await LearningEvent.create({
+            learnerId: learner._id,
+            eventType: 'module-started',
+            classId: classItem?._id,
+            courseId: course._id,
+            departmentId: course.departmentId,
+            timestamp: moduleStartedAt
+          });
+
+          const isCompleted = module.moduleNumber <= completedModules;
+          for (const contentItem of module.contents) {
+            if (!isCompleted && contentItem.type === 'quiz') {
+              continue;
+            }
+
+            const startedAt = randomDateWithinDays(18);
+            const completedAt = isCompleted ? randomDateWithinDays(10) : undefined;
+            const score = contentItem.type === 'quiz' || contentItem.type === 'scorm' ? randomInt(70, 98) : undefined;
+
+            await ContentAttempt.create({
+              contentId: contentItem._id,
+              learnerId: learner._id,
+              status: isCompleted ? 'completed' : 'in-progress',
+              attemptNumber: 1,
+              progressPercent: isCompleted ? 100 : randomInt(10, 75),
+              score,
+              timeSpentSeconds: randomInt(600, 3600),
+              startedAt,
+              completedAt
+            });
+
+            await LearningEvent.create({
+              learnerId: learner._id,
+              eventType: 'content-started',
+              classId: classItem?._id,
+              contentId: contentItem._id,
+              courseId: course._id,
+              departmentId: course.departmentId,
+              contentType: contentItem.type,
+              timestamp: startedAt
+            });
+
+            if (contentItem.type === 'video') {
+              await LearningEvent.create({
+                learnerId: learner._id,
+                eventType: 'video-played',
+                classId: classItem?._id,
+                contentId: contentItem._id,
+                courseId: course._id,
+                departmentId: course.departmentId,
+                contentType: contentItem.type,
+                timestamp: startedAt
+              });
+            }
+
+            if (isCompleted) {
+              await LearningEvent.create({
+                learnerId: learner._id,
+                eventType: 'content-completed',
+                classId: classItem?._id,
+                contentId: contentItem._id,
+                courseId: course._id,
+                departmentId: course.departmentId,
+                contentType: contentItem.type,
+                timestamp: completedAt || randomDateWithinDays(8),
+                score
+              });
+            }
+
+            if (contentItem.type === 'quiz' && isCompleted) {
+              await LearningEvent.create({
+                learnerId: learner._id,
+                eventType: 'assessment-submitted',
+                classId: classItem?._id,
+                contentId: contentItem._id,
+                courseId: course._id,
+                departmentId: course.departmentId,
+                timestamp: completedAt || randomDateWithinDays(9),
+                score
+              });
+
+              await LearningEvent.create({
+                learnerId: learner._id,
+                eventType: 'assessment-completed',
+                classId: classItem?._id,
+                contentId: contentItem._id,
+                courseId: course._id,
+                departmentId: course.departmentId,
+                timestamp: completedAt || randomDateWithinDays(9),
+                score
+              });
+
+              await ExamResult.create({
+                examId: contentItem._id,
+                learnerId: learner._id,
+                attemptNumber: 1,
+                status: 'completed',
+                score: score || 85,
+                maxScore: 100,
+                percentage: score || 85,
+                passed: (score || 0) >= 70,
+                startedAt,
+                submittedAt: completedAt
+              });
+            }
+
+            if (contentItem.type === 'scorm' && isCompleted) {
+              await ScormAttempt.create({
+                contentId: contentItem._id,
+                learnerId: learner._id,
+                attemptNumber: 1,
+                scormVersion: '1.2',
+                status: 'completed',
+                scoreRaw: score || 85,
+                scoreMin: 0,
+                scoreMax: 100,
+                progressMeasure: 1,
+                startedAt,
+                completedAt
+              });
+
+              await LearningEvent.create({
+                learnerId: learner._id,
+                eventType: 'scorm-completed',
+                classId: classItem?._id,
+                contentId: contentItem._id,
+                courseId: course._id,
+                departmentId: course.departmentId,
+                timestamp: completedAt || randomDateWithinDays(8),
+                score
+              });
+            }
+          }
+
+          if (isCompleted) {
+            await LearningEvent.create({
+              learnerId: learner._id,
+              eventType: 'module-completed',
+              classId: classItem?._id,
+              courseId: course._id,
+              departmentId: course.departmentId,
+              timestamp: randomDateWithinDays(7)
+            });
+          }
+        }
+
+        if (completedModules === modules.length) {
+          await LearningEvent.create({
+            learnerId: learner._id,
+            eventType: 'course-completed',
+            classId: classItem?._id,
+            courseId: course._id,
+            departmentId: course.departmentId,
+            timestamp: randomDateWithinDays(3)
+          });
+        }
+      }
+    }
+
+    console.log('');
+    console.log('Mock data seeded successfully.');
+    console.log('');
+    console.log('Users created (password):');
+    console.log(`  - ${ADMIN_EMAIL} (${ADMIN_PASSWORD})`);
+    console.log(`  - john.instructor@lms.edu (${DEFAULT_PASSWORD})`);
+    console.log(`  - maria.content@lms.edu (${DEFAULT_PASSWORD})`);
+    console.log(`  - sam.department@lms.edu (${DEFAULT_PASSWORD})`);
+    console.log(`  - riley.instructor@lms.edu (${DEFAULT_PASSWORD})`);
+    console.log(`  - taylor.billing@lms.edu (${DEFAULT_PASSWORD})`);
+    console.log(`  - alex.learner@lms.edu (${DEFAULT_PASSWORD})`);
+    console.log(`  - jordan.student@lms.edu (${DEFAULT_PASSWORD})`);
+    console.log(`  - casey.learner@lms.edu (${DEFAULT_PASSWORD})`);
+    console.log(`  - jamie.student@lms.edu (${DEFAULT_PASSWORD})`);
+    console.log('');
   } catch (error) {
-    console.error('\n❌ Error generating mock data:', error);
+    console.error('Error seeding mock data:', error);
     process.exit(1);
+  } finally {
+    if (mongoose.connection.readyState === 1) {
+      await mongoose.disconnect();
+      console.log('Disconnected from MongoDB');
+    }
   }
 }
 
-// Run if called directly
 if (require.main === module) {
   main();
 }

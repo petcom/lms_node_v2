@@ -16,6 +16,7 @@
     "start": "NODE_ENV=production node dist/server.js",
     "start:prod": "pm2 start ecosystem.config.js --env production",
     "dev": "NODE_ENV=development ts-node-dev --respawn --transpile-only -r tsconfig-paths/register src/server.ts",
+    "dev:mock": "ENV_FILE=.env.mock npm run dev",
     "dev:watch": "NODE_ENV=development ts-node-dev --respawn --transpile-only -r tsconfig-paths/register --watch src src/server.ts",
     "test": "NODE_ENV=test jest --runInBand",
     "test:watch": "NODE_ENV=test jest --watch --runInBand",
@@ -26,7 +27,7 @@
     "lint:fix": "eslint . --ext .ts,.js --fix",
     "format": "prettier --write \"**/*.{ts,js,json,md}\"",
     "format:check": "prettier --check \"**/*.{ts,js,json,md}\"",
-    "seed:mock": "MOCK_DB_URI=mongodb://localhost:27017/lms_v2_mockdata ts-node scripts/seed-mock-data.ts",
+    "seed:mock": "ENV_FILE=.env.mock ts-node --transpile-only -r tsconfig-paths/register scripts/seed-mock-data.ts",
     "seed:staff": "ts-node -r tsconfig-paths/register scripts/seed-staff-and-courses.ts",
     "seed:staff:fresh": "ts-node -r tsconfig-paths/register scripts/seed-staff-and-courses.ts --purge",
     "seed:admin": "ts-node --transpile-only -r tsconfig-paths/register scripts/seed-admin.ts",
@@ -37,8 +38,8 @@
     "seed:constants": "ts-node --transpile-only -r tsconfig-paths/register scripts/seeds/constants.seed.ts",
     "seed:all": "ts-node --transpile-only -r tsconfig-paths/register scripts/seeds/run-seeds.ts",
     "purge:staff": "ts-node -r tsconfig-paths/register scripts/purge-staff-and-courses.ts",
-    "purge:mock": "MOCK_DB_URI=mongodb://localhost:27017/lms_v2_mockdata ts-node scripts/purge-mock-data.ts",
-    "purge:mock:force": "MOCK_DB_URI=mongodb://localhost:27017/lms_v2_mockdata ts-node scripts/purge-mock-data.ts --force",
+    "purge:mock": "ENV_FILE=.env.mock ts-node --transpile-only -r tsconfig-paths/register scripts/purge-mock-data.ts",
+    "purge:mock:force": "ENV_FILE=.env.mock ts-node --transpile-only -r tsconfig-paths/register scripts/purge-mock-data.ts --force",
     "reset:mock": "npm run purge:mock:force && npm run seed:mock",
     "migrate:roledefinitions": "ts-node --transpile-only -r tsconfig-paths/register src/migrations/migrate-roledefinitions.ts",
     "migrate:globaladmin": "ts-node --transpile-only -r tsconfig-paths/register src/migrations/migrate-globaladmin.ts",
@@ -90,7 +91,8 @@
     "winston-daily-rotate-file": "^5.0.0",
     "xlsx": "^0.18.5",
     "xml2js": "^0.6.2",
-    "xss": "^1.0.15"
+    "xss": "^1.0.15",
+    "zod": "^4.3.5"
   },
   "devDependencies": {
     "@types/adm-zip": "^0.5.7",

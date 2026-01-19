@@ -25,8 +25,9 @@ import GlobalAdmin from '@/models/GlobalAdmin.model';
 import Department from '@/models/organization/Department.model';
 import { RoleDefinition } from '@/models/RoleDefinition.model';
 import { AccessRight } from '@/models/AccessRight.model';
+import { describeIfMongo } from '../../helpers/mongo-guard';
 
-describe('Roles API Integration Tests', () => {
+describeIfMongo('Roles API Integration Tests', () => {
   let mongoServer: MongoMemoryServer;
   let masterDepartment: any;
   let testDepartment1: any;

@@ -3,8 +3,9 @@ import { MongoMemoryServer } from 'mongodb-memory-server';
 import ScormAttempt from '@/models/activity/ScormAttempt.model';
 import Content from '@/models/content/Content.model';
 import Department from '@/models/organization/Department.model';
+import { describeIfMongo } from '../../helpers/mongo-guard';
 
-describe('ScormAttempt Model', () => {
+describeIfMongo('ScormAttempt Model', () => {
   let mongoServer: MongoMemoryServer;
   let testContent: any;
   let testLearnerId: mongoose.Types.ObjectId;

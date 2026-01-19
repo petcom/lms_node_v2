@@ -7,6 +7,7 @@ import { User } from '@/models/auth/User.model';
 import { Staff } from '@/models/auth/Staff.model';
 import { Learner } from '@/models/auth/Learner.model';
 import { hashPassword } from '@/utils/password';
+import { describeIfMongo } from '../../helpers/mongo-guard';
 
 /**
  * Demographics Endpoint Tests
@@ -19,7 +20,7 @@ import { hashPassword } from '@/utils/password';
  * Demographics data is sensitive and used for compliance reporting (IPEDS, Title IX, ADA)
  */
 
-describe('Demographics Endpoints - /api/v2/users/me/demographics', () => {
+describeIfMongo('Demographics Endpoints - /api/v2/users/me/demographics', () => {
   let mongoServer: MongoMemoryServer;
   let testStaffUser: any;
   let testStaff: any;

@@ -8,6 +8,7 @@ import { ApiError } from '@/utils/ApiError';
 import * as passwordUtils from '@/utils/password';
 import * as jwtUtils from '@/utils/jwt';
 import { Cache } from '@/config/redis';
+import { describeIfMongo } from '../../helpers/mongo-guard';
 
 jest.mock('@/utils/password');
 jest.mock('@/utils/jwt');
@@ -21,7 +22,7 @@ jest.mock('@/config/redis', () => ({
 
 let mongoServer: MongoMemoryServer;
 
-describe('AuthService', () => {
+describeIfMongo('AuthService', () => {
   beforeAll(async () => {
     mongoServer = await MongoMemoryServer.create();
     await mongoose.connect(mongoServer.getUri());

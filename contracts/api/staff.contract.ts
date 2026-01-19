@@ -92,7 +92,7 @@ export const StaffContracts = {
                   {
                     departmentId: 'string',
                     departmentName: 'string',
-                    roleInDepartment: 'string'
+                    rolesInDepartment: 'string[]'
                   }
                 ],
                 permissions: 'string[]',
@@ -143,7 +143,7 @@ export const StaffContracts = {
                 {
                   departmentId: '507f1f77bcf86cd799439012',
                   departmentName: 'Computer Science',
-                  roleInDepartment: 'instructor'
+                  rolesInDepartment: ['instructor']
                 }
               ],
               permissions: ['content:read', 'content:write', 'courses:manage'],
@@ -162,7 +162,7 @@ export const StaffContracts = {
                 {
                   departmentId: '507f1f77bcf86cd799439012',
                   departmentName: 'Computer Science',
-                  roleInDepartment: 'dept-admin'
+                  rolesInDepartment: ['dept-admin']
                 }
               ],
               permissions: ['content:read', 'content:write', 'content:admin', 'courses:manage', 'dept:manage'],
@@ -301,7 +301,7 @@ export const StaffContracts = {
               {
                 departmentId: 'string',
                 departmentName: 'string',
-                roleInDepartment: 'string'
+                rolesInDepartment: 'string[]'
               }
             ],
             permissions: 'string[]',
@@ -348,7 +348,7 @@ export const StaffContracts = {
             {
               departmentId: '507f1f77bcf86cd799439012',
               departmentName: 'Computer Science',
-              roleInDepartment: 'instructor'
+              rolesInDepartment: ['instructor']
             }
           ],
           permissions: ['content:read', 'content:write', 'courses:manage'],
@@ -427,7 +427,7 @@ export const StaffContracts = {
               {
                 departmentId: 'string',
                 departmentName: 'string',
-                roleInDepartment: 'string'
+                rolesInDepartment: 'string[]'
               }
             ],
             permissions: 'string[]',
@@ -472,12 +472,12 @@ export const StaffContracts = {
             {
               departmentId: '507f1f77bcf86cd799439012',
               departmentName: 'Computer Science',
-              roleInDepartment: 'instructor'
+              rolesInDepartment: ['instructor']
             },
             {
               departmentId: '507f1f77bcf86cd799439014',
               departmentName: 'Mathematics',
-              roleInDepartment: 'content-admin'
+              rolesInDepartment: ['content-admin']
             }
           ],
           permissions: ['content:read', 'content:write', 'content:admin', 'courses:manage'],
@@ -633,7 +633,7 @@ export const StaffContracts = {
             {
               departmentId: '507f1f77bcf86cd799439012',
               departmentName: 'Computer Science',
-              roleInDepartment: 'instructor'
+              rolesInDepartment: ['instructor']
             }
           ],
           permissions: ['content:read', 'content:write', 'courses:manage'],
@@ -826,7 +826,7 @@ export const StaffContracts = {
               {
                 departmentId: 'string',
                 departmentName: 'string',
-                roleInDepartment: 'string'
+                rolesInDepartment: 'string[]'
               }
             ],
             permissions: 'string[]',
@@ -867,12 +867,12 @@ export const StaffContracts = {
             {
               departmentId: '507f1f77bcf86cd799439012',
               departmentName: 'Computer Science',
-              roleInDepartment: 'instructor'
+              rolesInDepartment: ['instructor']
             },
             {
               departmentId: '507f1f77bcf86cd799439014',
               departmentName: 'Mathematics',
-              roleInDepartment: 'content-admin'
+              rolesInDepartment: ['content-admin']
             }
           ],
           permissions: ['content:read', 'content:write', 'content:admin', 'courses:manage'],

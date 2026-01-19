@@ -2,8 +2,9 @@ import mongoose from 'mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import { ReportTemplate, IReportTemplate } from '@/models/reports/ReportTemplate.model';
 import { LookupValue } from '@/models/LookupValue.model';
+import { describeIfMongo } from '../../helpers/mongo-guard';
 
-describe('ReportTemplate Model', () => {
+describeIfMongo('ReportTemplate Model', () => {
   let mongoServer: MongoMemoryServer;
   let testUserId: mongoose.Types.ObjectId;
 

@@ -1,7 +1,7 @@
 import { Router } from 'express';
-import { authenticate } from '@/middlewares/authenticate';
-import { requireAccessRight } from '@/middlewares/require-access-right';
-import { requireEscalation } from '@/middlewares/require-escalation';
+import { isAuthenticated } from '@/middlewares/isAuthenticated';
+import { requireAccessRight } from '@/middlewares/requireAccessRight';
+import { requireEscalation } from '@/middlewares/requireEscalation';
 import * as auditLogsController from '@/controllers/system/audit-logs.controller';
 
 const router = Router();
@@ -28,7 +28,7 @@ const router = Router();
  */
 
 // Apply authentication middleware to all routes
-router.use(authenticate);
+router.use(isAuthenticated);
 
 /**
  * GET /api/v2/audit-logs

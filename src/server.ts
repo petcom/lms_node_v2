@@ -2,8 +2,9 @@ import app from './app';
 import { connectDatabase, disconnectDatabase } from './config/database';
 import { config } from './config/environment';
 import { logger } from './config/logger';
+import { disconnectRedis } from './config/redis';
 import { RoleRegistry } from './services/role-registry.service';
-import { setRoleRegistry } from './middlewares/user-type-hydration';
+import { setRoleRegistry } from './middlewares/userTypeHydration';
 
 async function startServer() {
   try {
@@ -49,6 +50,7 @@ async function startServer() {
       server.close(async () => {
         logger.info('HTTP server closed');
         try {
+          await disconnectRedis();
           await disconnectDatabase();
           logger.info('All connections closed. Exiting.');
           process.exit(0);

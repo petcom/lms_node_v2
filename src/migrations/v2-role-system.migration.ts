@@ -341,7 +341,17 @@ async function seedRoleDefinitions(session: mongoose.ClientSession): Promise<num
       userType: 'global-admin',
       displayName: 'System Administrator',
       description: 'Full system access - highest privilege',
-      accessRights: ['system:*', 'content:*', 'enrollment:*', 'staff:*', 'billing:*', 'audit:*'],
+      accessRights: [
+        'system:*',
+        'content:*',
+        'enrollment:*',
+        'staff:*',
+        'billing:*',
+        'audit:*',
+        'reports:jobs:read',
+        'reports:jobs:create',
+        'reports:jobs:cancel'
+      ],
       isDefault: false,
       sortOrder: 1,
       isActive: true
@@ -449,6 +459,9 @@ async function seedAccessRights(session: mongoose.ClientSession): Promise<number
     { name: 'reports:billing:read', domain: 'reports', resource: 'billing', action: 'read', description: 'View billing reports', isSensitive: true, sensitiveCategory: 'billing' },
     { name: 'reports:financial:read', domain: 'reports', resource: 'financial', action: 'read', description: 'View financial reports', isSensitive: true, sensitiveCategory: 'billing' },
     { name: 'reports:enrollment:read', domain: 'reports', resource: 'enrollment', action: 'read', description: 'View enrollment reports', isSensitive: false },
+    { name: 'reports:jobs:read', domain: 'reports', resource: 'jobs', action: 'read', description: 'View report jobs', isSensitive: false },
+    { name: 'reports:jobs:create', domain: 'reports', resource: 'jobs', action: 'create', description: 'Create report jobs', isSensitive: false },
+    { name: 'reports:jobs:cancel', domain: 'reports', resource: 'jobs', action: 'cancel', description: 'Cancel report jobs', isSensitive: false },
 
     // System Domain
     { name: 'system:department-settings:manage', domain: 'system', resource: 'department-settings', action: 'manage', description: 'Manage department settings', isSensitive: false },

@@ -5,92 +5,111 @@
 This directory contains the API contracts that serve as the **single source of truth** for communication between the backend and UI teams. The backend team owns and maintains these contracts.
 
 **📋 Quick Links:**
+- **Status Tracker:** `PENDING.md` - Full endpoint list with status
 - **Getting Started:** `QUICKSTART.md` - Create your first contract in 15 minutes
-- **Implementation Plan:** `../devdocs/CONTRACT_IMPLEMENTATION_PLAN.md` - Phased roadmap
-- **Status Tracker:** `PENDING.md` - What's done, what's next
-- **Team Coordination:** `~/github/TEAM_COORDINATION_GUIDE.md` - Cross-team workflow
+- **Authorization:** `API_AUTHORIZATION_REFERENCE.md` - Permissions per endpoint
+- **UI Integration:** `UI_AUTHORIZATION_IMPLEMENTATION_GUIDE.md` - Frontend auth guide
 
-## 🚀 Contract-First Development (2026-01-08)
+---
 
-**Strategy:** Create all contracts quickly (Week 1-2) to unblock frontend team, then implement backend in parallel.
+## 🎉 All Contracts Complete (2026-01-16)
 
-**Completed Phases:**
-- ✅ **Phase 1** - Core Identity & Organization (6 contracts, 41 endpoints)
-- ✅ **Phase 2** - Programs & Courses (5 contracts, 44 endpoints)
-- ✅ **Phase 3** - Content & Templates (4 contracts, 39 endpoints)
+**Total Implementation:**
+- **28 Contracts** defined
+- **270 Endpoints** implemented
+- **All 6 Phases** complete
 
-**Current Phase:** Phase 4 - Enrollments & Progress (Next - TOP PRIORITY!)
+| Phase | Contracts | Endpoints | Status |
+|-------|-----------|-----------|--------|
+| Phase 1: Identity & Org | 6 | 61 | ✅ Complete |
+| Phase 2: Programs & Courses | 5 | 44 | ✅ Complete |
+| Phase 3: Content & Templates | 4 | 38 | ✅ Complete |
+| Phase 4: Enrollments & Progress | 4 | 36 | ✅ Complete |
+| Phase 5: Assessments & Results | 2 | 16 | ✅ Complete |
+| Phase 6: System & Settings | 4 | 25 | ✅ Complete |
+| Report System (Queue-based) | 3 | 18 | ✅ Complete |
+| Additional Routes | - | 32 | ✅ Complete |
 
-**Phase 1+2+3 Total:** 124 endpoints across 15 contracts - Frontend team can start implementing!
+See `PENDING.md` for full breakdown.
 
-See `PENDING.md` for full status.
+---
 
 ## Directory Structure
 
 ```
 contracts/
-├── README.md              # This file - Overview and workflow
-├── QUICKSTART.md          # 🆕 Step-by-step guide to create contracts
-├── PENDING.md             # 🆕 Contract status tracker (6 phases)
-├── api/                   # Endpoint contracts by domain
-│   ├── auth.contract.ts   # ✅ Authentication endpoints (COMPLETE)
-│   ├── users.contract.ts  # 🔲 User management endpoints
-│   ├── staff.contract.ts  # 🔲 Staff management
-│   ├── learners.contract.ts # 🔲 Learner management
-│   ├── departments.contract.ts # 🔲 Department hierarchy
-│   ├── programs.contract.ts # 🔲 Program structure
-│   ├── courses.contract.ts # 🔲 Course CRUD
-│   ├── content.contract.ts # 🔲 Content library
-│   ├── progress.contract.ts # 🔲 Progress tracking (HIGH PRIORITY)
-│   ├── enrollments.contract.ts # 🔲 Enrollment lifecycle
-│   └── ...               # (23 total contracts planned)
-├── types/                # Shared TypeScript types
-│   ├── api-types.ts      # Request/Response types
-│   └── domain-types.ts   # Domain model types
-├── validation/           # Contract validation utilities
-│   └── contract-validator.ts
-└── dist/                 # Exported contracts (generated)
-    ├── contracts.json    # JSON export for UI team
-    └── openapi.yaml      # OpenAPI specification
+├── README.md                         # This file - Overview
+├── PENDING.md                        # Contract status tracker
+├── QUICKSTART.md                     # Guide to create contracts
+├── API_AUTHORIZATION_REFERENCE.md    # Permissions per endpoint
+├── UI_AUTHORIZATION_IMPLEMENTATION_GUIDE.md
+├── UI_ROLE_SYSTEM_CONTRACTS.md
+│
+├── api/                              # Endpoint contracts
+│   ├── auth.contract.ts              # ✅ Authentication (13 endpoints)
+│   ├── users.contract.ts             # ✅ User management (13 endpoints)
+│   ├── staff.contract.ts             # ✅ Staff management (6 endpoints)
+│   ├── learners.contract.ts          # ✅ Learner management (5 endpoints)
+│   ├── departments.contract.ts       # ✅ Department hierarchy (9 endpoints)
+│   ├── academic-years.contract.ts    # ✅ Academic years (15 endpoints)
+│   ├── programs.contract.ts          # ✅ Program structure (10 endpoints)
+│   ├── program-levels.contract.ts    # ✅ Program levels (4 endpoints)
+│   ├── courses.contract.ts           # ✅ Course CRUD (14 endpoints)
+│   ├── course-segments.contract.ts   # ✅ Course modules (6 endpoints)
+│   ├── classes.contract.ts           # ✅ Class instances (10 endpoints)
+│   ├── content.contract.ts           # ✅ Content library (15 endpoints)
+│   ├── exercises.contract.ts         # ✅ Exercises/Exams (10 endpoints)
+│   ├── questions.contract.ts         # ✅ Question bank (6 endpoints)
+│   ├── templates.contract.ts         # ✅ Course templates (7 endpoints)
+│   ├── enrollments.contract.ts       # ✅ Enrollment lifecycle (10 endpoints)
+│   ├── progress.contract.ts          # ✅ Progress tracking (8 endpoints)
+│   ├── content-attempts.contract.ts  # ✅ SCORM attempts (10 endpoints)
+│   ├── learning-events.contract.ts   # ✅ Activity feeds (8 endpoints)
+│   ├── exam-attempts.contract.ts     # ✅ Exam attempts (8 endpoints)
+│   ├── reports.contract.ts           # ✅ Reports (8 endpoints)
+│   ├── report-jobs.contract.ts       # ✅ Report queue (6 endpoints)
+│   ├── report-templates.contract.ts  # ✅ Report templates (6 endpoints)
+│   ├── report-schedules.contract.ts  # ✅ Report schedules (6 endpoints)
+│   ├── settings.contract.ts          # ✅ Settings (6 endpoints)
+│   ├── audit-logs.contract.ts        # ✅ Audit trails (5 endpoints)
+│   ├── permissions.contract.ts       # ✅ Permissions (8 endpoints)
+│   └── system.contract.ts            # ✅ System health (6 endpoints)
+│
+├── types/                            # Shared TypeScript types
+│   └── api-types.ts
+│
+└── validation/                       # Contract validation
 ```
+
+---
+
+## API Base URL
+
+```
+Development: http://localhost:5150/api/v2
+Production:  https://api.cadencelms.com/api/v2
+```
+
+**Note:** Default port changed from 5000 to 5150 (macOS compatibility).
+
+---
 
 ## Cross-Team Workflow
 
 ### Backend Team (This Repository)
 
-1. **Define Contract First**
-   - Create/update contract in `contracts/api/`
-   - Define request/response types in `contracts/types/`
-   - Get tech lead approval
-
-2. **Implement Endpoint**
-   - Write tests against contract
-   - Implement controller/service
-   - Validate response matches contract
-
-3. **Export for UI Team**
-   ```bash
-   npm run contracts:export
-   ```
-
-4. **Notify UI Team**
-   - Share exported contracts
-   - Document breaking changes
-   - Update version if needed
+1. **Define Contract First** - Create/update contract in `contracts/api/`
+2. **Implement Endpoint** - Write controller/service to match contract
+3. **Export for UI Team** - `npm run contracts:export`
+4. **Notify UI Team** - Document breaking changes
 
 ### UI Team (Separate Repository)
 
-1. **Import Contracts**
-   - Copy `contracts/dist/` to UI repo
-   - Or use shared package/submodule
+1. **Import Contracts** - Use contracts to generate TypeScript types
+2. **Build API Client** - Type-safe API calls
+3. **Mock Responses** - Use contract examples for dev/test
 
-2. **Generate Types**
-   - Use contracts to generate TypeScript types
-   - Build type-safe API client
-
-3. **Develop Components**
-   - Use contract types for props/state
-   - Mock API responses from contract examples
+---
 
 ## Contract Format
 
@@ -142,6 +161,8 @@ export const ExampleContract = {
 };
 ```
 
+---
+
 ## NPM Scripts
 
 | Script | Description |
@@ -149,6 +170,8 @@ export const ExampleContract = {
 | `npm run contracts:export` | Export contracts to JSON and OpenAPI format |
 | `npm run contracts:validate` | Validate all contracts are properly formatted |
 | `npm run contracts:docs` | Generate API documentation from contracts |
+
+---
 
 ## Versioning
 
@@ -161,37 +184,26 @@ Contracts follow semantic versioning:
 ### Breaking Change Process
 
 1. Increment major version
-2. Document migration path
+2. Document migration path in `PENDING.md`
 3. Notify UI team with timeline
 4. Support old version during transition (if possible)
 
-## Validation
+---
 
-The backend validates responses match contracts at runtime (in development):
+## Recent Changes (2026-01-16)
 
-```typescript
-import { ContractValidator } from './validation/contract-validator';
+- ✅ Added report-jobs, report-templates, report-schedules routes (18 endpoints)
+- ✅ Changed default port from 5000 to 5150 (macOS compatibility)
+- ✅ Added @contracts path alias to tsconfig
+- ✅ Added zod validation dependency
+- ✅ Renamed all middleware files to camelCase
+- ✅ Added Redis graceful shutdown
 
-// In controller
-const response = await service.doSomething();
-ContractValidator.validateResponse('POST /api/v2/example', response);
-return res.json(response);
-```
-
-## Current Contracts
-
-| Domain | Contract File | Status |
-|--------|--------------|--------|
-| Authentication | `api/auth.contract.ts` | ✅ Defined |
-| Users | `api/user.contract.ts` | 🔲 Pending |
-| Courses | `api/course.contract.ts` | 🔲 Pending |
-| Enrollments | `api/enrollment.contract.ts` | 🔲 Pending |
-| Content | `api/content.contract.ts` | 🔲 Pending |
-| Assessments | `api/assessment.contract.ts` | 🔲 Pending |
-| SCORM | `api/scorm.contract.ts` | 🔲 Pending |
+---
 
 ## References
 
-- [Ideal TypeScript Data Structures](../devdocs/Ideal_TypeScript_DataStructures.md)
-- [API Crosswalk](../devdocs/Ideal_RestfulAPI_toCurrent_Crosswalk.md)
-- [MongoDB Data Objects](../devdocs/Ideal_MongoDB_DataObjects.md)
+- [API Authorization Reference](API_AUTHORIZATION_REFERENCE.md)
+- [UI Authorization Guide](UI_AUTHORIZATION_IMPLEMENTATION_GUIDE.md)
+- [Role System Contracts](UI_ROLE_SYSTEM_CONTRACTS.md)
+- [Developer Guide](../devdocs/DEVELOPER_GUIDE.md)

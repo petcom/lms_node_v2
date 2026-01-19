@@ -3,8 +3,9 @@ import { MongoMemoryServer } from 'mongodb-memory-server';
 import ExamResult from '@/models/activity/ExamResult.model';
 import Content from '@/models/content/Content.model';
 import Department from '@/models/organization/Department.model';
+import { describeIfMongo } from '../../helpers/mongo-guard';
 
-describe('ExamResult Model', () => {
+describeIfMongo('ExamResult Model', () => {
   let mongoServer: MongoMemoryServer;
   let testExam: any;
   let testLearnerId: mongoose.Types.ObjectId;

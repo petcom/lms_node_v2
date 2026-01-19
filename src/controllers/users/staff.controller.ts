@@ -16,6 +16,7 @@ import mongoose from 'mongoose';
  */
 export const listStaff = asyncHandler(async (req: Request, res: Response) => {
   const userId = (req as any).user.userId;
+  const hasGlobalAccess = Array.isArray((req as any).adminRoles) && (req as any).adminRoles.length > 0;
 
   // Parse query parameters
   const page = req.query.page ? parseInt(req.query.page as string, 10) : 1;
@@ -64,7 +65,7 @@ export const listStaff = asyncHandler(async (req: Request, res: Response) => {
     sort
   };
 
-  const result = await StaffService.listStaff(filters, userId);
+  const result = await StaffService.listStaff(filters, userId, { hasGlobalAccess });
   res.status(200).json(ApiResponse.success(result));
 });
 

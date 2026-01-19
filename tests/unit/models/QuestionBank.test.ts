@@ -3,8 +3,9 @@ import { MongoMemoryServer } from 'mongodb-memory-server';
 import QuestionBank from '@/models/assessment/QuestionBank.model';
 import Question from '@/models/assessment/Question.model';
 import Department from '@/models/organization/Department.model';
+import { describeIfMongo } from '../../helpers/mongo-guard';
 
-describe('QuestionBank Model', () => {
+describeIfMongo('QuestionBank Model', () => {
   let mongoServer: MongoMemoryServer;
   let testDept: any;
   let testQuestion1: any;

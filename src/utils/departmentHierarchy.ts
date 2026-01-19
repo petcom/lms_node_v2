@@ -4,8 +4,8 @@
  * Provides utilities for working with hierarchical department structures.
  *
  * Business Rules:
- * - Top-level department members: See ALL staff/data in top-level department + all subdepartments
- * - Subdepartment-only members: See ONLY staff/data in their specific subdepartment
+ * - Department members see their department and all of its subdepartments
+ * - No access to parent or sibling departments unless separately assigned
  * - System-admin: See everything across all departments
  *
  * This utility supports the hierarchical scoping requirements for staff management,
@@ -186,8 +186,7 @@ export async function getRootDepartment(
 /**
  * Check if user has access to department (considering hierarchy)
  *
- * Checks if user is a member of the department OR any of its parent departments
- * (if top-level access is granted).
+ * Checks if user is a member of the department OR any of its subdepartments.
  *
  * @param userId - The user ID to check
  * @param userDepartmentIds - Array of department IDs the user belongs to
@@ -209,6 +208,7 @@ export async function hasHierarchicalAccess(
   userDepartmentIds: (string | Types.ObjectId)[],
   targetDepartmentId: string | Types.ObjectId
 ): Promise<boolean> {
+  void userId;
   const targetId = typeof targetDepartmentId === 'string'
     ? targetDepartmentId
     : targetDepartmentId.toString();
@@ -222,19 +222,12 @@ export async function hasHierarchicalAccess(
     return true;
   }
 
-  // Check if user is in a parent department that grants hierarchical access
+  // Check if target is within any assigned department subtree
   for (const userDeptId of userDeptIds) {
-    // Check if this is a top-level department
-    const isTopLevel = await isTopLevelDepartmentMember(userId, userDeptId);
+    const subdepartments = await getDepartmentAndSubdepartments(userDeptId);
 
-    if (isTopLevel) {
-      // Get all subdepartments for this top-level department
-      const subdepartments = await getDepartmentAndSubdepartments(userDeptId);
-
-      // Check if target is in the hierarchy
-      if (subdepartments.includes(targetId)) {
-        return true;
-      }
+    if (subdepartments.includes(targetId)) {
+      return true;
     }
   }
 
@@ -245,7 +238,7 @@ export async function hasHierarchicalAccess(
  * Get department IDs for scoped query
  *
  * Returns the appropriate department IDs for filtering based on user's
- * department membership and hierarchical access rules.
+ * department membership and department subtrees.
  *
  * Use this in service layer to scope queries by department.
  *
@@ -264,24 +257,12 @@ export async function getDepartmentIdsForQuery(
   userDepartmentIds: (string | Types.ObjectId)[],
   userId?: string | Types.ObjectId
 ): Promise<string[]> {
+  void userId;
   const allDeptIds: string[] = [];
 
   for (const deptId of userDepartmentIds) {
-    const deptIdStr = typeof deptId === 'string' ? deptId : deptId.toString();
-
-    // Check if user is in top-level department
-    const isTopLevel = userId
-      ? await isTopLevelDepartmentMember(userId, deptId)
-      : await isTopLevelDepartmentMember('', deptId); // Check if dept is top-level
-
-    if (isTopLevel) {
-      // Include all subdepartments
-      const subdepts = await getDepartmentAndSubdepartments(deptId);
-      allDeptIds.push(...subdepts);
-    } else {
-      // Include only this department
-      allDeptIds.push(deptIdStr);
-    }
+    const subdepts = await getDepartmentAndSubdepartments(deptId);
+    allDeptIds.push(...subdepts);
   }
 
   // Remove duplicates

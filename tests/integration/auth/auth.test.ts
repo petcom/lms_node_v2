@@ -2,8 +2,9 @@ import request from 'supertest';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import mongoose from 'mongoose';
 import app from '@/app';
+import { describeIfMongo } from '../../helpers/mongo-guard';
 
-describe('Auth Integration Tests', () => {
+describeIfMongo('Auth Integration Tests', () => {
   let mongoServer: MongoMemoryServer;
 
   beforeAll(async () => {

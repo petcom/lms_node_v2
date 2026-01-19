@@ -2,16 +2,13 @@ import Redis from 'ioredis';
 import { config } from './environment';
 import { logger } from './logger';
 
+const redisDisabled = config.redis.disabled;
+
 const redisConfig = {
   host: config.redis.host,
   port: config.redis.port,
   password: config.redis.password,
   retryStrategy: (times: number) => {
-    // Stop retrying after 3 attempts in development
-    if (config.env === 'development' && times > 3) {
-      logger.warn('Redis unavailable - running without cache');
-      return null; // Stop retrying
-    }
     const delay = Math.min(times * 50, 2000);
     return delay;
   },
@@ -30,28 +27,26 @@ redis.on('connect', () => {
 });
 
 redis.on('error', (error) => {
-  if (config.env !== 'development') {
-    logger.error('Redis connection error:', error);
-  }
+  logger.error('Redis connection error:', error);
 });
 
 redis.on('close', () => {
   isRedisConnected = false;
-  if (config.env !== 'development') {
+  if (!redisDisabled) {
     logger.warn('Redis connection closed');
   }
 });
 
-// Try to connect, but don't fail if Redis is unavailable
-redis.connect().catch(() => {
-  if (config.env === 'development') {
-    logger.info('Redis not available - running without cache (optional in development)');
-  } else {
-    logger.error('Redis connection failed - cache disabled');
-  }
-});
+if (redisDisabled) {
+  logger.warn('Redis disabled via DISABLE_REDIS');
+} else {
+  redis.connect().catch((error) => {
+    logger.error('Redis connection failed', error);
+    process.exit(1);
+  });
+}
 
-export const isRedisAvailable = () => isRedisConnected;
+export const isRedisAvailable = () => isRedisConnected && !redisDisabled;
 
 /**
  * Cache helper functions
@@ -126,5 +121,20 @@ export class Cache {
       logger.error(`Cache exists error for key ${key}:`, error);
       return false;
     }
+  }
+}
+
+/**
+ * Disconnect Redis client gracefully
+ */
+export async function disconnectRedis(): Promise<void> {
+  try {
+    if (redis.status === 'ready' || redis.status === 'connecting') {
+      await redis.quit();
+      logger.info('Redis disconnected');
+    }
+  } catch (error) {
+    // Force disconnect if quit fails
+    redis.disconnect();
   }
 }

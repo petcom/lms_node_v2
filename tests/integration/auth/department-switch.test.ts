@@ -23,8 +23,9 @@ import { Staff } from '@/models/auth/Staff.model';
 import Department from '@/models/organization/Department.model';
 import { RoleDefinition } from '@/models/RoleDefinition.model';
 import { AccessRight } from '@/models/AccessRight.model';
+import { describeIfMongo } from '../../helpers/mongo-guard';
 
-describe('Department Switch Integration Tests', () => {
+describeIfMongo('Department Switch Integration Tests', () => {
   let mongoServer: MongoMemoryServer;
   let testDepartment1: any;
   let testDepartment2: any;

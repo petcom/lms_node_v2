@@ -1,8 +1,9 @@
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import mongoose from 'mongoose';
 import Setting from '../../../src/models/system/Setting.model';
+import { describeIfMongo } from '../../helpers/mongo-guard';
 
-describe('Setting Model', () => {
+describeIfMongo('Setting Model', () => {
   let mongoServer: MongoMemoryServer;
 
   beforeAll(async () => {

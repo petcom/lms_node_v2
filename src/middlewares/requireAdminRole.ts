@@ -21,7 +21,7 @@
  *
  * Phase 5, Task 5.4 - Full Implementation
  *
- * @module middlewares/require-admin-role
+ * @module middlewares/requireAdminRole
  */
 
 import { Request, Response, NextFunction } from 'express';

@@ -1,8 +1,8 @@
 import { Router } from 'express';
-import { authenticate } from '@/middlewares/authenticate';
-import { requireAccessRight } from '@/middlewares/require-access-right';
-import { requireEscalation } from '@/middlewares/require-escalation';
-import { requireAdminRole } from '@/middlewares/require-admin-role';
+import { isAuthenticated } from '@/middlewares/isAuthenticated';
+import { requireAccessRight } from '@/middlewares/requireAccessRight';
+import { requireEscalation } from '@/middlewares/requireEscalation';
+import { requireAdminRole } from '@/middlewares/requireAdminRole';
 import * as adminController from '@/controllers/admin/admin.controller';
 
 const router = Router();
@@ -26,7 +26,7 @@ const router = Router();
  */
 
 // Apply authentication middleware to all routes
-router.use(authenticate);
+router.use(isAuthenticated);
 
 // Apply common middleware to all routes: escalation + admin role + access right
 router.use(requireEscalation);

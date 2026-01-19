@@ -20,8 +20,9 @@ import { Staff } from '@/models/auth/Staff.model';
 import { Learner } from '@/models/auth/Learner.model';
 import { hashPassword } from '@/utils/password';
 import { isEncrypted } from '@/utils/encryption/EncryptionFactory';
+import { describeIfMongo } from '../../helpers/mongo-guard';
 
-describe('API Decryption Integration - ISS-011', () => {
+describeIfMongo('API Decryption Integration - ISS-011', () => {
   let mongoServer: MongoMemoryServer;
   const testEncryptionKey = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
 

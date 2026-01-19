@@ -4,8 +4,9 @@ import CourseContent from '@/models/content/CourseContent.model';
 import Course from '@/models/academic/Course.model';
 import Content from '@/models/content/Content.model';
 import Department from '@/models/organization/Department.model';
+import { describeIfMongo } from '../../helpers/mongo-guard';
 
-describe('CourseContent Model', () => {
+describeIfMongo('CourseContent Model', () => {
   let mongoServer: MongoMemoryServer;
   let testCourse: any;
   let testContent: any;

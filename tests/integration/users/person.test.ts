@@ -7,6 +7,7 @@ import { User } from '@/models/auth/User.model';
 import { Staff } from '@/models/auth/Staff.model';
 import { Learner } from '@/models/auth/Learner.model';
 import { hashPassword } from '@/utils/password';
+import { describeIfMongo } from '../../helpers/mongo-guard';
 
 /**
  * Person Endpoint Tests
@@ -19,7 +20,7 @@ import { hashPassword } from '@/utils/password';
  * - PUT /api/v2/users/me/person/extended
  */
 
-describe('Person Endpoints - /api/v2/users/me/person', () => {
+describeIfMongo('Person Endpoints - /api/v2/users/me/person', () => {
   let mongoServer: MongoMemoryServer;
   let testStaffUser: any;
   let testStaff: any;

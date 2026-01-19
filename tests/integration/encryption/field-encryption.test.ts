@@ -20,8 +20,9 @@ import { Staff } from '@/models/auth/Staff.model';
 import { User } from '@/models/auth/User.model';
 import { encrypt, decrypt, isEncrypted } from '@/utils/encryption/EncryptionFactory';
 import { hashPassword } from '@/utils/password';
+import { describeIfMongo } from '../../helpers/mongo-guard';
 
-describe('Field Encryption Integration - Mongoose Hooks', () => {
+describeIfMongo('Field Encryption Integration - Mongoose Hooks', () => {
   let mongoServer: MongoMemoryServer;
   const testEncryptionKey = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
 

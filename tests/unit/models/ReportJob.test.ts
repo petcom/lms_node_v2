@@ -3,8 +3,9 @@ import { MongoMemoryServer } from 'mongodb-memory-server';
 import { ReportJob, IReportJob } from '@/models/reports/ReportJob.model';
 import { LookupValue } from '@/models/LookupValue.model';
 import User from '@/models/auth/User.model';
+import { describeIfMongo } from '../../helpers/mongo-guard';
 
-describe('ReportJob Model', () => {
+describeIfMongo('ReportJob Model', () => {
   let mongoServer: MongoMemoryServer;
   let testUserId: mongoose.Types.ObjectId;
 

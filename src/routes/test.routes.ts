@@ -9,11 +9,11 @@
 
 import { Router, Request, Response } from 'express';
 import { isAuthenticated } from '@/middlewares/isAuthenticated';
-import { requireDepartmentMembership } from '@/middlewares/require-department-membership';
-import { requireDepartmentRole } from '@/middlewares/require-department-role';
-import { requireEscalation } from '@/middlewares/require-escalation';
-import { requireAdminRole } from '@/middlewares/require-admin-role';
-import { requireAccessRight } from '@/middlewares/require-access-right';
+import { requireDepartmentMembership } from '@/middlewares/requireDepartmentMembership';
+import { requireDepartmentRole } from '@/middlewares/requireDepartmentRole';
+import { requireEscalation } from '@/middlewares/requireEscalation';
+import { requireAdminRole } from '@/middlewares/requireAdminRole';
+import { requireAccessRight } from '@/middlewares/requireAccessRight';
 import { ApiResponse } from '@/utils/ApiResponse';
 
 const router = Router();

@@ -1,9 +1,9 @@
 import { Router } from 'express';
 import multer from 'multer';
 import path from 'path';
-import { authenticate } from '@/middlewares/authenticate';
-import { requireAccessRight } from '@/middlewares/require-access-right';
-import { requireEscalation } from '@/middlewares/require-escalation';
+import { isAuthenticated } from '@/middlewares/isAuthenticated';
+import { requireAccessRight } from '@/middlewares/requireAccessRight';
+import { requireEscalation } from '@/middlewares/requireEscalation';
 import * as contentController from '@/controllers/content/content.controller';
 
 const router = Router();
@@ -46,7 +46,7 @@ const upload = multer({
 });
 
 // Apply authentication middleware to all routes
-router.use(authenticate);
+router.use(isAuthenticated);
 
 /**
  * =====================

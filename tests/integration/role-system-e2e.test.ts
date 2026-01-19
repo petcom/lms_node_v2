@@ -15,6 +15,7 @@
 import request from 'supertest';
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
+import { MongoMemoryServer } from 'mongodb-memory-server';
 import app from '../../src/app';
 import { User } from '../../src/models/auth/User.model';
 import { Staff } from '../../src/models/auth/Staff.model';
@@ -23,6 +24,7 @@ import { GlobalAdmin } from '../../src/models/GlobalAdmin.model';
 import Department from '../../src/models/organization/Department.model';
 import { RoleDefinition } from '../../src/models/RoleDefinition.model';
 import { AccessRight } from '../../src/models/AccessRight.model';
+import { describeIfMongo } from '../helpers/mongo-guard';
 
 // Test data
 let testUser: any;
@@ -32,20 +34,20 @@ let childDepartment: any;
 let accessToken: string;
 let refreshToken: string;
 let adminToken: string;
+let mongoServer: MongoMemoryServer;
 
 const TEST_USER_EMAIL = 'test-e2e@example.com';
 const TEST_USER_PASSWORD = 'TestPassword123!';
 const TEST_ESCALATION_PASSWORD = 'AdminPassword456!';
 
-describe('Role System V2 - End-to-End Tests', () => {
+describeIfMongo('Role System V2 - End-to-End Tests', () => {
   // =========================================================================
   // SETUP & TEARDOWN
   // =========================================================================
 
   beforeAll(async () => {
-    // Connect to test database
-    const MONGODB_TEST_URI = process.env.MONGODB_TEST_URI || 'mongodb://localhost:27017/lms_test';
-    await mongoose.connect(MONGODB_TEST_URI);
+    mongoServer = await MongoMemoryServer.create();
+    await mongoose.connect(mongoServer.getUri());
 
     // Clean up test data
     await User.deleteMany({ email: TEST_USER_EMAIL });
@@ -131,7 +133,8 @@ describe('Role System V2 - End-to-End Tests', () => {
         { code: { $in: ['TEST-DEPT-1', 'TEST-DEPT-2', 'TEST-CHILD', 'NON-MEMBER', 'STRICT-CHILD'] } }
       ]
     });
-    await mongoose.connection.close();
+    await mongoose.disconnect();
+    await mongoServer.stop();
   });
 
   // =========================================================================

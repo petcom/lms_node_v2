@@ -3,8 +3,9 @@ import { MongoMemoryServer } from 'mongodb-memory-server';
 import { ReportSchedule, IReportSchedule } from '@/models/reports/ReportSchedule.model';
 import { ReportTemplate } from '@/models/reports/ReportTemplate.model';
 import { LookupValue } from '@/models/LookupValue.model';
+import { describeIfMongo } from '../../helpers/mongo-guard';
 
-describe('ReportSchedule Model', () => {
+describeIfMongo('ReportSchedule Model', () => {
   let mongoServer: MongoMemoryServer;
   let testUserId: mongoose.Types.ObjectId;
   let testTemplateId: mongoose.Types.ObjectId;

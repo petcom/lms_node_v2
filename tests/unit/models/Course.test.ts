@@ -2,8 +2,9 @@ import mongoose from 'mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import Course from '@/models/academic/Course.model';
 import Department from '@/models/organization/Department.model';
+import { describeIfMongo } from '../../helpers/mongo-guard';
 
-describe('Course Model', () => {
+describeIfMongo('Course Model', () => {
   let mongoServer: MongoMemoryServer;
   let testDepartment: any;
 

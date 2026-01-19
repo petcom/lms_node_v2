@@ -4,8 +4,9 @@ import Class from '@/models/academic/Class.model';
 import Course from '@/models/academic/Course.model';
 import Department from '@/models/organization/Department.model';
 import AcademicYear from '@/models/academic/AcademicYear.model';
+import { describeIfMongo } from '../../helpers/mongo-guard';
 
-describe('Class Model', () => {
+describeIfMongo('Class Model', () => {
   let mongoServer: MongoMemoryServer;
   let testDepartment: any;
   let testCourse: any;

@@ -22,7 +22,7 @@
  *
  * Phase 5, Task 5.2 - Full Implementation
  *
- * @module middlewares/require-department-role
+ * @module middlewares/requireDepartmentRole
  */
 
 import { Request, Response, NextFunction } from 'express';

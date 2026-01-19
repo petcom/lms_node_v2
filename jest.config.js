@@ -25,6 +25,7 @@ module.exports = {
     '^@utils/(.*)$': '<rootDir>/src/utils/$1',
     '^@types/(.*)$': '<rootDir>/src/types/$1',
     '^@validators/(.*)$': '<rootDir>/src/validators/$1',
+    '^@contracts/(.*)$': '<rootDir>/contracts/$1',
   },
   setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
   testTimeout: 20000,

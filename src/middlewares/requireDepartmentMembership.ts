@@ -21,7 +21,7 @@
  *
  * Phase 5, Task 5.1 - Full Implementation
  *
- * @module middlewares/require-department-membership
+ * @module middlewares/requireDepartmentMembership
  */
 
 import { Request, Response, NextFunction } from 'express';

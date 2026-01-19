@@ -32,10 +32,10 @@
  */
 
 import mongoose from 'mongoose';
-import dotenv from 'dotenv';
+import { loadEnv } from './utils/load-env';
 
 // Load environment variables
-dotenv.config();
+loadEnv();
 
 // Import models
 import { AccessRight, AccessRightDomain } from '../src/models/AccessRight.model';
@@ -760,6 +760,24 @@ const ACCESS_RIGHTS: AccessRightDefinition[] = [
     resource: 'system',
     action: 'read',
     description: 'View system-wide reports'
+  },
+  {
+    domain: 'reports',
+    resource: 'jobs',
+    action: 'read',
+    description: 'View report jobs'
+  },
+  {
+    domain: 'reports',
+    resource: 'jobs',
+    action: 'create',
+    description: 'Create report jobs'
+  },
+  {
+    domain: 'reports',
+    resource: 'jobs',
+    action: 'cancel',
+    description: 'Cancel report jobs'
   },
   {
     domain: 'reports',

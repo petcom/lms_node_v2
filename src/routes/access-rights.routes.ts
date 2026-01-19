@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import * as accessRightsController from '@/controllers/auth/access-rights.controller';
-import { authenticate } from '@/middlewares/authenticate';
+import { isAuthenticated } from '@/middlewares/isAuthenticated';
 
 const router = Router();
 
@@ -14,7 +14,7 @@ const router = Router();
  */
 
 // Apply authentication middleware to all routes
-router.use(authenticate);
+router.use(isAuthenticated);
 
 /**
  * GET /api/v2/access-rights

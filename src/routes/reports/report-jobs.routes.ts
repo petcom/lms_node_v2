@@ -9,8 +9,8 @@
 
 import { Router } from 'express';
 import * as controller from '@/controllers/reports/report-jobs.controller';
-import { authenticate } from '@/middlewares/authenticate';
-import { authorize } from '@/middlewares/authorize';
+import { isAuthenticated } from '@/middlewares/isAuthenticated';
+import { requireAccessRight } from '@/middlewares/requireAccessRight';
 import { validateRequest } from '@/middlewares/validateRequest';
 import {
   createReportJobSchema,
@@ -24,16 +24,16 @@ import {
 const router = Router();
 
 // All routes require authentication
-router.use(authenticate);
+router.use(isAuthenticated);
 
 /**
  * POST /api/v2/reports/jobs
  * Create a new report generation job
- * Requires: reports:create permission
+ * Requires: reports:jobs:create permission
  */
 router.post(
   '/',
-  authorize('reports:create'),
+  requireAccessRight('reports:jobs:create'),
   validateRequest(createReportJobSchema),
   controller.createReportJob
 );
@@ -41,11 +41,11 @@ router.post(
 /**
  * GET /api/v2/reports/jobs
  * List report jobs with filters and pagination
- * Requires: reports:read permission
+ * Requires: reports:jobs:read permission
  */
 router.get(
   '/',
-  authorize('reports:read'),
+  requireAccessRight('reports:jobs:read'),
   validateRequest(listReportJobsSchema),
   controller.listReportJobs
 );
@@ -53,11 +53,11 @@ router.get(
 /**
  * GET /api/v2/reports/jobs/:jobId
  * Get detailed information about a specific job
- * Requires: reports:read permission
+ * Requires: reports:jobs:read permission
  */
 router.get(
   '/:jobId',
-  authorize('reports:read'),
+  requireAccessRight('reports:jobs:read'),
   validateRequest(getReportJobSchema),
   controller.getReportJob
 );
@@ -65,11 +65,11 @@ router.get(
 /**
  * POST /api/v2/reports/jobs/:jobId/cancel
  * Cancel a pending or running job
- * Requires: reports:cancel permission OR be the job owner
+ * Requires: reports:jobs:cancel permission OR be the job owner
  */
 router.post(
   '/:jobId/cancel',
-  authorize('reports:cancel'),
+  requireAccessRight('reports:jobs:cancel'),
   validateRequest(cancelReportJobSchema),
   controller.cancelReportJob
 );
@@ -77,11 +77,11 @@ router.post(
 /**
  * GET /api/v2/reports/jobs/:jobId/download
  * Download the generated report file
- * Requires: reports:read permission
+ * Requires: reports:jobs:read permission
  */
 router.get(
   '/:jobId/download',
-  authorize('reports:read'),
+  requireAccessRight('reports:jobs:read'),
   validateRequest(downloadReportSchema),
   controller.downloadReport
 );
@@ -89,11 +89,11 @@ router.get(
 /**
  * POST /api/v2/reports/jobs/:jobId/retry
  * Retry a failed job
- * Requires: reports:create permission OR be the job owner
+ * Requires: reports:jobs:create permission OR be the job owner
  */
 router.post(
   '/:jobId/retry',
-  authorize('reports:create'),
+  requireAccessRight('reports:jobs:create'),
   validateRequest(retryReportJobSchema),
   controller.retryReportJob
 );

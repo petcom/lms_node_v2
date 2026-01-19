@@ -23,8 +23,9 @@ import { Learner } from '@/models/auth/Learner.model';
 import Department from '@/models/organization/Department.model';
 import { RoleDefinition } from '@/models/RoleDefinition.model';
 import { AccessRight } from '@/models/AccessRight.model';
+import { describeIfMongo } from '../../helpers/mongo-guard';
 
-describe('Role Cascading Integration Tests', () => {
+describeIfMongo('Role Cascading Integration Tests', () => {
   let mongoServer: MongoMemoryServer;
   let grandparentDept: any;
   let parentDept: any;

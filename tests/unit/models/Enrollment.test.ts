@@ -4,8 +4,9 @@ import Enrollment from '@/models/enrollment/Enrollment.model';
 import Program from '@/models/academic/Program.model';
 import Department from '@/models/organization/Department.model';
 import AcademicYear from '@/models/academic/AcademicYear.model';
+import { describeIfMongo } from '../../helpers/mongo-guard';
 
-describe('Enrollment Model', () => {
+describeIfMongo('Enrollment Model', () => {
   let mongoServer: MongoMemoryServer;
   let testProgram: any;
   let testAcademicYear: any;

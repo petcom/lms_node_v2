@@ -1,18 +1,18 @@
 import { Router } from 'express';
 import * as controller from '@/controllers/reports/report-templates.controller';
-import { authenticate } from '@/middlewares/authenticate';
-import { authorize } from '@/middlewares/authorize';
+import { isAuthenticated } from '@/middlewares/isAuthenticated';
+import { requireAccessRight } from '@/middlewares/requireAccessRight';
 import { validateRequest } from '@/middlewares/validateRequest';
 import * as schema from '@contracts/api/report-templates.contract';
 
 const router = Router();
-router.use(authenticate);
+router.use(isAuthenticated);
 
-router.post('/', authorize('reports:create'), validateRequest(schema.createTemplateSchema), controller.createTemplate);
-router.get('/', authorize('reports:read'), validateRequest(schema.listTemplatesSchema), controller.listTemplates);
-router.get('/:templateId', authorize('reports:read'), validateRequest(schema.getTemplateSchema), controller.getTemplate);
-router.put('/:templateId', authorize('reports:update'), validateRequest(schema.updateTemplateSchema), controller.updateTemplate);
-router.delete('/:templateId', authorize('reports:delete'), validateRequest(schema.deleteTemplateSchema), controller.deleteTemplate);
-router.post('/:templateId/clone', authorize('reports:create'), validateRequest(schema.cloneTemplateSchema), controller.cloneTemplate);
+router.post('/', requireAccessRight('reports:templates:create'), validateRequest(schema.createTemplateSchema), controller.createTemplate);
+router.get('/', requireAccessRight('reports:templates:read'), validateRequest(schema.listTemplatesSchema), controller.listTemplates);
+router.get('/:templateId', requireAccessRight('reports:templates:read'), validateRequest(schema.getTemplateSchema), controller.getTemplate);
+router.put('/:templateId', requireAccessRight('reports:templates:update'), validateRequest(schema.updateTemplateSchema), controller.updateTemplate);
+router.delete('/:templateId', requireAccessRight('reports:templates:delete'), validateRequest(schema.deleteTemplateSchema), controller.deleteTemplate);
+router.post('/:templateId/clone', requireAccessRight('reports:templates:create'), validateRequest(schema.cloneTemplateSchema), controller.cloneTemplate);
 
 export default router;

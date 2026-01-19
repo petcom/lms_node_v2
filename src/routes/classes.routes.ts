@@ -1,7 +1,7 @@
 import { Router } from 'express';
-import { authenticate } from '@/middlewares/authenticate';
-import { requireAccessRight } from '@/middlewares/require-access-right';
-import { requireAdminRole } from '@/middlewares/require-admin-role';
+import { isAuthenticated } from '@/middlewares/isAuthenticated';
+import { requireAccessRight } from '@/middlewares/requireAccessRight';
+import { requireAdminRole } from '@/middlewares/requireAdminRole';
 import * as classesController from '@/controllers/academic/classes.controller';
 
 const router = Router();
@@ -17,7 +17,7 @@ const router = Router();
  */
 
 // Apply authentication middleware to all routes
-router.use(authenticate);
+router.use(isAuthenticated);
 
 /**
  * =====================

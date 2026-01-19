@@ -1,10 +1,11 @@
 import mongoose from 'mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import { Report } from '@/models/system/Report.model';
+import { describeIfMongo } from '../../helpers/mongo-guard';
 
 let mongoServer: MongoMemoryServer;
 
-describe('Report Model', () => {
+describeIfMongo('Report Model', () => {
   beforeAll(async () => {
     mongoServer = await MongoMemoryServer.create();
     await mongoose.connect(mongoServer.getUri());

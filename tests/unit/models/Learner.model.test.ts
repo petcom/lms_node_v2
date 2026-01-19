@@ -3,6 +3,7 @@ import { MongoMemoryServer } from 'mongodb-memory-server';
 import { Learner, ILearner } from '@/models/auth/Learner.model';
 import { LEARNER_ROLES } from '@/models/auth/role-constants';
 import Department from '@/models/organization/Department.model';
+import { describeIfMongo } from '../../helpers/mongo-guard';
 
 // Helper function to create valid person object
 const createPersonObject = (firstName: string = 'John', lastName: string = 'Doe', email?: string) => ({
@@ -22,7 +23,7 @@ const createPersonObject = (firstName: string = 'John', lastName: string = 'Doe'
 });
 
 
-describe('Learner Model - Phase 1 Changes', () => {
+describeIfMongo('Learner Model - Phase 1 Changes', () => {
   let mongoServer: MongoMemoryServer;
   let testDepartment1: any;
   let testDepartment2: any;

@@ -1,101 +1,100 @@
-# Mock Data Scripts for LMS V2
+# Mock Data Scripts (Current LMS V2 Schema)
 
-This directory contains scripts for generating and managing test data in the `lms_v2_mockdata` database.
-
-## Overview
-
-The mock data generation creates a comprehensive, realistic dataset for testing and development purposes. All data is loaded into a separate `lms_v2_mockdata` database to avoid interference with production or test databases.
+This directory contains scripts for generating and managing mock data in a disposable
+`lms_mock` MongoDB database. The scripts respect `ENV_FILE` so you can switch between
+`.env` and `.env.mock` without editing your primary environment file.
 
 ## Quick Start
 
 ```bash
-# Generate all mock data
+# Start the API against the mock database
+npm run dev:mock
+
+# Seed mock data
 npm run seed:mock
 
-# Remove all mock data
+# Purge mock data (with confirmation)
 npm run purge:mock
 
-# Remove and regenerate (reset)
+# Purge and reseed
 npm run reset:mock
 ```
 
-## Generated Data
+## Environment Switching
 
-### Organization Structure
-- **6 Departments** (including Master Department)
-  - Master Department (root)
-  - Cognitive Therapy
-  - EMDR
-  - Basic Therapy (with 2 subdepartments)
-    - Counseling Services
-    - Crisis Intervention
+The scripts look for `ENV_FILE` and default to `.env`. The mock setup uses `.env.mock`:
+
+```bash
+ENV_FILE=.env.mock npm run dev
+ENV_FILE=.env.mock npm run seed:mock
+```
+
+`.env.mock` ships with:
+
+- `MONGODB_URI=mongodb://localhost:27017/lms_mock`
+- `DISABLE_REDIS=true`
+- Admin seed credentials
+- `MOCK_USER_PASSWORD` for mock users
+
+## Seeded Data Summary
+
+### Departments
+- System Administration (master, idempotent)
+- Behavioral Health
+- Cognitive Therapy
+- EMDR
+- CBT Fundamentals (child of Cognitive Therapy)
+- Crisis Intervention (child of Behavioral Health)
 
 ### Users
-- **4 Staff Members**
-  - Sarah Anderson (admin@lms.com) - System Admin only, default dashboard: sys-admin
-  - John Smith (john.smith@lms.com) - System Admin + Content Admin + Department Admin
-  - Emily Jones (emily.jones@lms.com) - System Admin + Content Admin
-  - Michael Brown (michael.brown@lms.com) - Content Admin + Department Admin
+**Passwords:**
+- Admin: `ADMIN_PASSWORD` from `.env.mock` (default `Admin123!`)
+- Mock users: `MOCK_USER_PASSWORD` from `.env.mock` (default `Password123!`)
 
-- **2 Learners**
-  - Alice Johnson (alice.student@lms.com) - Enrolled in 2 programs + standalone courses
-  - Bob Williams (bob.learner@lms.com) - Enrolled in 1 program + standalone courses
+**Staff**
+- `john.instructor@lms.edu` — instructor (Behavioral Health, Crisis Intervention)
+- `maria.content@lms.edu` — content-admin (Cognitive Therapy)
+- `sam.department@lms.edu` — department-admin + billing-admin (EMDR)
+- `riley.instructor@lms.edu` — instructor (Cognitive Therapy, CBT Fundamentals)
+- `taylor.billing@lms.edu` — billing-admin (Behavioral Health)
 
-**All passwords:** `Password123!`
+**Learners**
+- `alex.learner@lms.edu` — course-taker (Cognitive Therapy)
+- `jordan.student@lms.edu` — auditor (Behavioral Health)
+- `casey.learner@lms.edu` — course-taker (EMDR)
+- `jamie.student@lms.edu` — course-taker (Behavioral Health)
 
-### Academic Content
-- **1 Academic Year** (2025-2026) with 2 terms
-- **20 Courses** with 1-3 content segments each
-  - Randomly distributed across departments
-  - 5 courses assigned to multiple departments
-  - Courses include: CBT, EMDR, Basic Therapy, Counseling, Crisis Management topics
+**Admin**
+- `admin@lms.edu` — userTypes: learner, staff, global-admin (from `seed-admin`)
 
-- **15 Exams** with 4 questions each (60 total questions)
-  - Question types: Multiple Choice, True/False, Short Answer, Essay
-  - All linked to courses
+### Academic Data
+- Academic year: 2025-2026 (current)
+- Courses (6): BH101, BH201, CBT101, CBT201, EMDR101, EMDR201
+- Programs (2): CBT Certificate, EMDR Continuing Education
+- Classes (6): BH101, BH201, CBT101, CBT201, EMDR101, EMDR201 (Fall 2025 cohorts)
 
-- **3 Programs**
-  - Cognitive Therapy Certification
-  - EMDR Practitioner Program
-  - Basic Therapy Foundations
+### Content and Activity
+- Each course gets multiple modules with video + reading + quiz
+- CBT101 includes a SCORM lab in module 3
+- Course content links are created
+- Sample attempts, exam results, SCORM attempts, and learning events
 
-- **10 Class Instances** (scheduled course sections)
-
-### Learning Activity
-- **Course Enrollments** - Both learners enrolled in program and standalone courses
-- **Content Attempts** - Learners viewing/completing course content
-- **Learning Events** - Course starts, lesson completions, quiz submissions
-- **Exam Results** - Test scores and detailed answer data
-- **5 SCORM Packages** with learner attempts
-
-### System Data
-- **Permissions & Role Mappings** - Complete RBAC setup
-- **System Settings** - Configuration values
-- **Audit Logs** - Sample activity tracking (20 entries)
-
-## NPM Scripts
+## Scripts
 
 ### Seed Mock Data
 ```bash
 npm run seed:mock
 ```
-Generates all mock data in the `lms_v2_mockdata` database. Safe to run multiple times (will create duplicates).
-
-**Output:**
-- Departments with hierarchy
-- Users (staff and learners)
-- Courses, programs, and classes
-- Enrollments and learning activity
-- SCORM packages and attempts
-- System settings
+Seeds the mock database using `.env.mock` and the current schema. The script is
+idempotent for core entities (departments, users, courses, programs) but will
+add new activity data if rerun.
 
 ### Purge Mock Data
 ```bash
 npm run purge:mock
 ```
-Removes all data from the mock database. **Requires confirmation.**
+Deletes data from the mock database. Use `--force` to skip confirmation:
 
-Use `--force` flag to skip confirmation:
 ```bash
 npm run purge:mock:force
 ```
@@ -104,226 +103,9 @@ npm run purge:mock:force
 ```bash
 npm run reset:mock
 ```
-Purges and regenerates all mock data in one command.
+Purges and reseeds in one step.
 
-## Environment Variables
+## Notes
 
-The scripts use the following environment variable:
-
-```bash
-MOCK_DB_URI=mongodb://localhost:27017/lms_v2_mockdata
-```
-
-You can override this in your `.env` file or when running scripts:
-
-```bash
-MOCK_DB_URI=mongodb://other-host:27017/other_db npm run seed:mock
-```
-
-## Data Summary
-
-After running `npm run seed:mock`, you'll have:
-
-| Entity | Count | Notes |
-|--------|-------|-------|
-| **Departments** | 6 | Including Master + 2 subdepartments |
-| **Users** | 6 | 4 staff + 2 learners |
-| **Courses** | 20 | With 1-3 content segments each |
-| **Programs** | 3 | Certification programs |
-| **Classes** | 10 | Scheduled course instances |
-| **Content Items** | 40-60 | Course modules |
-| **Question Banks** | 15 | One per exam |
-| **Questions** | 60 | 4 questions per exam |
-| **Enrollments** | 15-20 | Program + standalone courses |
-| **Content Attempts** | 50+ | Learner content views |
-| **Exam Results** | 10-15 | Completed exams |
-| **SCORM Attempts** | 10-15 | Linked to content items |
-| **Audit Logs** | 20 | Sample activity |
-
-## Use Cases
-
-### Development
-Use mock data to develop and test features locally without setting up production-like data manually.
-
-### Testing
-Run integration tests against realistic data structures:
-```bash
-# Set test database to mock data
-MONGODB_URI=mongodb://localhost:27017/lms_v2_mockdata npm run dev
-```
-
-### Demonstrations
-Show the system with realistic data for demos, screenshots, or training.
-
-### API Testing
-Use Postman or similar tools with real user credentials:
-```
-POST /api/v2/auth/login
-{
-  "email": "admin@lms.com",
-  "password": "Password123!"
-}
-```
-
-## Staff Roles Breakdown
-
-| Email | Roles | Default Dashboard | Department |
-|-------|-------|-------------------|------------|
-| admin@lms.com | system-admin | sys-admin | Master Department |
-| john.smith@lms.com | system-admin, content-admin, department-admin | default | Cognitive Therapy |
-| emily.jones@lms.com | system-admin, content-admin | default | EMDR |
-| michael.brown@lms.com | content-admin, department-admin | default | Basic Therapy |
-
-## Learner Enrollments
-
-### Alice Johnson (alice.student@lms.com)
-- **Program Enrollments:** 2 programs
-- **Standalone Courses:** 3 courses
-- **Total Enrollments:** ~9-10 courses
-- **Activity:** Content attempts, exam results, SCORM attempts
-
-### Bob Williams (bob.learner@lms.com)
-- **Program Enrollments:** 1 program
-- **Standalone Courses:** 3 courses
-- **Total Enrollments:** ~6-7 courses
-- **Activity:** Content attempts, exam results, SCORM attempts
-
-## Data Relationships
-
-The generated data maintains all relationships:
-
-```
-Department
-  ├── Courses (20)
-  │   ├── Content (1-3 segments each)
-  │   ├── Question Banks (15 courses have exams)
-  │   │   └── Questions (4 per bank)
-  │   ├── SCORM Packages (5 courses)
-  │   └── Classes (10 scheduled instances)
-  ├── Programs (3)
-  │   └── Required Courses (3-4 per program)
-  └── Staff (assigned by department)
-
-Learners (2)
-  ├── Program Enrollments
-  ├── Course Enrollments (program + standalone)
-  ├── Content Attempts
-  ├── Exam Results
-  └── SCORM Attempts
-```
-
-## Recommendations for Testing End-to-End
-
-The mock data includes everything needed to visualize the system working end-to-end:
-
-### ✅ Already Included:
-- [x] User authentication (6 users with different roles)
-- [x] Department hierarchy (parent-child relationships)
-- [x] Course catalog with content
-- [x] Program enrollments
-- [x] Standalone course enrollments
-- [x] Learning progress tracking
-- [x] Assessment/exam data with answers
-- [x] SCORM package integration
-- [x] Audit logging
-- [x] System settings
-
-### 📋 Additional Data You Might Want to Add:
-
-1. **Reports**
-   - Scheduled reports
-   - Generated report files
-   - Report history
-
-2. **Notifications**
-   - Email notifications (if you have a notification system)
-   - In-app notifications
-   - Announcement messages
-
-3. **Discussions/Forums**
-   - Course discussions (if implemented)
-   - Student questions
-   - Instructor responses
-
-4. **Assignments**
-   - Assignment submissions (if separate from exams)
-   - Graded work
-   - Feedback comments
-
-5. **Certificates**
-   - Completion certificates
-   - Program certificates
-   - Badge awards
-
-6. **Calendar Events**
-   - Live sessions
-   - Office hours
-   - Deadlines
-
-7. **Grade Book**
-   - Weighted grade calculations
-   - Grade history
-   - Grade appeals
-
-## Troubleshooting
-
-### Database Connection Error
-```bash
-# Make sure MongoDB is running
-sudo systemctl start mongod
-
-# Or if using Docker
-docker start mongodb
-```
-
-### TypeScript Compilation Errors
-```bash
-# Rebuild TypeScript
-npm run build
-```
-
-### Duplicate Data
-The seed script will create duplicates if run multiple times. To avoid this:
-```bash
-# Always purge before seeding
-npm run reset:mock
-```
-
-### Permission Errors
-Make sure you have write access to the MongoDB instance and the database.
-
-## Maintenance
-
-### Adding New Mock Data
-To add new entities to the mock data:
-
-1. Import the model in `seed-mock-data.ts`
-2. Create a generator function (e.g., `createNewEntities()`)
-3. Add to the `mockData` storage object
-4. Call the function in `main()`
-5. Add the model to `purge-mock-data.ts` collections array
-
-### Modifying Existing Data
-Edit the generator functions in `seed-mock-data.ts`. Common modifications:
-- Change user count
-- Adjust course numbers
-- Modify department structure
-- Update enrollment patterns
-
-## Best Practices
-
-1. **Separate Databases:** Always use `lms_v2_mockdata` - never use production or test databases
-2. **Reset Between Tests:** Run `npm run reset:mock` for clean state
-3. **Realistic Data:** Mock data should represent real-world scenarios
-4. **Document Changes:** Update this README when modifying scripts
-5. **Version Control:** Commit script changes but not generated data
-
-## Security Note
-
-⚠️ **The mock data uses simple, predictable passwords (`Password123!`) for ALL users. This is intentional for testing purposes but should NEVER be used in production!**
-
----
-
-**For questions or issues with mock data scripts, contact the development team.**
-
-**Last Updated:** January 7, 2026
+- This mock database is intended for development and testing only.
+- It is safe to destroy and recreate at any time.

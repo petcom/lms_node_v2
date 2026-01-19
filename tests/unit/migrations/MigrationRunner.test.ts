@@ -1,8 +1,9 @@
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import mongoose from 'mongoose';
 import { MigrationRunner } from '../../../src/migrations/MigrationRunner';
+import { describeIfMongo } from '../../helpers/mongo-guard';
 
-describe('Migration Runner', () => {
+describeIfMongo('Migration Runner', () => {
   let mongoServer: MongoMemoryServer;
 
   beforeAll(async () => {

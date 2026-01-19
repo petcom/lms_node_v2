@@ -1,7 +1,7 @@
 import { Router } from 'express';
-import { authenticate } from '@/middlewares/authenticate';
-import { requireEscalation } from '@/middlewares/require-escalation';
-import { requireAdminRole } from '@/middlewares/require-admin-role';
+import { isAuthenticated } from '@/middlewares/isAuthenticated';
+import { requireEscalation } from '@/middlewares/requireEscalation';
+import { requireAdminRole } from '@/middlewares/requireAdminRole';
 import * as rolesController from '@/controllers/auth/roles.controller';
 
 const router = Router();
@@ -14,7 +14,7 @@ const router = Router();
  */
 
 // Apply authentication middleware to all routes
-router.use(authenticate);
+router.use(isAuthenticated);
 
 /**
  * GET /api/v2/roles/me

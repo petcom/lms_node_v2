@@ -23,7 +23,7 @@
  *
  * Phase 5, Task 5.3 - Full Implementation
  *
- * @module middlewares/require-escalation
+ * @module middlewares/requireEscalation
  */
 
 import { Request, Response, NextFunction } from 'express';

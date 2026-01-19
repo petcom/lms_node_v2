@@ -16,8 +16,9 @@
 import mongoose from 'mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import { LookupValue, ILookupValue } from '@/models/LookupValue.model';
+import { describeIfMongo } from '../../helpers/mongo-guard';
 
-describe('LookupValue Model', () => {
+describeIfMongo('LookupValue Model', () => {
   let mongoServer: MongoMemoryServer;
 
   beforeAll(async () => {

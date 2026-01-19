@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticate } from '@/middlewares/authenticate';
+import { isAuthenticated } from '@/middlewares/isAuthenticated';
 import * as templatesController from '@/controllers/content/templates.controller';
 
 const router = Router();
@@ -12,7 +12,7 @@ const router = Router();
  */
 
 // Apply authentication middleware to all routes
-router.use(authenticate);
+router.use(isAuthenticated);
 
 /**
  * GET /api/v2/templates

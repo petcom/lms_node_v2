@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticate } from '@/middlewares/authenticate';
+import { isAuthenticated } from '@/middlewares/isAuthenticated';
 import * as learningEventsController from '@/controllers/activity/learning-events.controller';
 
 const router = Router();
@@ -13,7 +13,7 @@ const router = Router();
  */
 
 // Apply authentication middleware to all routes
-router.use(authenticate);
+router.use(isAuthenticated);
 
 /**
  * =====================

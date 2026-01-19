@@ -7,8 +7,9 @@ import Course from '@/models/academic/Course.model';
 import Department from '@/models/organization/Department.model';
 import AcademicYear from '@/models/academic/AcademicYear.model';
 import { LookupValue } from '@/models/LookupValue.model';
+import { describeIfMongo } from '../../helpers/mongo-guard';
 
-describe('LearningEvent Model', () => {
+describeIfMongo('LearningEvent Model', () => {
   let mongoServer: MongoMemoryServer;
   let testContent: any;
   let testClass: any;

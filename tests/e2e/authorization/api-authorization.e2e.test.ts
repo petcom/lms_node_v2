@@ -32,8 +32,9 @@ import Class from '@/models/academic/Class.model';
 import ClassEnrollment from '@/models/enrollment/ClassEnrollment.model';
 import { RoleDefinition } from '@/models/RoleDefinition.model';
 import { AccessRight } from '@/models/AccessRight.model';
+import { describeIfMongo } from '../../helpers/mongo-guard';
 
-describe('E2E Authorization API Tests', () => {
+describeIfMongo('E2E Authorization API Tests', () => {
   let mongoServer: MongoMemoryServer;
   let masterDepartment: any;
   let topLevelDepartment: any;

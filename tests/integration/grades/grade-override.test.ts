@@ -13,6 +13,7 @@ import ClassEnrollment from '@/models/enrollment/ClassEnrollment.model';
 import GradeChangeLog from '@/models/audit/GradeChangeLog.model';
 import { hashPassword } from '@/utils/password';
 import AccessRight from '@/models/AccessRight.model';
+import { describeIfMongo } from '../../helpers/mongo-guard';
 
 /**
  * ISS-021 Integration Tests: Grade Override API
@@ -31,7 +32,7 @@ import AccessRight from '@/models/AccessRight.model';
  * - Audit trail is immutable
  */
 
-describe('Grade Override API - Integration Tests (ISS-021)', () => {
+describeIfMongo('Grade Override API - Integration Tests (ISS-021)', () => {
   let mongoServer: MongoMemoryServer;
   let department: any;
   let course: any;

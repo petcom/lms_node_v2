@@ -47,6 +47,15 @@ import settingsRoutes from './routes/settings.routes';
 import auditLogsRoutes from './routes/audit-logs.routes';
 import systemRoutes from './routes/system.routes';
 
+// Phase 7 routes - Analytics
+import analyticsRoutes from './routes/analytics.routes';
+
+// Admin routes (system-admin only)
+import adminRoutes from './routes/admin.routes';
+
+// Additional routes
+import programLevelsRoutes from './routes/program-levels.routes';
+
 const app: Application = express();
 
 // Security middleware
@@ -118,6 +127,15 @@ app.use('/api/v2/reports', reportsRoutes);
 app.use('/api/v2/settings', settingsRoutes);
 app.use('/api/v2/audit-logs', auditLogsRoutes);
 app.use('/api/v2/system', systemRoutes);
+
+// API routes - Phase 7 (Analytics)
+app.use('/api/v2/analytics', analyticsRoutes);
+
+// API routes - Admin (system-admin only, requires escalation)
+app.use('/api/v2/admin', adminRoutes);
+
+// API routes - Additional
+app.use('/api/v2/program-levels', programLevelsRoutes);
 
 // 404 handler
 app.use(notFoundHandler);

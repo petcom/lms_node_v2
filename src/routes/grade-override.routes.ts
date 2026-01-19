@@ -1,6 +1,6 @@
 import express from 'express';
-import { authenticate } from '@/middlewares/authenticate';
-import { requireAccessRight } from '@/middlewares/require-access-right';
+import { isAuthenticated } from '@/middlewares/isAuthenticated';
+import { requireAccessRight } from '@/middlewares/requireAccessRight';
 import { overrideGrade, getGradeHistory } from '@/controllers/grades/grade-override.controller';
 import { validateGradeOverride } from '@/validators/grade-override.validator';
 
@@ -28,7 +28,7 @@ const router = express.Router();
  */
 router.put(
   '/:enrollmentId/grades/override',
-  authenticate,
+  isAuthenticated,
   requireAccessRight('academic:grades:override'),
   validateGradeOverride,
   overrideGrade
@@ -47,7 +47,7 @@ router.put(
  */
 router.get(
   '/:enrollmentId/grades/history',
-  authenticate,
+  isAuthenticated,
   requireAccessRight('academic:grades:override'),
   getGradeHistory
 );

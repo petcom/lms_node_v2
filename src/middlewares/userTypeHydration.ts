@@ -19,7 +19,7 @@
  * The middleware expects req.user to already be set by isAuthenticated.
  * It transforms req.user.userTypes from string[] to UserTypeObject[].
  *
- * @module middlewares/user-type-hydration
+ * @module middlewares/userTypeHydration
  */
 
 import { Request, Response, NextFunction } from 'express';

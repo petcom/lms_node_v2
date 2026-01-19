@@ -2,8 +2,9 @@ import mongoose from 'mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import ContentAttempt from '@/models/content/ContentAttempt.model';
 import Content from '@/models/content/Content.model';
+import { describeIfMongo } from '../../helpers/mongo-guard';
 
-describe('ContentAttempt Model', () => {
+describeIfMongo('ContentAttempt Model', () => {
   let mongoServer: MongoMemoryServer;
   let testContent: any;
   let testLearnerId: mongoose.Types.ObjectId;

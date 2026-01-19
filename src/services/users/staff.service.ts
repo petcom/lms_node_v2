@@ -40,6 +40,10 @@ interface ListStaffFilters {
   sort?: string;
 }
 
+interface ListStaffOptions {
+  hasGlobalAccess?: boolean;
+}
+
 interface UpdateDepartmentsInput {
   action: 'add' | 'remove' | 'update' | 'replace';
   departmentAssignments: DepartmentAssignment[];
@@ -49,19 +53,17 @@ export class StaffService {
   /**
    * List staff users with department-scoped access
    */
-  static async listStaff(filters: ListStaffFilters, requesterId: string): Promise<any> {
+  static async listStaff(
+    filters: ListStaffFilters,
+    requesterId: string,
+    options: ListStaffOptions = {}
+  ): Promise<any> {
     const requester = await User.findById(requesterId);
     if (!requester) {
       throw ApiError.notFound('Requester not found');
     }
 
-    // Check permissions
-    const isGlobalAdmin = requester.roles.includes('system-admin');
-    const isDeptAdmin = requester.roles.includes('department-admin');
-
-    if (!isGlobalAdmin && !isDeptAdmin) {
-      throw ApiError.forbidden('Insufficient permissions to view staff');
-    }
+    const isGlobalAdmin = options.hasGlobalAccess === true;
 
     // Build department scope with hierarchical access
     let allowedDepartmentIds: string[] = [];
@@ -101,9 +103,9 @@ export class StaffService {
     const limit = Math.min(100, Math.max(1, filters.limit || 10));
     const skip = (page - 1) * limit;
 
-    // Build user query
+    // Build user query - filter by userTypes containing 'staff'
     const userQuery: any = {
-      roles: { $in: ['instructor', 'content-admin', 'department-admin'] }
+      userTypes: 'staff'
     };
 
     // Filter by status
@@ -120,10 +122,16 @@ export class StaffService {
     const users = await User.find(userQuery);
     const userIds = users.map((u) => u._id);
 
-    // Build staff query
+    // Build staff query - filter by role if specified
     const staffQuery: any = {
-      _id: { $in: userIds }
+      _id: { $in: userIds },
+      isActive: true
     };
+
+    // Filter by specific role if provided
+    if (filters.role && filters.role !== 'staff') {
+      staffQuery['departmentMemberships.roles'] = filters.role;
+    }
 
     // Apply department scoping
     if (filters.department) {
@@ -138,8 +146,8 @@ export class StaffService {
     if (filters.search && filters.search.length >= 2) {
       const searchRegex = new RegExp(filters.search, 'i');
       staffQuery.$or = [
-        { firstName: searchRegex },
-        { lastName: searchRegex }
+        { 'person.firstName': searchRegex },
+        { 'person.lastName': searchRegex }
       ];
 
       // Also search by email in User
@@ -157,10 +165,14 @@ export class StaffService {
     // Get total count
     const total = await Staff.countDocuments(staffQuery);
 
-    // Apply sorting
+    // Apply sorting - map simple field names to nested person fields
     const sortField = filters.sort || 'lastName';
     const sortOrder = sortField.startsWith('-') ? -1 : 1;
-    const sortKey = sortField.startsWith('-') ? sortField.substring(1) : sortField;
+    let sortKey = sortField.startsWith('-') ? sortField.substring(1) : sortField;
+    
+    // Map common sort fields to nested person fields
+    if (sortKey === 'lastName') sortKey = 'person.lastName';
+    if (sortKey === 'firstName') sortKey = 'person.firstName';
 
     // Get paginated staff
     const staffList = await Staff.find(staffQuery)
@@ -181,7 +193,7 @@ export class StaffService {
             return {
               departmentId: dm.departmentId.toString(),
               departmentName: dept?.name || 'Unknown',
-              roleInDepartment: dm.roles[0] || 'instructor'
+              rolesInDepartment: dm.roles
             };
           })
         );
@@ -327,7 +339,7 @@ export class StaffService {
         return {
           departmentId: dm.departmentId.toString(),
           departmentName: dept?.name || 'Unknown',
-          roleInDepartment: dm.roles[0]
+          rolesInDepartment: dm.roles
         };
       })
     );
@@ -401,7 +413,7 @@ export class StaffService {
         return {
           departmentId: dm.departmentId.toString(),
           departmentName: dept?.name || 'Unknown',
-          roleInDepartment: dm.roles[0] || 'instructor'
+          rolesInDepartment: dm.roles
         };
       })
     );
@@ -522,7 +534,7 @@ export class StaffService {
         return {
           departmentId: dm.departmentId.toString(),
           departmentName: dept?.name || 'Unknown',
-          roleInDepartment: dm.roles[0] || 'instructor'
+          rolesInDepartment: dm.roles
         };
       })
     );
@@ -760,7 +772,7 @@ export class StaffService {
         return {
           departmentId: dm.departmentId.toString(),
           departmentName: dept?.name || 'Unknown',
-          roleInDepartment: dm.roles[0] || 'instructor'
+          rolesInDepartment: dm.roles
         };
       })
     );

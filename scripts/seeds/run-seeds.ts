@@ -13,12 +13,12 @@
  */
 
 import mongoose from 'mongoose';
-import dotenv from 'dotenv';
+import { loadEnv } from '../utils/load-env';
 import { seedConstants } from './constants.seed';
 import { seedAdmin } from '../seed-admin';
 
 // Load environment variables
-dotenv.config();
+loadEnv();
 
 // Configuration
 const config = {

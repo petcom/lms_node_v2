@@ -2,8 +2,9 @@ import { MongoMemoryServer } from 'mongodb-memory-server';
 import mongoose from 'mongoose';
 import RolePermission from '../../../src/models/system/RolePermission.model';
 import Permission from '../../../src/models/system/Permission.model';
+import { describeIfMongo } from '../../helpers/mongo-guard';
 
-describe('RolePermission Model', () => {
+describeIfMongo('RolePermission Model', () => {
   let mongoServer: MongoMemoryServer;
 
   beforeAll(async () => {

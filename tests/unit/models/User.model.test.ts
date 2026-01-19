@@ -2,8 +2,9 @@ import mongoose from 'mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import { User, IUser, UserType } from '@/models/auth/User.model';
 import Department from '@/models/organization/Department.model';
+import { describeIfMongo } from '../../helpers/mongo-guard';
 
-describe('User Model - Phase 1 Changes', () => {
+describeIfMongo('User Model - Phase 1 Changes', () => {
   let mongoServer: MongoMemoryServer;
   let testDepartment: any;
 

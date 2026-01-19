@@ -2,7 +2,11 @@ import dotenv from 'dotenv';
 import path from 'path';
 
 // Load environment variables
-dotenv.config({ path: path.join(__dirname, '../../.env') });
+const envFile = process.env.ENV_FILE || '.env';
+const envPath = path.isAbsolute(envFile)
+  ? envFile
+  : path.join(__dirname, '../../', envFile);
+dotenv.config({ path: envPath });
 
 interface Config {
   env: string;
@@ -15,6 +19,7 @@ interface Config {
     host: string;
     port: number;
     password?: string;
+    disabled: boolean;
   };
   jwt: {
     accessSecret: string;
@@ -55,7 +60,7 @@ const getEnvConfig = (): Config => {
 
   const baseConfig: Config = {
     env,
-    port: parseInt(process.env.PORT || '5000', 10),
+    port: parseInt(process.env.PORT!, 10),
     mongodb: {
       uri: process.env.MONGODB_URI!,
       options: {
@@ -68,7 +73,8 @@ const getEnvConfig = (): Config => {
     redis: {
       host: process.env.REDIS_HOST || 'localhost',
       port: parseInt(process.env.REDIS_PORT || '6379', 10),
-      password: process.env.REDIS_PASSWORD
+      password: process.env.REDIS_PASSWORD,
+      disabled: process.env.DISABLE_REDIS === 'true' || process.env.DISABLE_REDIS === '1'
     },
     jwt: {
       accessSecret: process.env.JWT_ACCESS_SECRET!,
