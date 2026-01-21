@@ -2,7 +2,7 @@ import mongoose, { Schema, Document } from 'mongoose';
 
 export interface ICourseContent extends Document {
   courseId: mongoose.Types.ObjectId;
-  contentId: mongoose.Types.ObjectId;
+  contentId?: mongoose.Types.ObjectId;
   moduleNumber?: number;
   sectionNumber?: number;
   sequence: number;
@@ -25,7 +25,7 @@ const courseContentSchema = new Schema<ICourseContent>(
     contentId: {
       type: Schema.Types.ObjectId,
       ref: 'Content',
-      required: [true, 'Content is required']
+      default: undefined
     },
     moduleNumber: {
       type: Number,
@@ -65,7 +65,11 @@ const courseContentSchema = new Schema<ICourseContent>(
 );
 
 // Compound unique index - same content can't be added twice to same course
-courseContentSchema.index({ courseId: 1, contentId: 1 }, { unique: true });
+// Partial filter: only enforce uniqueness when contentId exists (not null/undefined)
+courseContentSchema.index(
+  { courseId: 1, contentId: 1 },
+  { unique: true, partialFilterExpression: { contentId: { $type: 'objectId' } } }
+);
 
 // Indexes for efficient querying
 courseContentSchema.index({ courseId: 1, sequence: 1 });
