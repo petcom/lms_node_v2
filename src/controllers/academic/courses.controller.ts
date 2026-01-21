@@ -79,10 +79,9 @@ export const createCourse = asyncHandler(async (req: Request, res: Response) => 
     throw ApiError.badRequest('Course code is required');
   }
 
-  // Validate code pattern
-  const codePattern = /^[A-Z]{2,4}[0-9]{3}$/;
-  if (!codePattern.test(code)) {
-    throw ApiError.badRequest('Course code must match pattern: 2-4 uppercase letters followed by 3 digits (e.g., CS101)');
+  // Validate code pattern (alphanumeric, max 35 chars)
+  if (code.length > 35 || !/^[A-Za-z0-9]+$/.test(code)) {
+    throw ApiError.badRequest('Course code must contain only letters and numbers (max 35 characters)');
   }
 
   if (!department || typeof department !== 'string') {
@@ -224,10 +223,9 @@ export const updateCourse = asyncHandler(async (req: Request, res: Response) => 
     throw ApiError.badRequest('Course code is required');
   }
 
-  // Validate code pattern
-  const codePattern = /^[A-Z]{2,4}[0-9]{3}$/;
-  if (!codePattern.test(code)) {
-    throw ApiError.badRequest('Course code must match pattern: 2-4 uppercase letters followed by 3 digits (e.g., CS101)');
+  // Validate code pattern (alphanumeric, max 35 chars)
+  if (code.length > 35 || !/^[A-Za-z0-9]+$/.test(code)) {
+    throw ApiError.badRequest('Course code must contain only letters and numbers (max 35 characters)');
   }
 
   if (!department || typeof department !== 'string') {
@@ -484,10 +482,9 @@ export const duplicateCourse = asyncHandler(async (req: Request, res: Response) 
     throw ApiError.badRequest('New course code is required');
   }
 
-  // Validate new code pattern
-  const codePattern = /^[A-Z]{2,4}[0-9]{3}$/;
-  if (!codePattern.test(newCode)) {
-    throw ApiError.badRequest('Course code must match pattern: 2-4 uppercase letters followed by 3 digits (e.g., CS101)');
+  // Validate new code pattern (alphanumeric, max 35 chars)
+  if (newCode.length > 35 || !/^[A-Za-z0-9]+$/.test(newCode)) {
+    throw ApiError.badRequest('Course code must contain only letters and numbers (max 35 characters)');
   }
 
   // Validate newTitle if provided

@@ -233,10 +233,9 @@ export class CoursesService {
    * Create a new course
    */
   static async createCourse(courseData: CreateCourseInput, createdBy?: string): Promise<any> {
-    // Validate code format (ABC123)
-    const codePattern = /^[A-Z]{2,4}[0-9]{3}$/;
-    if (!codePattern.test(courseData.code)) {
-      throw ApiError.badRequest('Course code must match pattern: 2-4 uppercase letters followed by 3 digits (e.g., CS101)');
+    // Validate code format (alphanumeric, max 35 chars)
+    if (courseData.code.length > 35 || !/^[A-Za-z0-9]+$/.test(courseData.code)) {
+      throw ApiError.badRequest('Course code must contain only letters and numbers (max 35 characters)');
     }
 
     // Validate department exists
@@ -767,10 +766,9 @@ export class CoursesService {
       throw ApiError.notFound('Source course not found');
     }
 
-    // Validate new code format
-    const codePattern = /^[A-Z]{2,4}[0-9]{3}$/;
-    if (!codePattern.test(options.newCode)) {
-      throw ApiError.badRequest('Course code must match pattern: 2-4 uppercase letters followed by 3 digits (e.g., CS101)');
+    // Validate new code format (alphanumeric, max 35 chars)
+    if (options.newCode.length > 35 || !/^[A-Za-z0-9]+$/.test(options.newCode)) {
+      throw ApiError.badRequest('Course code must contain only letters and numbers (max 35 characters)');
     }
 
     // Determine target department
