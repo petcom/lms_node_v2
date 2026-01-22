@@ -312,7 +312,7 @@ async function main() {
     };
 
     // Connect to database
-    const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/lms_v2';
+    const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/lms_mock';
     logger.info(`Connecting to MongoDB: ${mongoUri}`);
     await mongoose.connect(mongoUri);
     logger.info('✓ Connected to MongoDB');

@@ -13,6 +13,8 @@ import Exercise from '@/models/assessment/Exercise.model';
 import ExamResult from '@/models/activity/ExamResult.model';
 import SystemHealth from '@/models/system/SystemHealth.model';
 import { ApiError } from '@/utils/ApiError';
+import { roleCache } from '@/services/auth/role-cache.service';
+import { departmentCacheService } from '@/services/auth/department-cache.service';
 
 // Cache for metrics and stats
 let metricsCache: { data: any; timestamp: number } | null = null;
@@ -564,16 +566,43 @@ export class SystemService {
    * Helper: Check cache health
    */
   private static async checkCacheHealth(): Promise<any> {
-    // In production, this would check Redis/Memcached
+    const roleCacheStats = roleCache.getStats();
+    const deptCacheStats = departmentCacheService.getStats();
+
+    // Determine overall cache status
+    let status: 'healthy' | 'degraded' | 'unhealthy' = 'healthy';
+    let message: string | null = null;
+
+    if (!roleCacheStats.initialized && !deptCacheStats.isInitialized) {
+      status = 'degraded';
+      message = 'Authorization caches not initialized - using database fallback';
+    } else if (!roleCacheStats.initialized || !deptCacheStats.isInitialized) {
+      status = 'degraded';
+      message = !roleCacheStats.initialized
+        ? 'Role cache not initialized'
+        : 'Department cache not initialized';
+    } else if (roleCacheStats.isRefreshing || deptCacheStats.isLoading) {
+      status = 'degraded';
+      message = 'Cache refresh in progress';
+    }
+
     return {
-      status: 'healthy' as 'healthy' | 'degraded' | 'unhealthy',
-      responseTime: 2,
-      hitRate: 95.5,
-      memory: {
-        used: 536870912,
-        max: 1073741824
+      status,
+      responseTime: 1, // In-memory caches are fast
+      roleCache: {
+        initialized: roleCacheStats.initialized,
+        size: roleCacheStats.size,
+        lastRefreshAt: roleCacheStats.lastRefreshAt,
+        isRefreshing: roleCacheStats.isRefreshing
       },
-      message: null
+      departmentCache: {
+        initialized: deptCacheStats.isInitialized,
+        parentToChildrenCount: deptCacheStats.parentToChildrenCount,
+        childToParentCount: deptCacheStats.childToParentCount,
+        lastRefreshAt: deptCacheStats.lastRefreshTime,
+        isLoading: deptCacheStats.isLoading
+      },
+      message
     };
   }
 

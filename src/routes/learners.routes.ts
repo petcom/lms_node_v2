@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { isAuthenticated } from '@/middlewares/isAuthenticated';
-import { requireAccessRight } from '@/middlewares/requireAccessRight';
+import { authorize } from '@/middlewares/authorize';
 import { requireEscalation } from '@/middlewares/requireEscalation';
 import { requireAdminRole } from '@/middlewares/requireAdminRole';
 import * as learnersController from '@/controllers/users/learners.controller';
@@ -29,7 +29,7 @@ router.use(isAuthenticated);
  * - Enrollment-admin: Full names visible
  */
 router.get('/',
-  requireAccessRight('learner:pii:read'),
+  authorize('learner:pii:read'),
   learnersController.listLearners
 );
 
@@ -42,7 +42,7 @@ router.get('/',
  */
 router.post('/',
   requireEscalation,
-  requireAccessRight('learner:pii:read'),
+  authorize('learner:pii:read'),
   learnersController.registerLearner
 );
 
@@ -54,7 +54,7 @@ router.post('/',
  * Service Layer: Data masking applied, FERPA-sensitive
  */
 router.get('/:id',
-  requireAccessRight('learner:pii:read'),
+  authorize('learner:pii:read'),
   learnersController.getLearnerById
 );
 
@@ -67,7 +67,7 @@ router.get('/:id',
  */
 router.put('/:id',
   requireEscalation,
-  requireAccessRight('learner:pii:read'),
+  authorize('learner:pii:read'),
   learnersController.updateLearner
 );
 
@@ -81,7 +81,7 @@ router.put('/:id',
 router.delete('/:id',
   requireEscalation,
   requireAdminRole(['system-admin', 'enrollment-admin']),
-  requireAccessRight('learner:pii:read'),
+  authorize('learner:pii:read'),
   learnersController.deleteLearner
 );
 

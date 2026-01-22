@@ -18,11 +18,13 @@
 
 import { Types } from 'mongoose';
 import { ApiError } from '@/utils/ApiError';
-import Staff, { IStaff, IDepartmentMembership } from '@/models/auth/Staff.model';
-import User, { IUser } from '@/models/auth/User.model';
-import GlobalAdmin, { IGlobalAdmin, MASTER_DEPARTMENT_ID } from '@/models/GlobalAdmin.model';
-import RoleDefinition, { IRoleDefinition } from '@/models/RoleDefinition.model';
+import { Staff, IDepartmentMembership } from '@/models/auth/Staff.model';
+import { User } from '@/models/auth/User.model';
+import { GlobalAdmin, MASTER_DEPARTMENT_ID, GlobalAdminRole } from '@/models/GlobalAdmin.model';
+import { RoleDefinition } from '@/models/RoleDefinition.model';
 import AccessRight from '@/models/AccessRight.model';
+import { invalidateAndIncrementVersion } from '@/utils/permission-cache';
+import { logger } from '@/config/logger';
 
 // ============================================================================
 // USER ROLE ASSIGNMENT OPERATIONS
@@ -54,7 +56,7 @@ export async function getUserRoles(userId: string): Promise<{
   let departmentMemberships: any[] = [];
   let allRoles: string[] = [];
 
-  if (user.userType === 'staff') {
+  if (user.userTypes.includes('staff')) {
     // Get staff memberships
     const staff = await Staff.findById(userId).populate('departmentMemberships.departmentId');
     if (staff) {
@@ -69,7 +71,7 @@ export async function getUserRoles(userId: string): Promise<{
       }));
       allRoles = staff.departmentMemberships.flatMap((m: IDepartmentMembership) => m.roles);
     }
-  } else if (user.userType === 'learner') {
+  } else if (user.userTypes.includes('learner')) {
     // Learners don't have department memberships (system-wide access)
     // Their roles are directly on user object (if any)
     departmentMemberships = [];
@@ -86,9 +88,12 @@ export async function getUserRoles(userId: string): Promise<{
   // Calculate access rights from all roles
   const calculatedAccessRights = await calculateAccessRightsFromRoles(allRoles);
 
+  // Determine primary user type for response
+  const userType: 'staff' | 'learner' = user.userTypes.includes('staff') ? 'staff' : 'learner';
+
   return {
     userId: userId,
-    userType: user.userType,
+    userType,
     departmentMemberships,
     calculatedAccessRights
   };
@@ -119,10 +124,13 @@ export async function assignUserRole(
     throw ApiError.notFound('User not found');
   }
 
+  // Determine primary user type for validation
+  const primaryUserType: 'staff' | 'learner' = user.userTypes.includes('staff') ? 'staff' : 'learner';
+
   // Validate role compatibility with user type
-  const roleIsValid = await validateRoleForUserType(roleName, user.userType);
+  const roleIsValid = await validateRoleForUserType(roleName, primaryUserType);
   if (!roleIsValid) {
-    throw ApiError.badRequest(`Role '${roleName}' is not valid for user type '${user.userType}'`);
+    throw ApiError.badRequest(`Role '${roleName}' is not valid for user type '${primaryUserType}'`);
   }
 
   // Validate department exists
@@ -132,7 +140,7 @@ export async function assignUserRole(
   //   throw ApiError.notFound('Department not found');
   // }
 
-  if (user.userType !== 'staff') {
+  if (!user.userTypes.includes('staff')) {
     throw ApiError.badRequest('Only staff users can have department role assignments');
   }
 
@@ -141,8 +149,10 @@ export async function assignUserRole(
   if (!staff) {
     staff = new Staff({
       _id: userId,
-      firstName: user.firstName,
-      lastName: user.lastName,
+      person: {
+        firstName: 'Unknown',
+        lastName: 'User'
+      },
       departmentMemberships: []
     });
   }
@@ -180,6 +190,15 @@ export async function assignUserRole(
   //   targetUserId: userId,
   //   details: { departmentId, roleName, isPrimary }
   // });
+
+  // Invalidate permission cache after role assignment
+  try {
+    const newVersion = await invalidateAndIncrementVersion(userId);
+    logger.info(`[RoleManagement] Invalidated permission cache for user ${userId} after role assignment (version: ${newVersion})`);
+  } catch (cacheError) {
+    logger.error(`[RoleManagement] Failed to invalidate permission cache for user ${userId}:`, cacheError);
+    // Continue - cache invalidation failure should not fail the operation
+  }
 
   return {
     userId,
@@ -224,6 +243,15 @@ export async function removeUserRole(
   await staff.save();
 
   // TODO: Log to audit trail
+
+  // Invalidate permission cache after role removal
+  try {
+    const newVersion = await invalidateAndIncrementVersion(userId);
+    logger.info(`[RoleManagement] Invalidated permission cache for user ${userId} after role removal (version: ${newVersion})`);
+  } catch (cacheError) {
+    logger.error(`[RoleManagement] Failed to invalidate permission cache for user ${userId}:`, cacheError);
+    // Continue - cache invalidation failure should not fail the operation
+  }
 
   return {
     userId,
@@ -279,10 +307,11 @@ export async function updateRoleMembership(
   if (updates.roles !== undefined) {
     // Validate all roles
     const user = await User.findById(userId);
+    const primaryUserType: 'staff' | 'learner' = user!.userTypes.includes('staff') ? 'staff' : 'learner';
     for (const role of updates.roles) {
-      const valid = await validateRoleForUserType(role, user!.userType);
+      const valid = await validateRoleForUserType(role, primaryUserType);
       if (!valid) {
-        throw ApiError.badRequest(`Role '${role}' is not valid for user type '${user!.userType}'`);
+        throw ApiError.badRequest(`Role '${role}' is not valid for user type '${primaryUserType}'`);
       }
     }
     membership.roles = updates.roles;
@@ -297,6 +326,15 @@ export async function updateRoleMembership(
   await staff.save();
 
   // TODO: Log to audit trail
+
+  // Invalidate permission cache after membership update
+  try {
+    const newVersion = await invalidateAndIncrementVersion(userId);
+    logger.info(`[RoleManagement] Invalidated permission cache for user ${userId} after membership update (version: ${newVersion})`);
+  } catch (cacheError) {
+    logger.error(`[RoleManagement] Failed to invalidate permission cache for user ${userId}:`, cacheError);
+    // Continue - cache invalidation failure should not fail the operation
+  }
 
   return {
     userId,
@@ -380,14 +418,13 @@ export async function searchUsers(filters: {
   const query: any = {};
 
   if (filters.userType && filters.userType !== 'all') {
-    query.userType = filters.userType;
+    query.userTypes = filters.userType;
   }
 
   if (filters.query) {
+    // Note: firstName/lastName are on Staff.person, not User - search by email only for User
     query.$or = [
-      { email: { $regex: filters.query, $options: 'i' } },
-      { firstName: { $regex: filters.query, $options: 'i' } },
-      { lastName: { $regex: filters.query, $options: 'i' } }
+      { email: { $regex: filters.query, $options: 'i' } }
     ];
   }
 
@@ -395,14 +432,26 @@ export async function searchUsers(filters: {
   const total = await User.countDocuments(query);
 
   // Enrich with role information
+  interface UserLeanResult {
+    _id: Types.ObjectId;
+    email: string;
+    userTypes: ('learner' | 'staff' | 'global-admin')[];
+  }
   const enrichedUsers = await Promise.all(
-    users.map(async (user) => {
+    users.map(async (user: UserLeanResult) => {
       let currentRoles: string[] = [];
       let departments: any[] = [];
+      let firstName = 'Unknown';
+      let lastName = 'User';
 
-      if (user.userType === 'staff') {
+      // Determine primary user type
+      const userType: 'staff' | 'learner' = user.userTypes.includes('staff') ? 'staff' : 'learner';
+
+      if (user.userTypes.includes('staff')) {
         const staff = await Staff.findById(user._id);
         if (staff) {
+          firstName = staff.person?.firstName || 'Unknown';
+          lastName = staff.person?.lastName || 'User';
           currentRoles = staff.departmentMemberships.flatMap((m: IDepartmentMembership) => m.roles);
           departments = staff.departmentMemberships.map((m: IDepartmentMembership & any) => ({
             departmentId: m.departmentId.toString(),
@@ -421,9 +470,9 @@ export async function searchUsers(filters: {
       return {
         _id: user._id.toString(),
         email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        userType: user.userType,
+        firstName,
+        lastName,
+        userType,
         currentRoles,
         departments
       };
@@ -481,12 +530,17 @@ export async function listGlobalAdmins(): Promise<{
       const allRoles = admin.getAllRoles();
       const calculatedAccessRights = await calculateAccessRightsFromRoles(allRoles);
 
+      // Get staff record for name (firstName/lastName are on Staff.person, not User)
+      const staffRecord = await Staff.findById(admin._id);
+      const firstName = staffRecord?.person?.firstName || 'Unknown';
+      const lastName = staffRecord?.person?.lastName || 'User';
+
       return {
         _id: admin._id.toString(),
         userId: admin._id.toString(),
         email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
+        firstName,
+        lastName,
         roleMemberships: admin.roleMemberships.map(m => ({
           departmentId: m.departmentId.toString(),
           departmentName: 'System Administration',
@@ -516,7 +570,7 @@ export async function listGlobalAdmins(): Promise<{
 export async function createGlobalAdmin(
   userId: string,
   roles: string[],
-  masterDepartmentId: string,
+  _masterDepartmentId: string,
   isPrimary: boolean = true,
   createdBy?: string
 ): Promise<{
@@ -567,6 +621,15 @@ export async function createGlobalAdmin(
 
   // TODO: Log to audit trail
 
+  // Invalidate permission cache after global admin creation
+  try {
+    const newVersion = await invalidateAndIncrementVersion(userId);
+    logger.info(`[RoleManagement] Invalidated permission cache for user ${userId} after global admin creation (version: ${newVersion})`);
+  } catch (cacheError) {
+    logger.error(`[RoleManagement] Failed to invalidate permission cache for user ${userId}:`, cacheError);
+    // Continue - cache invalidation failure should not fail the operation
+  }
+
   return {
     userId,
     roles,
@@ -611,6 +674,15 @@ export async function removeGlobalAdmin(
 
   // TODO: Log to audit trail
 
+  // Invalidate permission cache after global admin removal
+  try {
+    const newVersion = await invalidateAndIncrementVersion(userId);
+    logger.info(`[RoleManagement] Invalidated permission cache for user ${userId} after global admin removal (version: ${newVersion})`);
+  } catch (cacheError) {
+    logger.error(`[RoleManagement] Failed to invalidate permission cache for user ${userId}:`, cacheError);
+    // Continue - cache invalidation failure should not fail the operation
+  }
+
   return {
     userId,
     removedAt: new Date(),
@@ -624,7 +696,7 @@ export async function removeGlobalAdmin(
 export async function updateGlobalAdminRoles(
   userId: string,
   roles: string[],
-  departmentId?: string,
+  _departmentId?: string,
   updatedBy?: string
 ): Promise<{
   userId: string;
@@ -649,11 +721,11 @@ export async function updateGlobalAdminRoles(
 
   // Update roles in master department
   if (globalAdmin.roleMemberships.length > 0) {
-    globalAdmin.roleMemberships[0].roles = roles;
+    globalAdmin.roleMemberships[0].roles = roles as GlobalAdminRole[];
   } else {
     globalAdmin.roleMemberships.push({
       departmentId: MASTER_DEPARTMENT_ID,
-      roles: roles,
+      roles: roles as GlobalAdminRole[],
       assignedAt: new Date(),
       assignedBy: updatedBy ? new Types.ObjectId(updatedBy) : undefined,
       isActive: true
@@ -665,6 +737,15 @@ export async function updateGlobalAdminRoles(
   const calculatedAccessRights = await calculateAccessRightsFromRoles(roles);
 
   // TODO: Log to audit trail
+
+  // Invalidate permission cache after global admin role update
+  try {
+    const newVersion = await invalidateAndIncrementVersion(userId);
+    logger.info(`[RoleManagement] Invalidated permission cache for user ${userId} after global admin role update (version: ${newVersion})`);
+  } catch (cacheError) {
+    logger.error(`[RoleManagement] Failed to invalidate permission cache for user ${userId}:`, cacheError);
+    // Continue - cache invalidation failure should not fail the operation
+  }
 
   return {
     userId,

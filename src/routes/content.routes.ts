@@ -2,7 +2,7 @@ import { Router } from 'express';
 import multer from 'multer';
 import path from 'path';
 import { isAuthenticated } from '@/middlewares/isAuthenticated';
-import { requireAccessRight } from '@/middlewares/requireAccessRight';
+import { authorize } from '@/middlewares/authorize';
 import { requireEscalation } from '@/middlewares/requireEscalation';
 import * as contentController from '@/controllers/content/content.controller';
 
@@ -64,7 +64,7 @@ router.use(isAuthenticated);
  * Roles: course-taker, auditor, instructor, content-admin, department-admin
  */
 router.get('/scorm',
-  requireAccessRight('content:courses:read'),
+  authorize('content:courses:read'),
   contentController.listScorm
 );
 
@@ -77,7 +77,7 @@ router.get('/scorm',
  */
 router.post(
   '/scorm',
-  requireAccessRight('content:courses:manage'),
+  authorize('content:courses:manage'),
   upload.fields([
     { name: 'file', maxCount: 1 },
     { name: 'thumbnail', maxCount: 1 }
@@ -92,7 +92,7 @@ router.post(
  * Roles: course-taker, auditor, instructor, content-admin, department-admin
  */
 router.get('/scorm/:id',
-  requireAccessRight('content:courses:read'),
+  authorize('content:courses:read'),
   contentController.getScorm
 );
 
@@ -103,7 +103,7 @@ router.get('/scorm/:id',
  * Roles: content-admin, department-admin
  */
 router.put('/scorm/:id',
-  requireAccessRight('content:courses:manage'),
+  authorize('content:courses:manage'),
   contentController.updateScorm
 );
 
@@ -116,7 +116,7 @@ router.put('/scorm/:id',
  */
 router.delete('/scorm/:id',
   requireEscalation,
-  requireAccessRight('content:courses:manage'),
+  authorize('content:courses:manage'),
   contentController.deleteScorm
 );
 
@@ -127,7 +127,7 @@ router.delete('/scorm/:id',
  * Roles: course-taker, instructor, content-admin
  */
 router.post('/scorm/:id/launch',
-  requireAccessRight('content:lessons:read'),
+  authorize('content:lessons:read'),
   contentController.launchScorm
 );
 
@@ -138,7 +138,7 @@ router.post('/scorm/:id/launch',
  * Roles: content-admin, department-admin
  */
 router.post('/scorm/:id/publish',
-  requireAccessRight('content:courses:manage'),
+  authorize('content:courses:manage'),
   contentController.publishScorm
 );
 
@@ -149,7 +149,7 @@ router.post('/scorm/:id/publish',
  * Roles: content-admin, department-admin
  */
 router.post('/scorm/:id/unpublish',
-  requireAccessRight('content:courses:manage'),
+  authorize('content:courses:manage'),
   contentController.unpublishScorm
 );
 
@@ -167,7 +167,7 @@ router.post('/scorm/:id/unpublish',
  * Roles: course-taker, auditor, instructor, content-admin, department-admin
  */
 router.get('/media',
-  requireAccessRight('content:courses:read'),
+  authorize('content:courses:read'),
   contentController.listMedia
 );
 
@@ -179,7 +179,7 @@ router.get('/media',
  * Content-Type: multipart/form-data
  */
 router.post('/media',
-  requireAccessRight('content:courses:manage'),
+  authorize('content:courses:manage'),
   upload.single('file'),
   contentController.uploadMedia
 );
@@ -191,7 +191,7 @@ router.post('/media',
  * Roles: course-taker, auditor, instructor, content-admin, department-admin
  */
 router.get('/media/:id',
-  requireAccessRight('content:courses:read'),
+  authorize('content:courses:read'),
   contentController.getMedia
 );
 
@@ -202,7 +202,7 @@ router.get('/media/:id',
  * Roles: content-admin, department-admin
  */
 router.put('/media/:id',
-  requireAccessRight('content:courses:manage'),
+  authorize('content:courses:manage'),
   contentController.updateMedia
 );
 
@@ -213,7 +213,7 @@ router.put('/media/:id',
  * Roles: content-admin, department-admin
  */
 router.delete('/media/:id',
-  requireAccessRight('content:courses:manage'),
+  authorize('content:courses:manage'),
   contentController.deleteMedia
 );
 
@@ -233,7 +233,7 @@ router.delete('/media/:id',
  * Roles: course-taker, auditor, instructor, content-admin, department-admin
  */
 router.get('/',
-  requireAccessRight('content:courses:read'),
+  authorize('content:courses:read'),
   contentController.listContent
 );
 
@@ -244,7 +244,7 @@ router.get('/',
  * Roles: course-taker, auditor, instructor, content-admin, department-admin
  */
 router.get('/:id',
-  requireAccessRight('content:courses:read'),
+  authorize('content:courses:read'),
   contentController.getContent
 );
 

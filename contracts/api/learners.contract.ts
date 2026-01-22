@@ -60,6 +60,12 @@ export const LearnersContract = {
           required: false,
           description: 'Filter by department association'
         },
+        includeSubdepartments: {
+          type: 'boolean',
+          required: false,
+          default: false,
+          description: 'When true, includes learners from all subdepartments of the specified department. Only applicable when department filter is provided.'
+        },
         sort: {
           type: 'string',
           required: false,
@@ -186,9 +192,11 @@ export const LearnersContract = {
         - 'completed': Completed all enrolled programs
         - 'suspended': Account suspended by admin
       - Department filter includes learners enrolled in programs under that department
+      - includeSubdepartments: When true, includes learners from the entire department hierarchy
       - completionRate calculated as completed courses / total enrolled courses
       - Returns empty array if no learners match filters
       - Pagination uses 1-based indexing
+      - Department filtering uses optimized aggregation pipeline for improved performance
     `
   },
 

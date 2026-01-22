@@ -1,6 +1,6 @@
 # Seed Scripts for LMS Database
 
-This directory contains database seed scripts copied from the backend repository (`lms_node`). These scripts are maintained here for reference and can be used to populate the `lms_mock` or `lms_v2_mockdata` database with test data.
+This directory contains database seed scripts copied from the backend repository (`lms_node`). These scripts are maintained here for reference and can be used to populate the `lms_mock` or `lms_mock` database with test data.
 
 ## Important Note
 

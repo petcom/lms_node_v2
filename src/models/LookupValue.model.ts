@@ -124,7 +124,7 @@ const LookupValueSchema = new Schema<ILookupValue>({
 }, {
   timestamps: true,
   toJSON: {
-    transform: function(_doc, ret) {
+    transform: function(_doc, ret: Record<string, unknown>) {
       // Remove __v
       delete ret.__v;
       return ret;

@@ -1,6 +1,9 @@
 /**
  * requireAccessRight Middleware
  *
+ * @deprecated Use `authorize()` from '@/middlewares/authorize' instead.
+ * This middleware will be removed in Phase 4 of the Unified Authorization Model migration.
+ *
  * Verifies that the user has specific access rights based on their roles
  * in the current department or admin context.
  *
@@ -37,6 +40,11 @@ import { ApiError } from '@/utils/ApiError';
 import { logger } from '@/config/logger';
 
 /**
+ * Flag to track if deprecation warning has been shown (once per process)
+ */
+let deprecationWarningShown = false;
+
+/**
  * Options for requireAccessRight middleware
  */
 export interface RequireAccessRightOptions {
@@ -61,6 +69,9 @@ export interface RequireAccessRightOptions {
 
 /**
  * Middleware factory: Require access right
+ *
+ * @deprecated Use `authorize()` from '@/middlewares/authorize' instead.
+ * This middleware will be removed in Phase 4 of the Unified Authorization Model migration.
  *
  * Creates middleware that checks if user has required access rights.
  * Access rights follow the pattern: domain:resource:action
@@ -128,6 +139,16 @@ export const requireAccessRight = (
   accessRights: string | string[],
   options: RequireAccessRightOptions = {}
 ) => {
+  // Show deprecation warning once per process
+  if (!deprecationWarningShown) {
+    console.warn(
+      '[DEPRECATED] requireAccessRight() is deprecated. ' +
+        'Use authorize() from @/middlewares/authorize instead. ' +
+        'This middleware will be removed in Phase 4 of the Unified Authorization Model migration.'
+    );
+    deprecationWarningShown = true;
+  }
+
   // Normalize to array
   const requiredRights = Array.isArray(accessRights) ? accessRights : [accessRights];
 
@@ -257,7 +278,7 @@ function hasAccessRight(userRights: string[], requiredRight: string): boolean {
   // Check for wildcard matches
   // Format: domain:resource:action or domain:*
 
-  const [reqDomain, reqResource, reqAction] = normalizedRequired.split(':');
+  const [reqDomain, reqResource, _reqAction] = normalizedRequired.split(':');
 
   for (const userRight of normalizedUserRights) {
     const [userDomain, userResource, userAction] = userRight.split(':');
@@ -282,6 +303,9 @@ function hasAccessRight(userRights: string[], requiredRight: string): boolean {
 
 /**
  * Helper: Check if user has specific access right
+ *
+ * @deprecated Use `authorize()` from '@/middlewares/authorize' instead.
+ * This function will be removed in Phase 4 of the Unified Authorization Model migration.
  *
  * Utility function to check access right without throwing errors.
  * Useful for conditional logic in controllers.
@@ -312,6 +336,9 @@ export function checkAccessRight(req: Request, accessRight: string): boolean {
 /**
  * Helper: Check if user has any of the specified access rights
  *
+ * @deprecated Use `authorize()` from '@/middlewares/authorize' instead.
+ * This function will be removed in Phase 4 of the Unified Authorization Model migration.
+ *
  * @param req - Express request
  * @param accessRights - Array of access rights to check
  * @returns True if user has at least one access right
@@ -337,6 +364,9 @@ export function checkAnyAccessRight(req: Request, accessRights: string[]): boole
 
 /**
  * Helper: Check if user has all of the specified access rights
+ *
+ * @deprecated Use `authorize()` from '@/middlewares/authorize' instead.
+ * This function will be removed in Phase 4 of the Unified Authorization Model migration.
  *
  * @param req - Express request
  * @param accessRights - Array of access rights to check
@@ -364,6 +394,9 @@ export function checkAllAccessRights(req: Request, accessRights: string[]): bool
 /**
  * Helper: Get all access rights for user
  *
+ * @deprecated Use `authorize()` from '@/middlewares/authorize' instead.
+ * This function will be removed in Phase 4 of the Unified Authorization Model migration.
+ *
  * @param req - Express request
  * @returns Array of all access rights (deduplicated)
  *
@@ -387,5 +420,8 @@ export function getAllAccessRights(req: Request): string[] {
 
 /**
  * Export default
+ *
+ * @deprecated Use `authorize()` from '@/middlewares/authorize' instead.
+ * This middleware will be removed in Phase 4 of the Unified Authorization Model migration.
  */
 export default requireAccessRight;

@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { isAuthenticated } from '@/middlewares/isAuthenticated';
-import { requireAccessRight } from '@/middlewares/requireAccessRight';
+import { authorize } from '@/middlewares/authorize';
 import * as courseSegmentsController from '@/controllers/academic/course-segments.controller';
 
 const router = Router();
@@ -25,7 +25,7 @@ router.use(isAuthenticated);
  * Service Layer: Department members see all. Learners see published only.
  */
 router.get('/:courseId/modules',
-  requireAccessRight('content:lessons:read'),
+  authorize('content:lessons:read'),
   courseSegmentsController.listModules
 );
 
@@ -37,7 +37,7 @@ router.get('/:courseId/modules',
  * Service Layer: Create module (owned by creator)
  */
 router.post('/:courseId/modules',
-  requireAccessRight('content:lessons:manage'),
+  authorize('content:lessons:manage'),
   courseSegmentsController.createModule
 );
 
@@ -49,7 +49,7 @@ router.post('/:courseId/modules',
  * Service Layer: Department members see all. Learners see published only.
  */
 router.get('/:courseId/modules/:moduleId',
-  requireAccessRight('content:lessons:read'),
+  authorize('content:lessons:read'),
   courseSegmentsController.getModule
 );
 
@@ -61,7 +61,7 @@ router.get('/:courseId/modules/:moduleId',
  * Service Layer: creator-only for unpublished
  */
 router.put('/:courseId/modules/:moduleId',
-  requireAccessRight('content:lessons:manage'),
+  authorize('content:lessons:manage'),
   courseSegmentsController.updateModule
 );
 
@@ -73,7 +73,7 @@ router.put('/:courseId/modules/:moduleId',
  * Service Layer: creator-only for unpublished
  */
 router.delete('/:courseId/modules/:moduleId',
-  requireAccessRight('content:lessons:manage'),
+  authorize('content:lessons:manage'),
   courseSegmentsController.deleteModule
 );
 
@@ -85,7 +85,7 @@ router.delete('/:courseId/modules/:moduleId',
  * Service Layer: creator-only for unpublished
  */
 router.patch('/:courseId/modules/reorder',
-  requireAccessRight('content:lessons:manage'),
+  authorize('content:lessons:manage'),
   courseSegmentsController.reorderModules
 );
 

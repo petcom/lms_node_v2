@@ -22,8 +22,8 @@ import {
  * ValidationService - Comprehensive validation for AI course creation
  */
 export class ValidationService {
-  // Course code pattern: 2-4 uppercase letters followed by 3 digits, optional letter at end
-  private static readonly COURSE_CODE_PATTERN = /^[A-Z]{2,4}[0-9]{3}[A-Z]?$/;
+  // Course code pattern: alphanumeric, max 35 characters
+  private static readonly COURSE_CODE_PATTERN = /^[A-Za-z0-9]+$/;
 
   /**
    * Validate complete course structure in one pass

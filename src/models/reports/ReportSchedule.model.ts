@@ -319,7 +319,7 @@ ReportScheduleSchema.index({ templateId: 1, isActive: 1 });
  */
 ReportScheduleSchema.methods.calculateNextRunTime = function (fromDate?: Date): Date | null {
   const from = fromDate || new Date();
-  const { frequency, timezone, runAt, timeOfDay, dayOfWeek, dayOfMonth, quarterMonths } =
+  const { frequency, timezone: _timezone, runAt, timeOfDay, dayOfWeek, dayOfMonth, quarterMonths } =
     this.schedule;
 
   // One-time schedules
@@ -440,7 +440,7 @@ ReportScheduleSchema.pre('save', async function (next) {
       this.isModified('isPaused')
     ) {
       if (this.isActive && !this.isPaused) {
-        this.nextRunAt = this.calculateNextRunTime();
+        this.nextRunAt = this.calculateNextRunTime() ?? undefined;
       } else {
         this.nextRunAt = undefined;
       }

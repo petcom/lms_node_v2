@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { isAuthenticated } from '@/middlewares/isAuthenticated';
-import { requireAccessRight } from '@/middlewares/requireAccessRight';
+import { authorize } from '@/middlewares/authorize';
 import { requireEscalation } from '@/middlewares/requireEscalation';
 import { requireAdminRole } from '@/middlewares/requireAdminRole';
 import * as departmentsController from '@/controllers/departments/departments.controller';
@@ -34,7 +34,7 @@ router.get('/', departmentsController.listDepartments);
 router.post('/',
   requireEscalation,
   requireAdminRole(['system-admin']),
-  requireAccessRight('system:department-settings:manage'),
+  authorize('system:department-settings:manage'),
   departmentsController.createDepartment
 );
 
@@ -51,7 +51,7 @@ router.get('/:id/hierarchy', departmentsController.getDepartmentHierarchy);
  * Access Right: content:programs:manage OR content:courses:read
  */
 router.get('/:id/programs',
-  requireAccessRight(['content:programs:manage', 'content:courses:read']),
+  authorize.anyOf(['content:programs:manage', 'content:courses:read']),
   departmentsController.getDepartmentPrograms
 );
 
@@ -62,7 +62,7 @@ router.get('/:id/programs',
  * Service Layer: Hierarchical scoping - Top-level members see all subdepartments
  */
 router.get('/:id/staff',
-  requireAccessRight('staff:department:read'),
+  authorize('staff:department:read'),
   departmentsController.getDepartmentStaff
 );
 
@@ -72,7 +72,7 @@ router.get('/:id/staff',
  * Access Right: reports:department:read
  */
 router.get('/:id/stats',
-  requireAccessRight('reports:department:read'),
+  authorize('reports:department:read'),
   departmentsController.getDepartmentStats
 );
 
@@ -92,7 +92,7 @@ router.get('/:id', departmentsController.getDepartmentById);
  */
 router.put('/:id',
   requireEscalation,
-  requireAccessRight('system:department-settings:manage'),
+  authorize('system:department-settings:manage'),
   departmentsController.updateDepartment
 );
 
@@ -105,7 +105,7 @@ router.put('/:id',
 router.delete('/:id',
   requireEscalation,
   requireAdminRole(['system-admin']),
-  requireAccessRight('system:department-settings:manage'),
+  authorize('system:department-settings:manage'),
   departmentsController.deleteDepartment
 );
 

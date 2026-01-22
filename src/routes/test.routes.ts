@@ -13,7 +13,7 @@ import { requireDepartmentMembership } from '@/middlewares/requireDepartmentMemb
 import { requireDepartmentRole } from '@/middlewares/requireDepartmentRole';
 import { requireEscalation } from '@/middlewares/requireEscalation';
 import { requireAdminRole } from '@/middlewares/requireAdminRole';
-import { requireAccessRight } from '@/middlewares/requireAccessRight';
+import { authorize } from '@/middlewares/authorize';
 import { ApiResponse } from '@/utils/ApiResponse';
 
 const router = Router();
@@ -32,7 +32,7 @@ router.get(
   '/departments/:departmentId/courses',
   isAuthenticated,
   requireDepartmentMembership,
-  (req: Request, res: Response) => {
+  (_req: Request, res: Response) => {
     res.status(200).json(ApiResponse.success({ courses: [] }));
   }
 );
@@ -72,7 +72,7 @@ router.get(
   '/admin/settings',
   isAuthenticated,
   requireEscalation,
-  (req: Request, res: Response) => {
+  (_req: Request, res: Response) => {
     res.status(200).json(ApiResponse.success({ settings: {} }));
   }
 );
@@ -87,7 +87,7 @@ router.put(
   isAuthenticated,
   requireEscalation,
   requireAdminRole(['system-admin']),
-  (req: Request, res: Response) => {
+  (_req: Request, res: Response) => {
     res.status(200).json(ApiResponse.success({ updated: true }));
   }
 );
@@ -98,7 +98,7 @@ router.get(
   isAuthenticated,
   requireEscalation,
   requireAdminRole(['system-admin', 'enrollment-admin']),
-  (req: Request, res: Response) => {
+  (_req: Request, res: Response) => {
     res.status(200).json(ApiResponse.success({ users: [] }));
   }
 );
@@ -107,35 +107,35 @@ router.get(
 // Access Right Tests
 // ===================================================================
 
-// Test requireAccessRight with content:courses:manage
+// Test authorize with content:courses:manage
 router.put(
   '/departments/:departmentId/courses/:courseId',
   isAuthenticated,
   requireDepartmentMembership,
-  requireAccessRight('content:courses:manage'),
+  authorize('content:courses:manage'),
   (req: Request, res: Response) => {
     res.status(200).json(ApiResponse.success({ course: { id: req.params.courseId, updated: true } }));
   }
 );
 
-// Test requireAccessRight with requireAny (staff:department:manage OR reports:department:read)
+// Test authorize.anyOf (staff:department:manage OR reports:department:read)
 router.get(
   '/departments/:departmentId/reports',
   isAuthenticated,
   requireDepartmentMembership,
-  requireAccessRight(['staff:department:manage', 'reports:department:read'], { requireAny: true }),
-  (req: Request, res: Response) => {
+  authorize.anyOf(['staff:department:manage', 'reports:department:read']),
+  (_req: Request, res: Response) => {
     res.status(200).json(ApiResponse.success({ reports: [] }));
   }
 );
 
-// Test requireAccessRight with requireAll (both rights required)
+// Test authorize.allOf (both rights required)
 router.post(
   '/departments/:departmentId/courses/bulk-update',
   isAuthenticated,
   requireDepartmentMembership,
-  requireAccessRight(['content:courses:manage', 'content:lessons:manage']),
-  (req: Request, res: Response) => {
+  authorize.allOf(['content:courses:manage', 'content:lessons:manage']),
+  (_req: Request, res: Response) => {
     res.status(200).json(ApiResponse.success({ updated: true }));
   }
 );
@@ -149,8 +149,8 @@ router.get(
   '/admin/system-info',
   isAuthenticated,
   requireEscalation,
-  requireAccessRight('system:*'),
-  (req: Request, res: Response) => {
+  authorize('system:*'),
+  (_req: Request, res: Response) => {
     res.status(200).json(ApiResponse.success({ systemInfo: {} }));
   }
 );
@@ -160,8 +160,8 @@ router.delete(
   '/admin/content/purge',
   isAuthenticated,
   requireEscalation,
-  requireAccessRight('content:*'),
-  (req: Request, res: Response) => {
+  authorize('content:*'),
+  (_req: Request, res: Response) => {
     res.status(200).json(ApiResponse.success({ purged: true }));
   }
 );
@@ -171,8 +171,8 @@ router.get(
   '/admin/content/courses',
   isAuthenticated,
   requireEscalation,
-  requireAccessRight('content:*'),
-  (req: Request, res: Response) => {
+  authorize('content:*'),
+  (_req: Request, res: Response) => {
     res.status(200).json(ApiResponse.success({ courses: [] }));
   }
 );
@@ -181,8 +181,8 @@ router.get(
   '/admin/content/lessons',
   isAuthenticated,
   requireEscalation,
-  requireAccessRight('content:*'),
-  (req: Request, res: Response) => {
+  authorize('content:*'),
+  (_req: Request, res: Response) => {
     res.status(200).json(ApiResponse.success({ lessons: [] }));
   }
 );
@@ -191,8 +191,8 @@ router.get(
   '/admin/content/materials',
   isAuthenticated,
   requireEscalation,
-  requireAccessRight('content:*'),
-  (req: Request, res: Response) => {
+  authorize('content:*'),
+  (_req: Request, res: Response) => {
     res.status(200).json(ApiResponse.success({ materials: [] }));
   }
 );

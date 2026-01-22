@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { isAuthenticated } from '@/middlewares/isAuthenticated';
-import { requireAccessRight } from '@/middlewares/requireAccessRight';
+import { authorize } from '@/middlewares/authorize';
 import * as certificateTemplatesController from '@/controllers/content/certificate-templates.controller';
 
 const router = Router();
@@ -23,7 +23,7 @@ router.use(isAuthenticated);
  */
 router.get(
   '/',
-  requireAccessRight('content:programs:manage'),
+  authorize('content:programs:manage'),
   certificateTemplatesController.listCertificateTemplates
 );
 

@@ -8,19 +8,26 @@
 import request from 'supertest';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import mongoose from 'mongoose';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 import app from '@/app';
 import Module from '@/models/academic/Module.model';
 import Course from '@/models/academic/Course.model';
 import Department from '@/models/organization/Department.model';
 import { LookupValue } from '@/models/LookupValue.model';
+import { User } from '@/models/auth/User.model';
+import { Staff } from '@/models/auth/Staff.model';
+import { RoleDefinition } from '@/models/RoleDefinition.model';
+import { AccessRight } from '@/models/AccessRight.model';
 import { describeIfMongo } from '../../helpers/mongo-guard';
+import { refreshDepartmentCache } from '../../helpers/department-cache';
 
 describeIfMongo('Modules API Integration Tests', () => {
   let mongoServer: MongoMemoryServer;
   let authToken: string;
   let testDepartment: any;
   let testCourse: any;
-  let testUserId: string;
+  let testUser: any;
 
   beforeAll(async () => {
     mongoServer = await MongoMemoryServer.create();
@@ -53,19 +60,69 @@ describeIfMongo('Modules API Integration Tests', () => {
       isActive: true
     });
 
-    // Register a staff user with content permissions
-    const registerResponse = await request(app)
-      .post('/api/v2/auth/register/staff')
-      .send({
-        email: 'modules-test@example.com',
-        password: 'SecurePass123!',
+    // Refresh department cache after creating departments
+    await refreshDepartmentCache();
+
+    // Seed role definitions
+    await RoleDefinition.create({
+      name: 'content-admin',
+      userType: 'staff',
+      displayName: 'Content Administrator',
+      description: 'Can manage content',
+      accessRights: ['content:lessons:read', 'content:lessons:manage', 'content:courses:read', 'content:courses:manage'],
+      isActive: true
+    });
+
+    // Seed access rights
+    await AccessRight.create([
+      { name: 'content:lessons:read', domain: 'content', resource: 'lessons', action: 'read', description: 'Read lessons', isActive: true },
+      { name: 'content:lessons:manage', domain: 'content', resource: 'lessons', action: 'manage', description: 'Manage lessons', isActive: true },
+      { name: 'content:courses:read', domain: 'content', resource: 'courses', action: 'read', description: 'Read courses', isActive: true },
+      { name: 'content:courses:manage', domain: 'content', resource: 'courses', action: 'manage', description: 'Manage courses', isActive: true }
+    ]);
+
+    // Create test user
+    const hashedPassword = await bcrypt.hash('Password123!', 10);
+    testUser = await User.create({
+      email: 'modules-test@example.com',
+      password: hashedPassword,
+      userTypes: ['staff'],
+      defaultDashboard: 'staff',
+      isActive: true
+    });
+
+    await Staff.create({
+      _id: testUser._id,
+      person: {
         firstName: 'Test',
         lastName: 'User',
-        roles: ['department-admin']
-      });
+        emails: [{
+          email: testUser.email,
+          type: 'institutional',
+          isPrimary: true,
+          verified: true,
+          allowNotifications: true
+        }],
+        phones: [],
+        addresses: [],
+        timezone: 'America/New_York',
+        languagePreference: 'en'
+      },
+      departmentMemberships: [{
+        departmentId: testDepartment._id,
+        roles: ['content-admin'],
+        isPrimary: true,
+        isActive: true,
+        joinedAt: new Date()
+      }]
+    });
 
-    authToken = registerResponse.body.data?.accessToken;
-    testUserId = registerResponse.body.data?.user?._id || registerResponse.body.data?.user?.id;
+    // Generate auth token
+    authToken = jwt.sign(
+      { userId: testUser._id.toString(), email: testUser.email, roles: ['staff'], type: 'access' },
+      process.env.JWT_ACCESS_SECRET || 'test-secret',
+      { expiresIn: '1h' }
+    );
   });
 
   afterAll(async () => {
@@ -83,7 +140,7 @@ describeIfMongo('Modules API Integration Tests', () => {
       credits: 3,
       status: 'draft',
       isActive: true,
-      createdBy: new mongoose.Types.ObjectId(testUserId)
+      createdBy: testUser._id
     });
   });
 
@@ -115,7 +172,7 @@ describeIfMongo('Modules API Integration Tests', () => {
               showAllAvailable: true,
               allowSkip: false
             },
-            createdBy: new mongoose.Types.ObjectId(testUserId)
+            createdBy: testUser._id
           },
           {
             courseId: testCourse._id,
@@ -132,7 +189,7 @@ describeIfMongo('Modules API Integration Tests', () => {
               showAllAvailable: true,
               allowSkip: false
             },
-            createdBy: new mongoose.Types.ObjectId(testUserId)
+            createdBy: testUser._id
           }
         ]);
 
@@ -162,7 +219,7 @@ describeIfMongo('Modules API Integration Tests', () => {
               showAllAvailable: true,
               allowSkip: false
             },
-            createdBy: new mongoose.Types.ObjectId(testUserId)
+            createdBy: testUser._id
           },
           {
             courseId: testCourse._id,
@@ -177,7 +234,7 @@ describeIfMongo('Modules API Integration Tests', () => {
               showAllAvailable: true,
               allowSkip: false
             },
-            createdBy: new mongoose.Types.ObjectId(testUserId)
+            createdBy: testUser._id
           },
           {
             courseId: testCourse._id,
@@ -192,7 +249,7 @@ describeIfMongo('Modules API Integration Tests', () => {
               showAllAvailable: true,
               allowSkip: false
             },
-            createdBy: new mongoose.Types.ObjectId(testUserId)
+            createdBy: testUser._id
           }
         ]);
 
@@ -234,7 +291,7 @@ describeIfMongo('Modules API Integration Tests', () => {
               showAllAvailable: true,
               allowSkip: false
             },
-            createdBy: new mongoose.Types.ObjectId(testUserId)
+            createdBy: testUser._id
           },
           {
             courseId: testCourse._id,
@@ -250,7 +307,7 @@ describeIfMongo('Modules API Integration Tests', () => {
               showAllAvailable: true,
               allowSkip: false
             },
-            createdBy: new mongoose.Types.ObjectId(testUserId)
+            createdBy: testUser._id
           }
         ]);
       });
@@ -296,7 +353,7 @@ describeIfMongo('Modules API Integration Tests', () => {
               showAllAvailable: true,
               allowSkip: false
             },
-            createdBy: new mongoose.Types.ObjectId(testUserId)
+            createdBy: testUser._id
           });
         }
         await Module.create(modules);
@@ -381,7 +438,7 @@ describeIfMongo('Modules API Integration Tests', () => {
               showAllAvailable: true,
               allowSkip: false
             },
-            createdBy: new mongoose.Types.ObjectId(testUserId)
+            createdBy: testUser._id
           },
           {
             courseId: testCourse._id,
@@ -396,7 +453,7 @@ describeIfMongo('Modules API Integration Tests', () => {
               showAllAvailable: true,
               allowSkip: false
             },
-            createdBy: new mongoose.Types.ObjectId(testUserId)
+            createdBy: testUser._id
           }
         ]);
       });
@@ -480,7 +537,7 @@ describeIfMongo('Modules API Integration Tests', () => {
           showAllAvailable: true,
           allowSkip: false
         },
-        createdBy: new mongoose.Types.ObjectId(testUserId)
+        createdBy: testUser._id
       });
     });
 
@@ -847,6 +904,8 @@ describeIfMongo('Modules API Integration Tests', () => {
               presentationMode: 'random',
               repetitionMode: 'spaced',
               masteryThreshold: 90,
+              repeatOn: { failedAttempt: false, belowMastery: false, learnerRequest: false },
+              repeatableCategories: [],
               showAllAvailable: false,
               allowSkip: true
             }
@@ -922,7 +981,7 @@ describeIfMongo('Modules API Integration Tests', () => {
           showAllAvailable: true,
           allowSkip: false
         },
-        createdBy: new mongoose.Types.ObjectId(testUserId)
+        createdBy: testUser._id
       });
     });
 
@@ -1109,7 +1168,7 @@ describeIfMongo('Modules API Integration Tests', () => {
           showAllAvailable: true,
           allowSkip: false
         },
-        createdBy: new mongoose.Types.ObjectId(testUserId)
+        createdBy: testUser._id
       });
     });
 
@@ -1143,7 +1202,7 @@ describeIfMongo('Modules API Integration Tests', () => {
             showAllAvailable: true,
             allowSkip: false
           },
-          createdBy: new mongoose.Types.ObjectId(testUserId)
+          createdBy: testUser._id
         });
 
         const response = await request(app)
@@ -1227,7 +1286,7 @@ describeIfMongo('Modules API Integration Tests', () => {
             showAllAvailable: true,
             allowSkip: false
           },
-          createdBy: new mongoose.Types.ObjectId(testUserId)
+          createdBy: testUser._id
         },
         {
           courseId: testCourse._id,
@@ -1242,7 +1301,7 @@ describeIfMongo('Modules API Integration Tests', () => {
             showAllAvailable: true,
             allowSkip: false
           },
-          createdBy: new mongoose.Types.ObjectId(testUserId)
+          createdBy: testUser._id
         },
         {
           courseId: testCourse._id,
@@ -1257,7 +1316,7 @@ describeIfMongo('Modules API Integration Tests', () => {
             showAllAvailable: true,
             allowSkip: false
           },
-          createdBy: new mongoose.Types.ObjectId(testUserId)
+          createdBy: testUser._id
         }
       ]);
     });
@@ -1394,7 +1453,7 @@ describeIfMongo('Modules API Integration Tests', () => {
             showAllAvailable: true,
             allowSkip: false
           },
-          createdBy: new mongoose.Types.ObjectId(testUserId)
+          createdBy: testUser._id
         });
 
         const response = await request(app)
@@ -1450,7 +1509,7 @@ describeIfMongo('Modules API Integration Tests', () => {
           showAllAvailable: true,
           allowSkip: false
         },
-        createdBy: new mongoose.Types.ObjectId(testUserId)
+        createdBy: testUser._id
       });
 
       moduleB = await Module.create({
@@ -1467,7 +1526,7 @@ describeIfMongo('Modules API Integration Tests', () => {
           showAllAvailable: true,
           allowSkip: false
         },
-        createdBy: new mongoose.Types.ObjectId(testUserId)
+        createdBy: testUser._id
       });
     });
 

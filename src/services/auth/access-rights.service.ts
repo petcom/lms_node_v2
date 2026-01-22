@@ -205,7 +205,8 @@ export class AccessRightsService {
       return result;
     } catch (error) {
       logger.error('Error expanding wildcard access rights:', error);
-      return regularRights; // Fallback to non-wildcard rights
+      // Fallback to non-wildcard rights (filter out wildcards from original array)
+      return rights.filter(right => !right.includes('*'));
     }
   }
 

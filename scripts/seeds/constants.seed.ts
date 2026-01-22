@@ -44,7 +44,7 @@ loadEnv();
 
 // Configuration
 const config = {
-  mongoUri: process.env.MONGO_URI || 'mongodb://localhost:27017/lms_v2'
+  mongoUri: process.env.MONGO_URI || 'mongodb://localhost:27017/lms_mock'
 };
 
 /**
@@ -276,6 +276,13 @@ const LOOKUP_VALUES = [
       color: '#10B981'
     }
   },
+
+  // =========================================================================
+  // COURSE STATUS VALUES
+  // =========================================================================
+  { category: 'course-status', key: 'draft', parentLookupId: null, displayAs: 'Draft', description: 'Course is being created', sortOrder: 1, isActive: true, metadata: {} },
+  { category: 'course-status', key: 'published', parentLookupId: null, displayAs: 'Published', description: 'Course is available to learners', sortOrder: 2, isActive: true, metadata: {} },
+  { category: 'course-status', key: 'archived', parentLookupId: null, displayAs: 'Archived', description: 'Course is no longer active', sortOrder: 3, isActive: true, metadata: {} },
 
   // =========================================================================
   // ACTIVITY EVENT TYPES (Report System)

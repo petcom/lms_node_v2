@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { isAuthenticated } from '@/middlewares/isAuthenticated';
-import { requireAccessRight } from '@/middlewares/requireAccessRight';
+import { authorize } from '@/middlewares/authorize';
 import { requireAdminRole } from '@/middlewares/requireAdminRole';
 import * as classesController from '@/controllers/academic/classes.controller';
 
@@ -44,7 +44,7 @@ router.use(isAuthenticated);
  * - limit: number (results per page, max 100)
  */
 router.get('/',
-  requireAccessRight('content:courses:read'),
+  authorize('content:courses:read'),
   classesController.listClasses
 );
 
@@ -66,7 +66,7 @@ router.get('/',
  * - academicTerm: ObjectId (optional)
  */
 router.post('/',
-  requireAccessRight('content:courses:manage'),
+  authorize('content:courses:manage'),
   classesController.createClass
 );
 
@@ -78,7 +78,7 @@ router.post('/',
  * Service Layer: Instructors see own classes, learners see enrolled classes
  */
 router.get('/:id',
-  requireAccessRight(['content:courses:read', 'enrollment:own:read']),
+  authorize.anyOf(['content:courses:read', 'enrollment:own:read']),
   classesController.getClass
 );
 
@@ -98,7 +98,7 @@ router.get('/:id',
  * - status: upcoming|active|completed|cancelled
  */
 router.put('/:id',
-  requireAccessRight('content:courses:manage'),
+  authorize('content:courses:manage'),
   classesController.updateClass
 );
 
@@ -113,7 +113,7 @@ router.put('/:id',
  */
 router.delete('/:id',
   requireAdminRole(['system-admin']),
-  requireAccessRight('content:courses:manage'),
+  authorize('content:courses:manage'),
   classesController.deleteClass
 );
 
@@ -135,7 +135,7 @@ router.delete('/:id',
  * - limit: number (results per page, max 200)
  */
 router.get('/:id/enrollments',
-  requireAccessRight('enrollment:department:read'),
+  authorize('enrollment:department:read'),
   classesController.getClassEnrollments
 );
 
@@ -149,7 +149,7 @@ router.get('/:id/enrollments',
  * - enrolledAt: Date (optional, defaults to now)
  */
 router.post('/:id/enrollments',
-  requireAccessRight('enrollment:department:manage'),
+  authorize('enrollment:department:manage'),
   classesController.enrollLearners
 );
 
@@ -162,7 +162,7 @@ router.post('/:id/enrollments',
  * - reason: string (optional, max 500 chars)
  */
 router.delete('/:id/enrollments/:enrollmentId',
-  requireAccessRight('enrollment:department:manage'),
+  authorize('enrollment:department:manage'),
   classesController.dropEnrollment
 );
 
@@ -183,7 +183,7 @@ router.delete('/:id/enrollments/:enrollmentId',
  * - status: active|withdrawn|completed (filter by enrollment status)
  */
 router.get('/:id/roster',
-  requireAccessRight('enrollment:department:read'),
+  authorize('enrollment:department:read'),
   classesController.getClassRoster
 );
 
@@ -195,7 +195,7 @@ router.get('/:id/roster',
  * Returns aggregate progress, scores, completion rates, and module-level breakdown
  */
 router.get('/:id/progress',
-  requireAccessRight(['reports:own-classes:read', 'reports:department:read'], { requireAny: true }),
+  authorize.anyOf(['reports:own-classes:read', 'reports:department:read']),
   classesController.getClassProgress
 );
 

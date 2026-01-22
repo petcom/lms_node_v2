@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { isAuthenticated } from '@/middlewares/isAuthenticated';
-import { requireAccessRight } from '@/middlewares/requireAccessRight';
+import { authorize } from '@/middlewares/authorize';
 import { requireEscalation } from '@/middlewares/requireEscalation';
 import { requireAdminRole } from '@/middlewares/requireAdminRole';
 import * as settingsController from '@/controllers/system/settings.controller';
@@ -74,7 +74,7 @@ router.get('/:key', settingsController.getSettingByKey);
  */
 router.put('/:key',
   requireEscalation,
-  requireAccessRight('system:department-settings:manage'),
+  authorize('system:department-settings:manage'),
   settingsController.updateSetting
 );
 
@@ -90,7 +90,7 @@ router.put('/:key',
  */
 router.post('/bulk',
   requireEscalation,
-  requireAccessRight('system:department-settings:manage'),
+  authorize('system:department-settings:manage'),
   settingsController.bulkUpdateSettings
 );
 
@@ -109,7 +109,7 @@ router.post('/bulk',
 router.post('/reset',
   requireEscalation,
   requireAdminRole(['system-admin']),
-  requireAccessRight('system:*'),
+  authorize('system:*'),
   settingsController.resetSettings
 );
 

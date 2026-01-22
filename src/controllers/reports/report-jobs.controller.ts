@@ -10,18 +10,130 @@
 import { Request, Response } from 'express';
 import mongoose from 'mongoose';
 import { asyncHandler } from '@/utils/asyncHandler';
-import { ApiResponse } from '@/utils/ApiResponse';
 import { ApiError } from '@/utils/ApiError';
 import reportJobService from '@/services/reports/report-jobs.service';
-import {
-  ReportJobSummary,
-  ReportJobDetail,
-  CreateReportJobResponse,
-  ListReportJobsResponse,
-  GetReportJobResponse,
-  CancelReportJobResponse,
-  RetryReportJobResponse
-} from '@contracts/api/report-jobs.contract';
+
+// Types inlined from contracts to avoid rootDir issues
+interface ReportJobSummary {
+  id: string;
+  name: string;
+  description?: string;
+  reportType: string;
+  status: string;
+  priority: string;
+  visibility: string;
+  progress?: {
+    percentage: number;
+    currentStep: string;
+    recordsProcessed?: number;
+    totalRecords?: number;
+  };
+  requestedBy: {
+    id: string;
+    name: string;
+    email: string;
+  };
+  departmentId?: string;
+  createdAt: string;
+  updatedAt: string;
+  startedAt?: string;
+  completedAt?: string;
+  expiresAt?: string;
+  output?: {
+    format: string;
+    downloadUrl?: string;
+  };
+}
+
+interface ReportJobDetail extends ReportJobSummary {
+  parameters: {
+    dateRange?: {
+      startDate: string;
+      endDate: string;
+    };
+    filters?: {
+      departmentIds?: string[];
+      courseIds?: string[];
+      classIds?: string[];
+      learnerIds?: string[];
+      contentIds?: string[];
+      eventTypes?: string[];
+      statuses?: string[];
+    };
+    groupBy?: string[];
+    measures?: string[];
+    includeInactive?: boolean;
+  };
+  output: {
+    format: string;
+    filename?: string;
+    storage?: {
+      provider: string;
+      path?: string;
+      bucket?: string;
+      key?: string;
+      url?: string;
+      expiresAt?: string;
+    };
+  };
+  error?: {
+    code?: string;
+    message: string;
+    stack?: string;
+    retryCount?: number;
+    lastRetryAt?: string;
+  };
+  scheduledFor?: string;
+  templateId?: string;
+  scheduleId?: string;
+}
+
+interface CreateReportJobResponse {
+  success: true;
+  data: {
+    id: string;
+    status: string;
+    estimatedWaitTime?: number;
+    queuePosition?: number;
+  };
+  message: string;
+}
+
+interface ListReportJobsResponse {
+  success: true;
+  data: ReportJobSummary[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+interface GetReportJobResponse {
+  success: true;
+  data: ReportJobDetail;
+}
+
+interface CancelReportJobResponse {
+  success: true;
+  data: {
+    id: string;
+    status: string;
+    cancelledAt: string;
+  };
+  message: string;
+}
+
+interface RetryReportJobResponse {
+  success: true;
+  data: {
+    id: string;
+    status: string;
+    retryCount: number;
+  };
+  message: string;
+}
 
 /**
  * POST /api/v2/reports/jobs
@@ -29,9 +141,9 @@ import {
  */
 export const createReportJob = asyncHandler(async (req: Request, res: Response) => {
   const userId = new mongoose.Types.ObjectId(req.user!.userId);
-  const userDepartmentIds = req.user!.departmentIds?.map(
+  const userDepartmentIds = (req.user!.departmentMemberships?.map(m => m.departmentId) || []).map(
     (id: string) => new mongoose.Types.ObjectId(id)
-  ) || [];
+  );
 
   // Convert string IDs to ObjectIds in request body
   const input = {
@@ -106,9 +218,9 @@ export const createReportJob = asyncHandler(async (req: Request, res: Response) 
  */
 export const listReportJobs = asyncHandler(async (req: Request, res: Response) => {
   const userId = new mongoose.Types.ObjectId(req.user!.userId);
-  const userDepartmentIds = req.user!.departmentIds?.map(
+  const userDepartmentIds = (req.user!.departmentMemberships?.map(m => m.departmentId) || []).map(
     (id: string) => new mongoose.Types.ObjectId(id)
-  ) || [];
+  );
 
   const filters = {
     status: req.query.status as string | string[] | undefined,
@@ -194,9 +306,9 @@ export const listReportJobs = asyncHandler(async (req: Request, res: Response) =
 export const getReportJob = asyncHandler(async (req: Request, res: Response) => {
   const { jobId } = req.params;
   const userId = new mongoose.Types.ObjectId(req.user!.userId);
-  const userDepartmentIds = req.user!.departmentIds?.map(
+  const userDepartmentIds = (req.user!.departmentMemberships?.map(m => m.departmentId) || []).map(
     (id: string) => new mongoose.Types.ObjectId(id)
-  ) || [];
+  );
 
   const job = await reportJobService.getReportJobById(jobId, userId, userDepartmentIds);
 
@@ -209,8 +321,23 @@ export const getReportJob = asyncHandler(async (req: Request, res: Response) => 
     priority: job.priority,
     visibility: job.visibility,
     parameters: {
-      dateRange: job.parameters.dateRange,
-      filters: job.parameters.filters,
+      dateRange: job.parameters.dateRange ? {
+        startDate: job.parameters.dateRange.startDate instanceof Date
+          ? job.parameters.dateRange.startDate.toISOString()
+          : job.parameters.dateRange.startDate,
+        endDate: job.parameters.dateRange.endDate instanceof Date
+          ? job.parameters.dateRange.endDate.toISOString()
+          : job.parameters.dateRange.endDate
+      } : undefined,
+      filters: job.parameters.filters ? {
+        departmentIds: job.parameters.filters.departmentIds?.map((id: any) => id.toString()),
+        courseIds: job.parameters.filters.courseIds?.map((id: any) => id.toString()),
+        classIds: job.parameters.filters.classIds?.map((id: any) => id.toString()),
+        learnerIds: job.parameters.filters.learnerIds?.map((id: any) => id.toString()),
+        contentIds: job.parameters.filters.contentIds?.map((id: any) => id.toString()),
+        eventTypes: job.parameters.filters.eventTypes,
+        statuses: job.parameters.filters.statuses
+      } : undefined,
       groupBy: job.parameters.groupBy,
       measures: job.parameters.measures,
       includeInactive: job.parameters.includeInactive
@@ -280,9 +407,9 @@ export const getReportJob = asyncHandler(async (req: Request, res: Response) => 
 export const cancelReportJob = asyncHandler(async (req: Request, res: Response) => {
   const { jobId } = req.params;
   const userId = new mongoose.Types.ObjectId(req.user!.userId);
-  const userDepartmentIds = req.user!.departmentIds?.map(
+  const userDepartmentIds = (req.user!.departmentMemberships?.map(m => m.departmentId) || []).map(
     (id: string) => new mongoose.Types.ObjectId(id)
-  ) || [];
+  );
 
   const job = await reportJobService.cancelReportJob(jobId, userId, userDepartmentIds);
 
@@ -306,9 +433,9 @@ export const cancelReportJob = asyncHandler(async (req: Request, res: Response) 
 export const downloadReport = asyncHandler(async (req: Request, res: Response) => {
   const { jobId } = req.params;
   const userId = new mongoose.Types.ObjectId(req.user!.userId);
-  const userDepartmentIds = req.user!.departmentIds?.map(
+  const userDepartmentIds = (req.user!.departmentMemberships?.map(m => m.departmentId) || []).map(
     (id: string) => new mongoose.Types.ObjectId(id)
-  ) || [];
+  );
 
   const job = await reportJobService.getReportJobById(jobId, userId, userDepartmentIds);
 
@@ -332,9 +459,9 @@ export const downloadReport = asyncHandler(async (req: Request, res: Response) =
 export const retryReportJob = asyncHandler(async (req: Request, res: Response) => {
   const { jobId } = req.params;
   const userId = new mongoose.Types.ObjectId(req.user!.userId);
-  const userDepartmentIds = req.user!.departmentIds?.map(
+  const userDepartmentIds = (req.user!.departmentMemberships?.map(m => m.departmentId) || []).map(
     (id: string) => new mongoose.Types.ObjectId(id)
-  ) || [];
+  );
 
   const job = await reportJobService.getReportJobById(jobId, userId, userDepartmentIds);
 

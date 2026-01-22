@@ -390,7 +390,7 @@ const reorderModulesSchema = Joi.object({
  */
 export const validateCreateModule = (
   req: Request,
-  res: Response,
+  _res: Response,
   next: NextFunction
 ) => {
   const { error, value } = createModuleSchema.validate(req.body, {
@@ -415,7 +415,7 @@ export const validateCreateModule = (
  */
 export const validateUpdateModule = (
   req: Request,
-  res: Response,
+  _res: Response,
   next: NextFunction
 ) => {
   const { error, value } = updateModuleSchema.validate(req.body, {
@@ -440,7 +440,7 @@ export const validateUpdateModule = (
  */
 export const validateReorderModules = (
   req: Request,
-  res: Response,
+  _res: Response,
   next: NextFunction
 ) => {
   const { error, value } = reorderModulesSchema.validate(req.body, {

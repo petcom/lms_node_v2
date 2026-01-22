@@ -215,7 +215,7 @@ export class ReportScheduleService {
     if (input.schedule) {
       schedule.schedule = { ...schedule.schedule, ...input.schedule };
     }
-    if (input.dateRangeType) schedule.dateRangeType = input.dateRangeType;
+    if (input.dateRangeType) schedule.dateRangeType = input.dateRangeType as 'custom' | 'previous-period' | 'from-template';
     if (input.customDateRange !== undefined) schedule.customDateRange = input.customDateRange;
     if (input.output) {
       schedule.output = {
@@ -430,7 +430,7 @@ export class ReportScheduleService {
     schedule.lastRunAt = new Date();
     schedule.lastRunJobId = reportJob._id;
     schedule.runCount += 1;
-    schedule.nextRunAt = schedule.calculateNextRunTime();
+    schedule.nextRunAt = schedule.calculateNextRunTime() ?? undefined;
 
     await schedule.save();
 

@@ -33,6 +33,7 @@ import ClassEnrollment from '@/models/enrollment/ClassEnrollment.model';
 import { RoleDefinition } from '@/models/RoleDefinition.model';
 import { AccessRight } from '@/models/AccessRight.model';
 import { describeIfMongo } from '../../helpers/mongo-guard';
+import { refreshDepartmentCache } from '../../helpers/department-cache';
 
 describeIfMongo('E2E Authorization API Tests', () => {
   let mongoServer: MongoMemoryServer;
@@ -103,6 +104,9 @@ describeIfMongo('E2E Authorization API Tests', () => {
       isActive: true
     });
 
+    // Refresh department cache to pick up hierarchy
+    await refreshDepartmentCache();
+
     // Seed role definitions
     await RoleDefinition.create([
       {
@@ -143,6 +147,14 @@ describeIfMongo('E2E Authorization API Tests', () => {
         displayName: 'System Administrator',
         description: 'Full system access',
         accessRights: ['system:*', 'content:*', 'enrollment:*'],
+        isActive: true
+      },
+      {
+        name: 'course-taker',
+        userType: 'learner',
+        displayName: 'Course Taker',
+        description: 'Can view and take courses',
+        accessRights: ['content:courses:read', 'content:lessons:read', 'grades:own:read'],
         isActive: true
       }
     ]);
@@ -269,10 +281,13 @@ describeIfMongo('E2E Authorization API Tests', () => {
       {
         userId: instructorUser._id.toString(),
         email: instructorUser.email,
-        roles: ['instructor'],
         type: 'access',
-        allAccessRights: ['content:courses:read', 'content:lessons:read', 'learner:grades:read', 'grades:own-classes:manage', 'reports:own-classes:read'],
-        departmentMemberships: [{ departmentId: topLevelDepartment._id.toString(), roles: ['instructor'] }]
+        roles: ['instructor'],
+        globalRights: [],
+        departmentRights: {
+          [topLevelDepartment._id.toString()]: ['content:courses:read', 'content:lessons:read', 'learner:grades:read', 'grades:own-classes:manage', 'reports:own-classes:read']
+        },
+        departmentMemberships: [{ departmentId: topLevelDepartment._id.toString() }]
       },
       process.env.JWT_ACCESS_SECRET || 'test-secret',
       { expiresIn: '1h' }
@@ -322,10 +337,13 @@ describeIfMongo('E2E Authorization API Tests', () => {
       {
         userId: contentAdminUser._id.toString(),
         email: contentAdminUser.email,
-        roles: ['content-admin'],
         type: 'access',
-        allAccessRights: ['content:courses:read', 'content:courses:manage', 'content:lessons:manage'],
-        departmentMemberships: [{ departmentId: topLevelDepartment._id.toString(), roles: ['content-admin'] }]
+        roles: ['content-admin'],
+        globalRights: [],
+        departmentRights: {
+          [topLevelDepartment._id.toString()]: ['content:courses:read', 'content:courses:manage', 'content:lessons:manage']
+        },
+        departmentMemberships: [{ departmentId: topLevelDepartment._id.toString() }]
       },
       process.env.JWT_ACCESS_SECRET || 'test-secret',
       { expiresIn: '1h' }
@@ -369,10 +387,13 @@ describeIfMongo('E2E Authorization API Tests', () => {
       {
         userId: deptAdminUser._id.toString(),
         email: deptAdminUser.email,
-        roles: ['department-admin'],
         type: 'access',
-        allAccessRights: ['content:courses:read', 'content:courses:manage', 'staff:department:manage', 'reports:department:read', 'learner:transcripts:read'],
-        departmentMemberships: [{ departmentId: topLevelDepartment._id.toString(), roles: ['department-admin'] }]
+        roles: ['department-admin'],
+        globalRights: [],
+        departmentRights: {
+          [topLevelDepartment._id.toString()]: ['content:courses:read', 'content:courses:manage', 'staff:department:manage', 'reports:department:read', 'learner:transcripts:read']
+        },
+        departmentMemberships: [{ departmentId: topLevelDepartment._id.toString() }]
       },
       process.env.JWT_ACCESS_SECRET || 'test-secret',
       { expiresIn: '1h' }
@@ -416,10 +437,13 @@ describeIfMongo('E2E Authorization API Tests', () => {
       {
         userId: enrollmentAdminUser._id.toString(),
         email: enrollmentAdminUser.email,
-        roles: ['enrollment-admin'],
         type: 'access',
-        allAccessRights: ['enrollment:*', 'content:courses:read', 'reports:*', 'learner:transcripts:read'],
-        departmentMemberships: [{ departmentId: topLevelDepartment._id.toString(), roles: ['enrollment-admin'] }]
+        roles: ['enrollment-admin'],
+        globalRights: [],
+        departmentRights: {
+          [topLevelDepartment._id.toString()]: ['enrollment:*', 'content:courses:read', 'reports:*', 'learner:transcripts:read']
+        },
+        departmentMemberships: [{ departmentId: topLevelDepartment._id.toString() }]
       },
       process.env.JWT_ACCESS_SECRET || 'test-secret',
       { expiresIn: '1h' }
@@ -475,10 +499,11 @@ describeIfMongo('E2E Authorization API Tests', () => {
       {
         userId: systemAdminUser._id.toString(),
         email: systemAdminUser.email,
-        roles: ['system-admin'],
         type: 'access',
-        allAccessRights: ['system:*', 'content:*', 'enrollment:*', 'reports:*', 'grades:*', 'learner:*'],
-        departmentMemberships: [{ departmentId: masterDepartment._id.toString(), roles: ['system-admin'] }]
+        roles: ['system-admin'],
+        globalRights: ['*'],
+        departmentRights: {},
+        departmentMemberships: [{ departmentId: masterDepartment._id.toString() }]
       },
       process.env.JWT_ACCESS_SECRET || 'test-secret',
       { expiresIn: '1h' }
@@ -488,9 +513,11 @@ describeIfMongo('E2E Authorization API Tests', () => {
       {
         userId: systemAdminUser._id.toString(),
         email: systemAdminUser.email,
-        roles: ['system-admin'],
         type: 'access',
-        allAccessRights: ['system:*', 'content:*', 'enrollment:*'],
+        roles: ['system-admin'],
+        globalRights: ['*'],
+        departmentRights: {},
+        departmentMemberships: [{ departmentId: masterDepartment._id.toString() }],
         isAdmin: true,
         adminRoles: ['system-admin']
       },
@@ -527,13 +554,17 @@ describeIfMongo('E2E Authorization API Tests', () => {
       departmentMemberships: []
     });
 
+    // Learner token with global content:courses:read (no department membership)
+    // This allows viewing published courses but not draft/archived courses
     learner1Token = jwt.sign(
       {
         userId: learner1User._id.toString(),
         email: learner1User.email,
-        roles: ['learner'],
         type: 'access',
-        allAccessRights: ['content:courses:read']
+        roles: ['course-taker'],
+        globalRights: ['content:courses:read', 'content:lessons:read', 'grades:own:read'],
+        departmentRights: {},
+        departmentMemberships: []
       },
       process.env.JWT_ACCESS_SECRET || 'test-secret',
       { expiresIn: '1h' }
@@ -607,10 +638,13 @@ describeIfMongo('E2E Authorization API Tests', () => {
           {
             userId: otherUser._id.toString(),
             email: otherUser.email,
-            roles: ['instructor'],
             type: 'access',
-            allAccessRights: ['content:courses:read', 'content:lessons:read'],
-            departmentMemberships: [{ departmentId: otherDepartment._id.toString(), roles: ['instructor'] }]
+            roles: ['instructor'],
+            globalRights: [],
+            departmentRights: {
+              [otherDepartment._id.toString()]: ['content:courses:read', 'content:lessons:read']
+            },
+            departmentMemberships: [{ departmentId: otherDepartment._id.toString() }]
           },
           process.env.JWT_ACCESS_SECRET || 'test-secret',
           { expiresIn: '1h' }
@@ -681,10 +715,13 @@ describeIfMongo('E2E Authorization API Tests', () => {
           {
             userId: otherUser._id.toString(),
             email: otherUser.email,
-            roles: ['instructor'],
             type: 'access',
-            allAccessRights: ['content:courses:read', 'content:lessons:read'],
-            departmentMemberships: [{ departmentId: otherDepartment._id.toString(), roles: ['instructor'] }]
+            roles: ['instructor'],
+            globalRights: [],
+            departmentRights: {
+              [otherDepartment._id.toString()]: ['content:courses:read', 'content:lessons:read']
+            },
+            departmentMemberships: [{ departmentId: otherDepartment._id.toString() }]
           },
           process.env.JWT_ACCESS_SECRET || 'test-secret',
           { expiresIn: '1h' }
@@ -949,9 +986,10 @@ describeIfMongo('E2E Authorization API Tests', () => {
         {
           userId: limitedUser._id.toString(),
           email: limitedUser.email,
-          roles: [],
           type: 'access',
-          allAccessRights: []
+          globalRights: [],
+          departmentRights: {},
+          departmentMemberships: []
         },
         process.env.JWT_ACCESS_SECRET || 'test-secret',
         { expiresIn: '1h' }
@@ -1002,9 +1040,13 @@ describeIfMongo('E2E Authorization API Tests', () => {
         {
           userId: otherUser._id.toString(),
           email: otherUser.email,
-          roles: ['instructor'],
           type: 'access',
-          departmentMemberships: [{ departmentId: otherDepartment._id.toString(), roles: ['instructor'] }]
+          roles: ['instructor'],
+          globalRights: [],
+          departmentRights: {
+            [otherDepartment._id.toString()]: ['content:courses:read']
+          },
+          departmentMemberships: [{ departmentId: otherDepartment._id.toString() }]
         },
         process.env.JWT_ACCESS_SECRET || 'test-secret',
         { expiresIn: '1h' }

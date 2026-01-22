@@ -3,7 +3,7 @@
 
 // Set test environment variables
 process.env.NODE_ENV = 'test';
-process.env.MONGODB_URI = process.env.MONGODB_URI_TEST || 'mongodb://localhost:27017/lms_v2_test';
+process.env.MONGODB_URI = process.env.MONGODB_URI_TEST || 'mongodb://localhost:27017/lms_test';
 process.env.JWT_ACCESS_SECRET = 'test-access-secret-key-for-testing-only';
 process.env.JWT_REFRESH_SECRET = 'test-refresh-secret-key-for-testing-only';
 process.env.REDIS_HOST = 'localhost';
@@ -33,6 +33,11 @@ const net = require('node:net');
 const originalListen = net.Server.prototype.listen;
 
 net.Server.prototype.listen = function (...args: any[]) {
+  // Don't patch port 0 calls - supertest uses this and needs synchronous binding
+  if (typeof args[0] === 'number' && args[0] === 0) {
+    return originalListen.apply(this, args);
+  }
+
   if (typeof args[0] === 'number' && (args.length === 1 || typeof args[1] === 'function')) {
     const port = args[0];
     const callback = typeof args[1] === 'function' ? args[1] : undefined;
@@ -56,8 +61,13 @@ MongoMemoryServer.create = (options: Record<string, unknown> = {}) => {
 
 // Mock Redis for tests
 jest.mock('@/config/redis', () => {
-  const { Cache } = require('../tests/__mocks__/redis');
-  return { Cache };
+  const redisMock = require('../tests/__mocks__/redis');
+  return {
+    Cache: redisMock.Cache,
+    redis: redisMock.redis,
+    isRedisAvailable: redisMock.isRedisAvailable,
+    disconnectRedis: redisMock.disconnectRedis
+  };
 });
 
 // Increase timeout for database operations

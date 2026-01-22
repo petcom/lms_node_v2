@@ -9,7 +9,7 @@
 
 import { Router } from 'express';
 import { isAuthenticated } from '@/middlewares/isAuthenticated';
-import { requireAccessRight } from '@/middlewares/requireAccessRight';
+import { authorize } from '@/middlewares/authorize';
 import * as courseSummaryController from '@/controllers/analytics/course-summary.controller';
 
 const router = Router();
@@ -40,7 +40,7 @@ router.use(isAuthenticated);
  *   - Permission: analytics:courses:read
  */
 router.get('/courses/summary',
-  requireAccessRight(['analytics:courses:read', 'reports:department:read'], { requireAny: true }),
+  authorize.anyOf(['analytics:courses:read', 'reports:department:read']),
   courseSummaryController.getCourseSummary
 );
 
@@ -61,7 +61,7 @@ router.get('/courses/summary',
  *   - Permission: analytics:courses:export
  */
 router.post('/courses/summary/export',
-  requireAccessRight(['analytics:courses:export', 'reports:department:export'], { requireAny: true }),
+  authorize.anyOf(['analytics:courses:export', 'reports:department:export']),
   courseSummaryController.exportCourseSummary
 );
 

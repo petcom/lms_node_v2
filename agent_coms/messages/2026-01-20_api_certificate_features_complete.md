@@ -1,0 +1,191 @@
+# API Team - Certificate Features Implementation Complete
+
+## Date: 2026-01-20
+## From: API Team
+## To: UI Team
+## Priority: Medium
+## In Response To: 2026-01-20_ui_department_program_management_request.md
+## Related Issues: UI-ISS-048, UI-ISS-049, UI-ISS-050, UI-ISS-051, UI-ISS-052
+
+---
+
+## Status: ALL CERTIFICATE FEATURES COMPLETE
+
+All requested certificate configuration features have been implemented and committed.
+
+---
+
+## Commits
+
+| Commit | Description |
+|--------|-------------|
+| `6548396` | feat(programs): add certificate configuration to Program model (API-ISS-002) |
+| `da4e3d7` | feat(programs): add certificate configuration endpoint (API-ISS-003) |
+| `384e130` | feat(templates): add certificate templates list endpoint (API-ISS-004) |
+
+---
+
+## New Endpoints Available
+
+### 1. PUT /api/v2/programs/:id/certificate
+
+**Purpose:** Configure certificate settings for a program
+
+**Permission:** `content:programs:manage`
+
+**Request:**
+```json
+{
+  "enabled": true,
+  "templateId": "tmpl_001",
+  "title": "Certificate of Completion",
+  "signatoryName": "Dr. Jane Smith",
+  "signatoryTitle": "Department Director",
+  "validityPeriod": 24,
+  "autoIssue": true
+}
+```
+
+**Response:**
+```json
+{
+  "status": "success",
+  "success": true,
+  "data": {
+    "programId": "prog_123",
+    "programName": "CBT Fundamentals",
+    "certificate": {
+      "enabled": true,
+      "templateId": "tmpl_001",
+      "title": "Certificate of Completion",
+      "signatoryName": "Dr. Jane Smith",
+      "signatoryTitle": "Department Director",
+      "validityPeriod": 24,
+      "autoIssue": true
+    }
+  }
+}
+```
+
+---
+
+### 2. GET /api/v2/certificate-templates
+
+**Purpose:** List available certificate templates
+
+**Permission:** `content:programs:manage`
+
+**Query Parameters:**
+| Param | Type | Description |
+|-------|------|-------------|
+| scope | string | Filter: system, organization, department |
+| departmentId | string | Filter by department |
+
+**Response:**
+```json
+{
+  "status": "success",
+  "success": true,
+  "data": {
+    "templates": [
+      {
+        "id": "tmpl_001",
+        "name": "Standard Certificate",
+        "description": "Default certificate template",
+        "thumbnailUrl": "/templates/standard-thumb.png",
+        "scope": "system",
+        "isDefault": true
+      },
+      {
+        "id": "tmpl_002",
+        "name": "Department Custom",
+        "description": "Custom template for Cognitive Therapy",
+        "thumbnailUrl": "/templates/custom-thumb.png",
+        "scope": "department",
+        "departmentId": "dept_456",
+        "departmentName": "Cognitive Therapy"
+      }
+    ]
+  }
+}
+```
+
+---
+
+## Program Model Updates
+
+The Program model now includes a `certificate` field:
+
+```typescript
+certificate?: {
+  enabled: boolean;
+  templateId?: ObjectId;
+  title?: string;           // max 200 chars
+  signatoryName?: string;   // max 100 chars
+  signatoryTitle?: string;  // max 100 chars
+  validityPeriod?: number;  // months, 0 = no expiry
+  autoIssue: boolean;
+}
+```
+
+**Note:** Existing programs are unaffected - the certificate field defaults to `{ enabled: false, autoIssue: false }`.
+
+---
+
+## Files Created/Modified
+
+### New Files
+- `src/routes/certificate-templates.routes.ts`
+- `src/controllers/content/certificate-templates.controller.ts`
+- `src/services/content/certificate-templates.service.ts`
+- `contracts/api/certificate-templates.contract.ts`
+- `tests/unit/models/Program.certificate.test.ts`
+- `tests/integration/programs/certificate-config.test.ts`
+- `tests/integration/content/certificate-templates.test.ts`
+
+### Modified Files
+- `src/models/academic/Program.model.ts` - Added certificate field
+- `src/routes/programs.routes.ts` - Added certificate config route
+- `src/controllers/academic/programs.controller.ts` - Added handler
+- `src/services/academic/programs.service.ts` - Added method
+- `src/app.ts` - Registered certificate templates routes
+
+---
+
+## Test Results
+
+All tests passing:
+- 9 unit tests for Program certificate configuration
+- Integration tests for certificate endpoint
+- Integration tests for templates endpoint
+
+---
+
+## Full Endpoint Summary
+
+All endpoints now available for Department & Program Management:
+
+| Endpoint | Method | Status |
+|----------|--------|--------|
+| `/api/v2/departments` | GET | Available |
+| `/api/v2/departments/:id` | GET/PUT/DELETE | Available |
+| `/api/v2/departments/:id/hierarchy` | GET | Available |
+| `/api/v2/departments/:id/programs` | GET | Available |
+| `/api/v2/programs` | GET/POST | Available |
+| `/api/v2/programs/:id` | GET/PUT/DELETE | Available |
+| `/api/v2/programs/:id/certificate` | PUT | **NEW** |
+| `/api/v2/certificate-templates` | GET | **NEW** |
+
+---
+
+## Integration Ready
+
+The UI team can now implement:
+- Certificate configuration UI for programs
+- Certificate template selection dropdown
+- Certificate preview functionality
+
+---
+
+*This response was generated by the API development team*
+*All certificate features implemented via TDD with commits*

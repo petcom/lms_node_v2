@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { isAuthenticated } from '@/middlewares/isAuthenticated';
-import { requireAccessRight } from '@/middlewares/requireAccessRight';
+import { authorize } from '@/middlewares/authorize';
 import { requireEscalation } from '@/middlewares/requireEscalation';
 import * as reportsController from '@/controllers/reporting/reports.controller';
 import reportJobsRoutes from './reports/report-jobs.routes';
@@ -44,7 +44,7 @@ router.use('/schedules', reportSchedulesRoutes);
  * Access: reports:department:read OR reports:enrollment:read OR reports:own-classes:read (department-admin OR enrollment-admin OR instructor), instructor scoped
  */
 router.get('/completion',
-  requireAccessRight(['reports:department:read', 'reports:enrollment:read', 'reports:own-classes:read'], { requireAny: true }),
+  authorize.anyOf(['reports:department:read', 'reports:enrollment:read', 'reports:own-classes:read']),
   reportsController.getCompletionReport
 );
 
@@ -66,7 +66,7 @@ router.get('/completion',
  * Access: reports:department:read (department-admin, instructor scoped to own classes)
  */
 router.get('/performance',
-  requireAccessRight('reports:department:read'),
+  authorize('reports:department:read'),
   reportsController.getPerformanceReport
 );
 
@@ -82,7 +82,7 @@ router.get('/performance',
  * Service layer: Department-admin filter to show ONLY their department courses
  */
 router.get('/transcript/:learnerId',
-  requireAccessRight(['learner:transcripts:read', 'grades:own:read'], { requireAny: true }),
+  authorize.anyOf(['learner:transcripts:read', 'grades:own:read']),
   reportsController.getLearnerTranscript
 );
 
@@ -101,7 +101,7 @@ router.get('/transcript/:learnerId',
  */
 router.post('/transcript/:learnerId/generate',
   requireEscalation,
-  requireAccessRight('learner:transcripts:read'),
+  authorize('learner:transcripts:read'),
   reportsController.generatePDFTranscript
 );
 
@@ -118,7 +118,7 @@ router.post('/transcript/:learnerId/generate',
  * Access: reports:own-classes:read OR reports:content:read OR reports:department:read (instructor own classes OR content-admin OR dept-admin)
  */
 router.get('/course/:courseId',
-  requireAccessRight(['reports:own-classes:read', 'reports:department:read', 'reports:content:read'], { requireAny: true }),
+  authorize.anyOf(['reports:own-classes:read', 'reports:department:read', 'reports:content:read']),
   reportsController.getCourseReport
 );
 
@@ -134,7 +134,7 @@ router.get('/course/:courseId',
  * Access: reports:department:read OR reports:enrollment:read (department-admin OR enrollment-admin)
  */
 router.get('/program/:programId',
-  requireAccessRight(['reports:department:read', 'reports:enrollment:read'], { requireAny: true }),
+  authorize.anyOf(['reports:department:read', 'reports:enrollment:read']),
   reportsController.getProgramReport
 );
 
@@ -150,7 +150,7 @@ router.get('/program/:programId',
  * Access: reports:department:read (department-admin own dept, system-admin all)
  */
 router.get('/department/:departmentId',
-  requireAccessRight('reports:department:read'),
+  authorize('reports:department:read'),
   reportsController.getDepartmentReport
 );
 
@@ -171,7 +171,7 @@ router.get('/department/:departmentId',
  * Access: reports:department:read OR reports:own-classes:read (instructor scoped to own classes)
  */
 router.get('/export',
-  requireAccessRight(['reports:department:read', 'reports:own-classes:read'], { requireAny: true }),
+  authorize.anyOf(['reports:department:read', 'reports:own-classes:read']),
   reportsController.exportReport
 );
 

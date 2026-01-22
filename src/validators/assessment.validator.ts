@@ -338,7 +338,7 @@ const updateAssessmentSchema = Joi.object({
  */
 export const validateCreateAssessment = (
   req: Request,
-  res: Response,
+  _res: Response,
   next: NextFunction
 ) => {
   const { error } = createAssessmentSchema.validate(req.body, {
@@ -362,7 +362,7 @@ export const validateCreateAssessment = (
  */
 export const validateUpdateAssessment = (
   req: Request,
-  res: Response,
+  _res: Response,
   next: NextFunction
 ) => {
   const { error } = updateAssessmentSchema.validate(req.body, {

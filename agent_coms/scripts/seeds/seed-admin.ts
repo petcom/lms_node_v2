@@ -22,7 +22,7 @@
  *   ADMIN_EMAIL - Admin email (default: admin@system.local)
  *   ADMIN_PASSWORD - Admin login password (default: Admin123!)
  *   ADMIN_ESCALATION_PASSWORD - Admin escalation password (default: Escalate123!)
- *   MONGO_URI - MongoDB connection string (default: mongodb://localhost:27017/lms_v2)
+ *   MONGO_URI - MongoDB connection string (default: mongodb://localhost:27017/lms_mock)
  *
  * Security Notes:
  * - Escalation password is hashed using bcrypt (salt rounds: 12)
@@ -57,7 +57,7 @@ const config = {
   adminEscalationPassword: process.env.ADMIN_ESCALATION_PASSWORD || 'Escalate123!',
   adminFirstName: 'System',
   adminLastName: 'Administrator',
-  mongoUri: process.env.MONGO_URI || 'mongodb://localhost:27017/lms_v2'
+  mongoUri: process.env.MONGO_URI || 'mongodb://localhost:27017/lms_mock'
 };
 
 /**

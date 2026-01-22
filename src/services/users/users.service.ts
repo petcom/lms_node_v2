@@ -10,7 +10,7 @@ import ClassEnrollment from '@/models/enrollment/ClassEnrollment.model';
 import ContentAttempt from '@/models/content/ContentAttempt.model';
 import { ApiError } from '@/utils/ApiError';
 import { hashPassword, comparePassword } from '@/utils/password';
-import { IPerson, getPrimaryPhone, getPrimaryEmail } from '@/models/auth/Person.types';
+import { IPerson, getPrimaryPhone } from '@/models/auth/Person.types';
 import { IStaffPersonExtended } from '@/models/auth/PersonExtended.types';
 import { ILearnerPersonExtended } from '@/models/auth/PersonExtended.types';
 import { IDemographics } from '@/models/auth/Demographics.types';
@@ -24,13 +24,6 @@ interface UpdateMeInput {
   lastName?: string;
   phone?: string;
   profileImage?: string | null;
-}
-
-/**
- * NEW: Update person data (v2.0.0)
- */
-interface UpdatePersonInput {
-  person?: Partial<IPerson>;
 }
 
 interface MyCoursesFilters {
@@ -183,7 +176,7 @@ export class UsersService {
         }
       }
       if (updateData.profileImage !== undefined) {
-        staff.person.avatar = updateData.profileImage;
+        staff.person.avatar = updateData.profileImage ?? undefined;
       }
       await staff.save();
     }
@@ -212,7 +205,7 @@ export class UsersService {
         }
       }
       if (updateData.profileImage !== undefined) {
-        learner.person.avatar = updateData.profileImage;
+        learner.person.avatar = updateData.profileImage ?? undefined;
       }
       await learner.save();
     }
@@ -862,13 +855,14 @@ export class UsersService {
       }
 
       // Decrypt identification numbers for authorized user (ISS-011)
-      const personExtended = learner.personExtended?.toObject() || {};
+      const personExtended = (learner.personExtended as any)?.toObject() || {};
       if (personExtended.identifications && Array.isArray(personExtended.identifications)) {
         personExtended.identifications = personExtended.identifications.map((id: any, index: number) => {
-          if (id.idNumber && learner.personExtended?.identifications?.[index]?.getDecryptedIdNumber) {
+          const identification = (learner.personExtended as any)?.identifications?.[index];
+          if (id.idNumber && identification?.getDecryptedIdNumber) {
             return {
               ...id,
-              idNumber: learner.personExtended.identifications[index].getDecryptedIdNumber()
+              idNumber: identification.getDecryptedIdNumber()
             };
           }
           return id;
@@ -955,7 +949,7 @@ export class UsersService {
       }
 
       // Decrypt alienRegistrationNumber for authorized user (ISS-011)
-      const demographics = staff.demographics?.toObject() || {} as IDemographics;
+      const demographics = (staff.demographics as any)?.toObject() || {} as IDemographics;
       if (demographics.alienRegistrationNumber) {
         const { decrypt } = require('@/utils/encryption/EncryptionFactory');
         demographics.alienRegistrationNumber = decrypt(demographics.alienRegistrationNumber);
@@ -971,7 +965,7 @@ export class UsersService {
       }
 
       // Decrypt alienRegistrationNumber for authorized user (ISS-011)
-      const demographics = learner.demographics?.toObject() || {} as IDemographics;
+      const demographics = (learner.demographics as any)?.toObject() || {} as IDemographics;
       if (demographics.alienRegistrationNumber) {
         const { decrypt } = require('@/utils/encryption/EncryptionFactory');
         demographics.alienRegistrationNumber = decrypt(demographics.alienRegistrationNumber);

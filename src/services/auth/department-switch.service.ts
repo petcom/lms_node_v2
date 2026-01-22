@@ -183,10 +183,7 @@ export class DepartmentSwitchService {
 
       // Wrap other errors
       console.error('Error in switchDepartment:', error);
-      throw ApiError.internal(
-        'Failed to switch department',
-        error instanceof Error ? error : undefined
-      );
+      throw ApiError.internal('Failed to switch department');
     }
   }
 
@@ -441,7 +438,7 @@ export class DepartmentSwitchService {
     deptId: mongoose.Types.ObjectId,
     roles: string[],
     userType: UserType | null,
-    requireExplicitMembership: boolean
+    _requireExplicitMembership: boolean
   ): Promise<ChildDepartmentInfo[]> {
     // Don't return children if no userType (shouldn't happen but safety check)
     if (!userType) {

@@ -84,8 +84,8 @@ npx ts-node --transpile-only -r tsconfig-paths/register scripts/seed-access-righ
 The script uses the following environment variables (with defaults):
 
 ```bash
-DB_URI=mongodb://localhost:27017/lms_v2_dev    # Database connection string
-MONGODB_URI=mongodb://localhost:27017/lms_v2_dev  # Alternative variable name
+DB_URI=mongodb://localhost:27017/lms_mock    # Database connection string
+MONGODB_URI=mongodb://localhost:27017/lms_mock  # Alternative variable name
 ```
 
 ## Script Features
@@ -136,7 +136,7 @@ After seeding, the script displays detailed statistics:
 ╚══════════════════════════════════════════╝
 
 🔌 Connecting to database...
-  ✓ Connected to mongodb://localhost:27017/lms_v2_dev
+  ✓ Connected to mongodb://localhost:27017/lms_mock
 
 📋 Seeding access rights...
   Processing regular access rights...
@@ -316,7 +316,7 @@ await generateAccessRightsFromRoles();
 If you get database connection errors:
 ```bash
 # Set the correct database URI
-export DB_URI=mongodb://localhost:27017/lms_v2_dev
+export DB_URI=mongodb://localhost:27017/lms_mock
 npm run seed:access-rights
 ```
 
@@ -325,10 +325,10 @@ npm run seed:access-rights
 If you get duplicate key errors, the collection may have existing data with conflicts:
 ```bash
 # Check existing rights
-npx mongosh mongodb://localhost:27017/lms_v2_dev --eval "db.accessrights.find().limit(5)"
+npx mongosh mongodb://localhost:27017/lms_mock --eval "db.accessrights.find().limit(5)"
 
 # Optionally clear and reseed
-npx mongosh mongodb://localhost:27017/lms_v2_dev --eval "db.accessrights.deleteMany({})"
+npx mongosh mongodb://localhost:27017/lms_mock --eval "db.accessrights.deleteMany({})"
 npm run seed:access-rights
 ```
 
@@ -349,7 +349,7 @@ To verify the script worked correctly:
 
 ```bash
 # Connect to MongoDB
-npx mongosh mongodb://localhost:27017/lms_v2_dev
+npx mongosh mongodb://localhost:27017/lms_mock
 
 # Check total count
 db.accessrights.countDocuments()

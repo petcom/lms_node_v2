@@ -10,6 +10,7 @@ import Course from '@/models/academic/Course.model';
 import { hashPassword } from '@/utils/password';
 import { ApiError } from '@/utils/ApiError';
 import { maskLastName, maskUserList } from '@/utils/dataMasking';
+import { getDepartmentAndSubdepartments } from '@/utils/departmentHierarchy';
 
 interface ListLearnersFilters {
   page?: number;
@@ -18,6 +19,7 @@ interface ListLearnersFilters {
   program?: string;
   status?: 'active' | 'withdrawn' | 'completed' | 'suspended';
   department?: string;
+  includeSubdepartments?: boolean;
   sort?: string;
 }
 
@@ -66,6 +68,12 @@ export class LearnersService {
    * @param viewer - The user viewing the data (for data masking)
    */
   static async listLearners(filters: ListLearnersFilters, viewer: any): Promise<any> {
+    // Use optimized aggregation when filtering by department
+    if (filters.department) {
+      return this.listLearnersByDepartmentOptimized(filters, viewer);
+    }
+
+    // Original implementation for non-department queries
     const page = filters.page || 1;
     const limit = Math.min(filters.limit || 10, 100);
     const skip = (page - 1) * limit;
@@ -106,20 +114,6 @@ export class LearnersService {
 
     // Get users matching initial filters
     let users = await User.find(userQuery);
-
-    // Filter by department if provided
-    if (filters.department) {
-      // Filter based on enrollment in programs under the department
-      const programsInDept = await Program.find({ departmentId: filters.department }).select('_id');
-      const programIds = programsInDept.map(p => p._id);
-
-      const enrollmentsInDept = await Enrollment.find({
-        programId: { $in: programIds },
-        learnerId: { $in: users.map(u => u._id) }
-      }).distinct('learnerId');
-
-      users = users.filter(u => enrollmentsInDept.some(id => id.equals(u._id)));
-    }
 
     // Filter by program if provided
     if (filters.program) {
@@ -168,8 +162,8 @@ export class LearnersService {
 
         if (!aLearner || !bLearner) return 0;
 
-        const aValue = sortKey === 'firstName' ? aLearner.firstName : aLearner.lastName;
-        const bValue = sortKey === 'firstName' ? bLearner.firstName : bLearner.lastName;
+        const aValue = sortKey === 'firstName' ? aLearner.person.firstName : aLearner.person.lastName;
+        const bValue = sortKey === 'firstName' ? bLearner.person.firstName : bLearner.person.lastName;
 
         return sortDirection * aValue.localeCompare(bValue);
       });
@@ -270,6 +264,329 @@ export class LearnersService {
   }
 
   /**
+   * Optimized learner listing using aggregation pipeline when filtering by department
+   * Eliminates N+1 query pattern by using MongoDB aggregation
+   *
+   * @param filters - Filtering and pagination options (must include department)
+   * @param viewer - The user viewing the data (for data masking)
+   */
+  private static async listLearnersByDepartmentOptimized(
+    filters: ListLearnersFilters,
+    viewer: any
+  ): Promise<any> {
+    const page = filters.page || 1;
+    const limit = Math.min(filters.limit || 10, 100);
+    const skip = (page - 1) * limit;
+
+    // Get department IDs (including subdepartments if requested)
+    let departmentIds: string[];
+    if (filters.includeSubdepartments) {
+      departmentIds = await getDepartmentAndSubdepartments(filters.department!);
+    } else {
+      departmentIds = [filters.department!];
+    }
+
+    // Convert to ObjectIds
+    const departmentObjectIds = departmentIds.map(id => new mongoose.Types.ObjectId(id));
+
+    // Build match stage for programs
+    const programMatch: any = {
+      departmentId: { $in: departmentObjectIds }
+    };
+
+    // Build match stage for enrollments
+    const enrollmentMatch: any = {};
+    if (filters.program) {
+      enrollmentMatch.programId = new mongoose.Types.ObjectId(filters.program);
+    }
+    if (filters.status === 'withdrawn' || filters.status === 'completed') {
+      enrollmentMatch.status = filters.status;
+    }
+
+    // Build match stage for users
+    const userMatch: any = { roles: 'learner' };
+    if (filters.status === 'active') {
+      userMatch.isActive = true;
+    } else if (filters.status === 'suspended') {
+      userMatch.isActive = false;
+    }
+
+    // Build search filter for learners
+    const learnerMatch: any = {};
+    if (filters.search) {
+      const searchRegex = new RegExp(filters.search, 'i');
+      learnerMatch.$or = [
+        { 'person.firstName': searchRegex },
+        { 'person.lastName': searchRegex },
+        { email: searchRegex }
+      ];
+    }
+
+    // Build sort stage
+    const sortField = filters.sort || '-createdAt';
+    const sortDirection = sortField.startsWith('-') ? -1 : 1;
+    const sortKey = sortField.replace(/^-/, '');
+
+    let sortStage: any;
+    if (sortKey === 'firstName') {
+      sortStage = { 'learnerProfile.person.firstName': sortDirection };
+    } else if (sortKey === 'lastName') {
+      sortStage = { 'learnerProfile.person.lastName': sortDirection };
+    } else {
+      sortStage = { 'user.createdAt': sortDirection };
+    }
+
+    // Build aggregation pipeline
+    const pipeline: any[] = [
+      // Stage 1: Get programs in the department(s)
+      {
+        $match: programMatch
+      },
+      // Stage 2: Find enrollments in those programs
+      {
+        $lookup: {
+          from: 'enrollments',
+          let: { programId: '$_id' },
+          pipeline: [
+            {
+              $match: {
+                $expr: { $eq: ['$programId', '$$programId'] },
+                ...enrollmentMatch
+              }
+            }
+          ],
+          as: 'enrollments'
+        }
+      },
+      // Stage 3: Unwind enrollments
+      {
+        $unwind: '$enrollments'
+      },
+      // Stage 4: Group by learner to get unique learners
+      {
+        $group: {
+          _id: '$enrollments.learnerId',
+          programIds: { $addToSet: '$_id' },
+          firstDepartmentId: { $first: '$departmentId' },
+          enrollmentStatuses: { $push: '$enrollments.status' }
+        }
+      },
+      // Stage 5: Lookup user data
+      {
+        $lookup: {
+          from: 'users',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'user'
+        }
+      },
+      {
+        $unwind: '$user'
+      },
+      // Stage 6: Match user criteria
+      {
+        $match: userMatch
+      },
+      // Stage 7: Lookup learner profile
+      {
+        $lookup: {
+          from: 'learners',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'learnerProfile'
+        }
+      },
+      {
+        $unwind: '$learnerProfile'
+      },
+      // Stage 8: Apply search filter if provided
+      ...(Object.keys(learnerMatch).length > 0 ? [{
+        $addFields: {
+          email: '$user.email'
+        }
+      }, {
+        $match: learnerMatch
+      }] : []),
+      // Stage 9: Lookup department info
+      {
+        $lookup: {
+          from: 'departments',
+          localField: 'firstDepartmentId',
+          foreignField: '_id',
+          as: 'department'
+        }
+      },
+      // Stage 10: Lookup program enrollments count
+      {
+        $lookup: {
+          from: 'enrollments',
+          localField: '_id',
+          foreignField: 'learnerId',
+          as: 'allProgramEnrollments'
+        }
+      },
+      // Stage 11: Lookup course enrollments
+      {
+        $lookup: {
+          from: 'classenrollments',
+          localField: '_id',
+          foreignField: 'learnerId',
+          as: 'courseEnrollments'
+        }
+      },
+      // Stage 12: Calculate stats and build response
+      {
+        $addFields: {
+          programEnrollmentCount: { $size: '$allProgramEnrollments' },
+          courseEnrollmentCount: { $size: '$courseEnrollments' },
+          completedCoursesCount: {
+            $size: {
+              $filter: {
+                input: '$courseEnrollments',
+                as: 'ce',
+                cond: { $eq: ['$$ce.status', 'completed'] }
+              }
+            }
+          },
+          completionRate: {
+            $cond: [
+              { $gt: [{ $size: '$courseEnrollments' }, 0] },
+              {
+                $divide: [
+                  {
+                    $size: {
+                      $filter: {
+                        input: '$courseEnrollments',
+                        as: 'ce',
+                        cond: { $eq: ['$$ce.status', 'completed'] }
+                      }
+                    }
+                  },
+                  { $size: '$courseEnrollments' }
+                ]
+              },
+              0
+            ]
+          },
+          learnerStatus: {
+            $cond: [
+              { $eq: ['$user.isActive', false] },
+              'suspended',
+              {
+                $cond: [
+                  {
+                    $and: [
+                      { $gt: [{ $size: '$allProgramEnrollments' }, 0] },
+                      {
+                        $allElementsTrue: {
+                          $map: {
+                            input: '$enrollmentStatuses',
+                            as: 'status',
+                            in: { $eq: ['$$status', 'withdrawn'] }
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  'withdrawn',
+                  {
+                    $cond: [
+                      {
+                        $and: [
+                          { $gt: [{ $size: '$allProgramEnrollments' }, 0] },
+                          {
+                            $allElementsTrue: {
+                              $map: {
+                                input: '$enrollmentStatuses',
+                                as: 'status',
+                                in: {
+                                  $or: [
+                                    { $eq: ['$$status', 'completed'] },
+                                    { $eq: ['$$status', 'graduated'] }
+                                  ]
+                                }
+                              }
+                            }
+                          }
+                        ]
+                      },
+                      'completed',
+                      'active'
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      },
+      // Stage 13: Use $facet for pagination with count
+      {
+        $facet: {
+          metadata: [
+            { $count: 'total' }
+          ],
+          data: [
+            { $sort: sortStage },
+            { $skip: skip },
+            { $limit: limit },
+            {
+              $project: {
+                id: { $toString: '$_id' },
+                email: '$user.email',
+                firstName: '$learnerProfile.person.firstName',
+                lastName: '$learnerProfile.person.lastName',
+                studentId: null,
+                status: '$learnerStatus',
+                department: {
+                  $cond: [
+                    { $gt: [{ $size: '$department' }, 0] },
+                    {
+                      id: { $toString: { $arrayElemAt: ['$department._id', 0] } },
+                      name: { $arrayElemAt: ['$department.name', 0] }
+                    },
+                    null
+                  ]
+                },
+                programEnrollments: '$programEnrollmentCount',
+                courseEnrollments: '$courseEnrollmentCount',
+                completionRate: '$completionRate',
+                lastLogin: null,
+                createdAt: '$user.createdAt',
+                updatedAt: '$user.updatedAt'
+              }
+            }
+          ]
+        }
+      }
+    ];
+
+    // Execute aggregation on Program collection
+    const results = await Program.aggregate(pipeline);
+
+    // Extract results
+    const total = results[0]?.metadata[0]?.total || 0;
+    const learners = results[0]?.data || [];
+
+    const totalPages = Math.ceil(total / limit);
+
+    // Apply FERPA-compliant data masking based on viewer's role
+    const maskedLearners = viewer ? maskUserList(learners, viewer) : learners;
+
+    return {
+      learners: maskedLearners,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasNext: page < totalPages,
+        hasPrev: page > 1
+      }
+    };
+  }
+
+  /**
    * Register a new learner account
    */
   static async registerLearner(input: RegisterLearnerInput): Promise<any> {
@@ -348,9 +665,9 @@ export class LearnersService {
           role: 'learner',
           status: 'active',
           department: departmentInfo,
-          phone: learner.phoneNumber || null,
-          dateOfBirth: learner.dateOfBirth || null,
-          address: learner.address || null,
+          phone: learner.person.phones?.[0]?.number || null,
+          dateOfBirth: learner.person.dateOfBirth || null,
+          address: learner.person.addresses?.[0] || null,
           createdAt: user.createdAt,
           updatedAt: user.updatedAt
         }
@@ -377,7 +694,7 @@ export class LearnersService {
     }
 
     const user = await User.findById(learnerId);
-    if (!user || !user.roles.includes('learner')) {
+    if (!user || !user.userTypes.includes('learner')) {
       throw ApiError.notFound('Learner not found');
     }
 
@@ -503,9 +820,9 @@ export class LearnersService {
       role: 'learner',
       status: learnerStatus,
       department: departmentInfo,
-      phone: learner.phoneNumber || null,
-      dateOfBirth: learner.dateOfBirth || null,
-      address: learner.address || null,
+      phone: learner.person.phones?.[0]?.number || null,
+      dateOfBirth: learner.person.dateOfBirth || null,
+      address: learner.person.addresses?.[0] || null,
       enrollments: {
         programs,
         courses
@@ -539,7 +856,7 @@ export class LearnersService {
     }
 
     const user = await User.findById(learnerId);
-    if (!user || !user.roles.includes('learner')) {
+    if (!user || !user.userTypes.includes('learner')) {
       throw ApiError.notFound('Learner not found');
     }
 
@@ -594,17 +911,48 @@ export class LearnersService {
       learner.person.lastName = updateData.lastName;
     }
     if (updateData.phone !== undefined) {
-      learner.phoneNumber = updateData.phone;
+      // Update primary phone or add new one
+      const primaryPhoneIndex = learner.person.phones.findIndex(p => p.isPrimary);
+      if (primaryPhoneIndex >= 0) {
+        learner.person.phones[primaryPhoneIndex].number = updateData.phone;
+      } else if (updateData.phone) {
+        learner.person.phones.push({
+          number: updateData.phone,
+          type: 'mobile',
+          isPrimary: true,
+          verified: false,
+          allowSMS: true
+        });
+      }
     }
     if (updateData.dateOfBirth !== undefined) {
-      learner.dateOfBirth = updateData.dateOfBirth;
+      learner.person.dateOfBirth = updateData.dateOfBirth;
     }
     if (updateData.address) {
-      // Merge address fields
-      learner.address = {
-        ...learner.address,
-        ...updateData.address
-      };
+      // Merge address fields - update primary address or add new one
+      const primaryAddressIndex = learner.person.addresses.findIndex(a => a.isPrimary);
+      if (primaryAddressIndex >= 0) {
+        const existingAddress = learner.person.addresses[primaryAddressIndex];
+        learner.person.addresses[primaryAddressIndex] = {
+          street1: updateData.address.street || existingAddress.street1,
+          city: updateData.address.city || existingAddress.city,
+          state: updateData.address.state || existingAddress.state,
+          postalCode: updateData.address.zipCode || existingAddress.postalCode,
+          country: updateData.address.country || existingAddress.country,
+          type: existingAddress.type,
+          isPrimary: true
+        };
+      } else if (updateData.address.street || updateData.address.city) {
+        learner.person.addresses.push({
+          street1: updateData.address.street || '',
+          city: updateData.address.city || '',
+          state: updateData.address.state || '',
+          postalCode: updateData.address.zipCode || '',
+          country: updateData.address.country || 'US',
+          type: 'home',
+          isPrimary: true
+        });
+      }
     }
     await learner.save();
 
@@ -643,9 +991,9 @@ export class LearnersService {
         role: 'learner',
         status: user.isActive ? 'active' : 'suspended',
         department: departmentInfo,
-        phone: learner.phoneNumber || null,
-        dateOfBirth: learner.dateOfBirth || null,
-        address: learner.address || null,
+        phone: learner.person.phones?.[0]?.number || null,
+        dateOfBirth: learner.person.dateOfBirth || null,
+        address: learner.person.addresses?.[0] || null,
         updatedAt: user.updatedAt
       }
     };
@@ -661,7 +1009,7 @@ export class LearnersService {
     }
 
     const user = await User.findById(learnerId);
-    if (!user || !user.roles.includes('learner')) {
+    if (!user || !user.userTypes.includes('learner')) {
       throw ApiError.notFound('Learner not found');
     }
 

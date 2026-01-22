@@ -714,7 +714,7 @@ async function main() {
       memberships: [
         {
           departmentId: cognitive._id,
-          roles: ['instructor'],
+          roles: ['instructor', 'content-admin', 'department-admin'],
           isPrimary: true
         },
         {
@@ -882,6 +882,33 @@ async function main() {
       prerequisites: [courseEMDR101._id]
     });
 
+    // Riley's courses - Cognitive Therapy department
+    const courseCOG101 = await ensureCourse({
+      name: 'Cognitive Assessment Fundamentals',
+      code: 'COG101',
+      departmentId: cognitive._id,
+      credits: 3,
+      createdBy: leadInstructorStaff._id
+    });
+
+    const courseCOG201 = await ensureCourse({
+      name: 'Advanced Cognitive Interventions',
+      code: 'COG201',
+      departmentId: cognitive._id,
+      credits: 4,
+      prerequisites: [courseCOG101._id],
+      createdBy: leadInstructorStaff._id
+    });
+
+    const courseCOG301 = await ensureCourse({
+      name: 'Cognitive Therapy Practicum',
+      code: 'COG301',
+      departmentId: cognitive._id,
+      credits: 4,
+      prerequisites: [courseCOG201._id],
+      createdBy: leadInstructorStaff._id
+    });
+
     console.log('Creating programs...');
     const programCBT = await ensureProgram({
       name: 'CBT Certificate',
@@ -964,6 +991,40 @@ async function main() {
       maxEnrollment: 18
     });
 
+    // Riley's classes
+    const classCOG101 = await ensureClass({
+      name: 'COG101 - Fall Cohort',
+      courseId: courseCOG101._id,
+      academicYearId: academicYear._id,
+      termCode: 'FALL2025',
+      startDate: new Date('2025-09-08'),
+      endDate: new Date('2025-12-08'),
+      instructorIds: [leadInstructorStaff._id],
+      maxEnrollment: 25
+    });
+
+    const classCOG201 = await ensureClass({
+      name: 'COG201 - Fall Cohort',
+      courseId: courseCOG201._id,
+      academicYearId: academicYear._id,
+      termCode: 'FALL2025',
+      startDate: new Date('2025-09-10'),
+      endDate: new Date('2025-12-10'),
+      instructorIds: [leadInstructorStaff._id],
+      maxEnrollment: 20
+    });
+
+    const classCOG301 = await ensureClass({
+      name: 'COG301 - Fall Cohort',
+      courseId: courseCOG301._id,
+      academicYearId: academicYear._id,
+      termCode: 'FALL2025',
+      startDate: new Date('2025-09-12'),
+      endDate: new Date('2025-12-12'),
+      instructorIds: [leadInstructorStaff._id],
+      maxEnrollment: 15
+    });
+
     console.log('Creating content and course modules...');
     const courseList = [
       courseBH101,
@@ -971,7 +1032,26 @@ async function main() {
       courseCBT101,
       courseCBT201,
       courseEMDR101,
-      courseEMDR201
+      courseEMDR201,
+      courseCOG101,
+      courseCOG201,
+      courseCOG301
+    ];
+
+    // Riley's courses get quiz-heavy content (assessment focused)
+    const rileyModuleTemplates = [
+      {
+        title: 'Theory & Concepts',
+        types: ['document', 'quiz'] as const
+      },
+      {
+        title: 'Assessment Skills',
+        types: ['quiz', 'quiz'] as const
+      },
+      {
+        title: 'Comprehensive Exam',
+        types: ['quiz'] as const
+      }
     ];
 
     const moduleTemplates = [
@@ -1007,12 +1087,18 @@ async function main() {
     > = {};
 
     for (const course of courseList) {
-      const owner =
-        course.departmentId.toString() === behavioral._id.toString()
+      // Determine content owner based on department
+      const isRileyCourse = course.createdBy?.toString() === leadInstructorStaff._id.toString();
+      const owner = isRileyCourse
+        ? leadInstructorStaff._id
+        : course.departmentId.toString() === behavioral._id.toString()
           ? instructorStaff._id
           : course.departmentId.toString() === emdr._id.toString()
             ? deptAdminStaff._id
             : contentStaff._id;
+
+      // Use quiz-heavy templates for Riley's courses
+      const templates = isRileyCourse ? rileyModuleTemplates : moduleTemplates;
 
       const courseModules: Array<{
         moduleNumber: number;
@@ -1022,10 +1108,9 @@ async function main() {
       const allContent: any[] = [];
       let sequence = 1;
 
-      for (const [moduleIndex, moduleTemplate] of moduleTemplates.entries()) {
+      for (const [moduleIndex, moduleTemplate] of templates.entries()) {
         const moduleNumber = moduleIndex + 1;
         const moduleContents: any[] = [];
-        let sectionNumber = 1;
 
         for (const contentType of moduleTemplate.types) {
           const content = await ensureContent({
@@ -1041,14 +1126,12 @@ async function main() {
             contentId: content._id,
             sequence,
             moduleNumber,
-            sectionNumber,
             isRequired: contentType !== 'document'
           });
 
           moduleContents.push(content);
           allContent.push(content);
           sequence += 1;
-          sectionNumber += 1;
         }
 
         if (course.code === 'CBT101' && moduleNumber === 3) {
@@ -1065,7 +1148,6 @@ async function main() {
             contentId: scorm._id,
             sequence,
             moduleNumber,
-            sectionNumber,
             isRequired: true
           });
 
@@ -1117,7 +1199,9 @@ async function main() {
           options,
           correctAnswer: questionType === 'multiple-choice' ? 'Option A' : questionType === 'true-false' ? 'True' : 'Sample answer',
           difficulty: 'medium',
-          tags: [course.code.toLowerCase(), `module-${moduleNumber}`, 'seeded']
+          tags: [course.code.toLowerCase(), `module-${moduleNumber}`, 'seeded'],
+          questionBankIds: [bank._id.toString()],
+          explanation: `This is the explanation for question ${index + 1} in ${course.code}`
         });
         createdQuestions.push(question._id);
       }
@@ -1160,15 +1244,22 @@ async function main() {
       { learner: learnerOne, classItem: classCBT101 },
       { learner: learnerOne, classItem: classBH101 },
       { learner: learnerOne, classItem: classCBT201 },
+      { learner: learnerOne, classItem: classCOG101 },
       { learner: learnerTwo, classItem: classBH101 },
       { learner: learnerTwo, classItem: classEMDR101 },
       { learner: learnerTwo, classItem: classBH201 },
+      { learner: learnerTwo, classItem: classCOG101 },
+      { learner: learnerTwo, classItem: classCOG201 },
       { learner: learnerThree, classItem: classEMDR101 },
       { learner: learnerThree, classItem: classEMDR201 },
       { learner: learnerThree, classItem: classCBT101 },
+      { learner: learnerThree, classItem: classCOG101 },
       { learner: learnerFour, classItem: classBH101 },
       { learner: learnerFour, classItem: classBH201 },
-      { learner: learnerFour, classItem: classCBT101 }
+      { learner: learnerFour, classItem: classCBT101 },
+      { learner: learnerFour, classItem: classCOG101 },
+      { learner: learnerFour, classItem: classCOG201 },
+      { learner: learnerFour, classItem: classCOG301 }
     ];
 
     const enrollmentCounts = new Map<string, number>();
@@ -1190,7 +1281,10 @@ async function main() {
       classCBT101,
       classCBT201,
       classEMDR101,
-      classEMDR201
+      classEMDR201,
+      classCOG101,
+      classCOG201,
+      classCOG301
     ]) {
       classItem.currentEnrollment = enrollmentCounts.get(classItem._id.toString()) || 0;
       await classItem.save();
@@ -1204,7 +1298,10 @@ async function main() {
       classCBT101,
       classCBT201,
       classEMDR101,
-      classEMDR201
+      classEMDR201,
+      classCOG101,
+      classCOG201,
+      classCOG301
     ];
     const courseById = new Map(courseList.map(course => [course._id.toString(), course]));
     const classByCourseId = new Map(classes.map(classItem => [classItem.courseId.toString(), classItem]));

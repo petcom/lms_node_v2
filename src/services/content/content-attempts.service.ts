@@ -82,7 +82,7 @@ export class ContentAttemptsService {
       throw ApiError.unauthorized('User not found');
     }
 
-    const isLearner = user.roles?.includes('learner') && !user.roles?.includes('global-admin');
+    const isLearner = user.userTypes?.includes('learner') && !user.userTypes?.includes('global-admin');
 
     if (isLearner) {
       // Learners can only see their own attempts
@@ -96,7 +96,7 @@ export class ContentAttemptsService {
       const learnerStaff = await Staff.findById(filters.learnerId).lean();
       if (learnerStaff) {
         const learnerDeptIds = learnerStaff.departmentMemberships?.map((m: any) => m.departmentId.toString()) || [];
-        const hasAccess = learnerDeptIds.some(id => departmentIds.includes(id)) || user.roles?.includes('global-admin');
+        const hasAccess = learnerDeptIds.some(id => departmentIds.includes(id)) || user.userTypes?.includes('global-admin');
 
         if (!hasAccess) {
           throw ApiError.forbidden('No access to this learner\'s attempts');
@@ -364,7 +364,7 @@ export class ContentAttemptsService {
     // Check access permissions
     const user = await User.findById(userId).lean();
     const isOwner = attempt.learnerId._id.toString() === userId;
-    const isStaff = user?.roles?.some(r => ['global-admin', 'department-admin', 'content-admin'].includes(r));
+    const isStaff = user?.userTypes?.some((r: string) => ['global-admin', 'staff'].includes(r));
 
     if (!isOwner && !isStaff) {
       throw ApiError.forbidden('Cannot access this attempt');
@@ -616,7 +616,7 @@ export class ContentAttemptsService {
     // Check access permissions
     const user = await User.findById(userId).lean();
     const isOwner = attempt.learnerId.toString() === userId;
-    const isStaff = user?.roles?.some(r => ['global-admin', 'department-admin', 'content-admin'].includes(r));
+    const isStaff = user?.userTypes?.some((r: string) => ['global-admin', 'staff'].includes(r));
 
     if (!isOwner && !isStaff) {
       throw ApiError.forbidden('Cannot access this attempt');
@@ -850,7 +850,7 @@ export class ContentAttemptsService {
 
     // Check admin permissions
     const user = await User.findById(userId).lean();
-    const isAdmin = user?.roles?.some(r => ['global-admin', 'system-admin'].includes(r));
+    const isAdmin = user?.userTypes?.some((r: string) => ['global-admin'].includes(r));
 
     if (!isAdmin) {
       throw ApiError.forbidden('Insufficient permissions to delete attempts');

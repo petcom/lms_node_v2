@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { isAuthenticated } from '@/middlewares/isAuthenticated';
-import { requireAccessRight } from '@/middlewares/requireAccessRight';
+import { authorize } from '@/middlewares/authorize';
 import { requireEscalation } from '@/middlewares/requireEscalation';
 import * as programsController from '@/controllers/academic/programs.controller';
 
@@ -23,7 +23,7 @@ router.use(isAuthenticated);
  * Service Layer: Department-scoped for staff, all published for learners
  */
 router.get('/',
-  requireAccessRight(['content:programs:manage', 'content:courses:read']),
+  authorize.anyOf(['content:programs:manage', 'content:courses:read']),
   programsController.listPrograms
 );
 
@@ -33,7 +33,7 @@ router.get('/',
  * Access Right: content:programs:manage
  */
 router.post('/',
-  requireAccessRight('content:programs:manage'),
+  authorize('content:programs:manage'),
   programsController.createProgram
 );
 
@@ -43,7 +43,7 @@ router.post('/',
  * Access Right: content:programs:manage OR content:courses:read
  */
 router.get('/:id',
-  requireAccessRight(['content:programs:manage', 'content:courses:read']),
+  authorize.anyOf(['content:programs:manage', 'content:courses:read']),
   programsController.getProgramById
 );
 
@@ -53,7 +53,7 @@ router.get('/:id',
  * Access Right: content:programs:manage
  */
 router.put('/:id',
-  requireAccessRight('content:programs:manage'),
+  authorize('content:programs:manage'),
   programsController.updateProgram
 );
 
@@ -65,7 +65,7 @@ router.put('/:id',
  */
 router.delete('/:id',
   requireEscalation,
-  requireAccessRight('content:programs:manage'),
+  authorize('content:programs:manage'),
   programsController.deleteProgram
 );
 
@@ -75,7 +75,7 @@ router.delete('/:id',
  * Access Right: content:programs:manage OR content:courses:read
  */
 router.get('/:id/levels',
-  requireAccessRight(['content:programs:manage', 'content:courses:read']),
+  authorize.anyOf(['content:programs:manage', 'content:courses:read']),
   programsController.getProgramLevels
 );
 
@@ -85,7 +85,7 @@ router.get('/:id/levels',
  * Access Right: content:programs:manage
  */
 router.post('/:id/levels',
-  requireAccessRight('content:programs:manage'),
+  authorize('content:programs:manage'),
   programsController.createProgramLevel
 );
 
@@ -95,7 +95,7 @@ router.post('/:id/levels',
  * Access Right: content:courses:read
  */
 router.get('/:id/courses',
-  requireAccessRight('content:courses:read'),
+  authorize('content:courses:read'),
   programsController.getProgramCourses
 );
 
@@ -105,7 +105,7 @@ router.get('/:id/courses',
  * Access Right: enrollment:department:read
  */
 router.get('/:id/enrollments',
-  requireAccessRight('enrollment:department:read'),
+  authorize('enrollment:department:read'),
   programsController.getProgramEnrollments
 );
 
@@ -117,7 +117,7 @@ router.get('/:id/enrollments',
  */
 router.patch('/:id/department',
   requireEscalation,
-  requireAccessRight('content:programs:manage'),
+  authorize('content:programs:manage'),
   programsController.updateProgramDepartment
 );
 
@@ -127,7 +127,7 @@ router.patch('/:id/department',
  * Access Right: content:programs:manage
  */
 router.put('/:id/certificate',
-  requireAccessRight('content:programs:manage'),
+  authorize('content:programs:manage'),
   programsController.updateCertificateConfig
 );
 

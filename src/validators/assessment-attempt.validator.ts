@@ -126,7 +126,7 @@ const gradeQuestionSchema = Joi.object({
  */
 export const validateStartAttempt = (
   req: Request,
-  res: Response,
+  _res: Response,
   next: NextFunction
 ) => {
   const { error } = startAttemptSchema.validate(req.body, {
@@ -152,7 +152,7 @@ export const validateStartAttempt = (
  */
 export const validateSaveProgress = (
   req: Request,
-  res: Response,
+  _res: Response,
   next: NextFunction
 ) => {
   const { error } = saveProgressSchema.validate(req.body, {
@@ -178,7 +178,7 @@ export const validateSaveProgress = (
  */
 export const validateGradeQuestion = (
   req: Request,
-  res: Response,
+  _res: Response,
   next: NextFunction
 ) => {
   const { error } = gradeQuestionSchema.validate(req.body, {

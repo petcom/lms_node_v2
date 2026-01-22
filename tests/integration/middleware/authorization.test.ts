@@ -26,6 +26,7 @@ import Department from '@/models/organization/Department.model';
 import { RoleDefinition } from '@/models/RoleDefinition.model';
 import { AccessRight } from '@/models/AccessRight.model';
 import { describeIfMongo } from '../../helpers/mongo-guard';
+import { refreshDepartmentCache } from '../../helpers/department-cache';
 
 describeIfMongo('Authorization Middleware Integration Tests', () => {
   let mongoServer: MongoMemoryServer;
@@ -74,6 +75,9 @@ describeIfMongo('Authorization Middleware Integration Tests', () => {
       slug: 'department-b',
       isActive: true
     });
+
+    // Refresh department cache to pick up test departments
+    await refreshDepartmentCache();
 
     // Seed role definitions
     await RoleDefinition.create([

@@ -257,7 +257,7 @@ const moveLearningUnitSchema = Joi.object({
  */
 export const validateCreateLearningUnit = (
   req: Request,
-  res: Response,
+  _res: Response,
   next: NextFunction
 ) => {
   const { error } = createLearningUnitSchema.validate(req.body, {
@@ -280,7 +280,7 @@ export const validateCreateLearningUnit = (
  */
 export const validateUpdateLearningUnit = (
   req: Request,
-  res: Response,
+  _res: Response,
   next: NextFunction
 ) => {
   const { error } = updateLearningUnitSchema.validate(req.body, {
@@ -304,7 +304,7 @@ export const validateUpdateLearningUnit = (
  */
 export const validateReorderLearningUnits = (
   req: Request,
-  res: Response,
+  _res: Response,
   next: NextFunction
 ) => {
   const { error } = reorderLearningUnitsSchema.validate(req.body, {
@@ -328,7 +328,7 @@ export const validateReorderLearningUnits = (
  */
 export const validateMoveLearningUnit = (
   req: Request,
-  res: Response,
+  _res: Response,
   next: NextFunction
 ) => {
   const { error } = moveLearningUnitSchema.validate(req.body, {

@@ -23,8 +23,23 @@
  */
 
 import { Request, Response, NextFunction } from 'express';
-import { UserTypeObject } from '@contracts/api/lookup-values.contract';
 import { UserType } from '@/models/auth/User.model';
+
+/**
+ * UserType object format for API responses
+ * Inlined from @contracts/api/lookup-values.contract to avoid rootDir issues
+ */
+export interface UserTypeObject {
+  /**
+   * The userType key (matches LookupValue.key)
+   */
+  _id: 'learner' | 'staff' | 'global-admin';
+
+  /**
+   * Human-readable display label (from LookupValue.displayAs)
+   */
+  displayAs: string;
+}
 import { logger } from '@/config/logger';
 
 /**

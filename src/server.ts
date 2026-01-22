@@ -5,6 +5,8 @@ import { logger } from './config/logger';
 import { disconnectRedis } from './config/redis';
 import { RoleRegistry } from './services/role-registry.service';
 import { setRoleRegistry } from './middlewares/userTypeHydration';
+import { roleCache } from './services/auth/role-cache.service';
+import { departmentCacheService } from './services/auth/department-cache.service';
 
 async function startServer() {
   try {
@@ -35,6 +37,27 @@ async function startServer() {
       process.exit(1);
     }
 
+    // Initialize caches (non-fatal - will fallback to database queries if initialization fails)
+    logger.info('Initializing authorization caches...');
+    try {
+      await roleCache.initialize();
+      const roleCacheStats = roleCache.getStats();
+      logger.info(`RoleCache initialized: ${roleCacheStats.size} role definitions cached`);
+    } catch (error: any) {
+      logger.warn('RoleCache initialization failed - will fallback to database queries:', error.message);
+    }
+
+    try {
+      await departmentCacheService.initialize();
+      const deptCacheStats = departmentCacheService.getStats();
+      logger.info(
+        `DepartmentCache initialized: ${deptCacheStats.parentToChildrenCount} parent->children mappings, ` +
+        `${deptCacheStats.childToParentCount} child->parent mappings`
+      );
+    } catch (error: any) {
+      logger.warn('DepartmentCache initialization failed - will fallback to database queries:', error.message);
+    }
+
     // Start server
     const server = app.listen(config.port, () => {
       logger.info(`Server running on port ${config.port} in ${config.env} mode`);
@@ -43,13 +66,19 @@ async function startServer() {
     // Graceful shutdown handler
     const gracefulShutdown = async (signal: string) => {
       logger.info(`${signal} received. Closing server gracefully...`);
-      
+
       // Close all keep-alive connections immediately
       server.closeAllConnections();
-      
+
       server.close(async () => {
         logger.info('HTTP server closed');
         try {
+          // Clear caches before disconnecting
+          logger.info('Clearing authorization caches...');
+          roleCache.clear();
+          departmentCacheService.shutdown();
+          logger.info('Authorization caches cleared');
+
           await disconnectRedis();
           await disconnectDatabase();
           logger.info('All connections closed. Exiting.');
@@ -59,7 +88,7 @@ async function startServer() {
           process.exit(1);
         }
       });
-      
+
       // Force exit if graceful shutdown takes too long
       setTimeout(() => {
         logger.warn('Forcing shutdown after timeout');

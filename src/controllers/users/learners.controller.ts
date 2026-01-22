@@ -21,6 +21,7 @@ export const listLearners = asyncHandler(async (req: Request, res: Response) => 
   const program = req.query.program as string | undefined;
   const status = req.query.status as 'active' | 'withdrawn' | 'completed' | 'suspended' | undefined;
   const department = req.query.department as string | undefined;
+  const includeSubdepartments = req.query.includeSubdepartments === 'true';
   const sort = req.query.sort as string | undefined;
 
   // Validate page
@@ -55,6 +56,7 @@ export const listLearners = asyncHandler(async (req: Request, res: Response) => 
     program,
     status,
     department,
+    includeSubdepartments,
     sort
   };
 

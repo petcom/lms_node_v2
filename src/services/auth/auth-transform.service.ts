@@ -16,7 +16,14 @@
  * @module services/auth/auth-transform
  */
 
-import { UserTypeObject } from '@contracts/api/lookup-values.contract';
+/**
+ * UserTypeObject interface (inlined from contracts)
+ */
+interface UserTypeObject {
+  _id: string;
+  code?: string;
+  displayAs: string;
+}
 
 /**
  * IRoleRegistry Interface (mocked initially, will be replaced by real RoleRegistry)

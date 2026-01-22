@@ -7,8 +7,6 @@
  * @module workers/report-worker
  */
 
-import mongoose from 'mongoose';
-import { config } from '@/config/environment';
 import { connectDatabase } from '@/config/database';
 import { logger } from '@/config/logger';
 import reportJobService from '@/services/reports/report-jobs.service';
@@ -63,7 +61,7 @@ class ReportGenerator {
    * Fetch data based on report type and parameters
    */
   private async fetchReportData(job: any): Promise<any[]> {
-    const { reportType, parameters } = job;
+    const { reportType: _reportType, parameters } = job;
 
     // Build query based on parameters
     const query: any = {};
@@ -126,7 +124,7 @@ class ReportGenerator {
   /**
    * Format data as JSON
    */
-  private formatAsJSON(data: any[], groupBy?: string[], measures?: string[]): any {
+  private formatAsJSON(data: any[], groupBy?: string[], _measures?: string[]): any {
     if (!groupBy || groupBy.length === 0) {
       return { totalRecords: data.length, data };
     }
@@ -156,7 +154,7 @@ class ReportGenerator {
   /**
    * Format data as CSV
    */
-  private formatAsCSV(data: any[], groupBy?: string[], measures?: string[]): string {
+  private formatAsCSV(data: any[], _groupBy?: string[], _measures?: string[]): string {
     if (data.length === 0) return 'No data';
 
     // Simple CSV generation

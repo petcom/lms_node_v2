@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { isAuthenticated } from '@/middlewares/isAuthenticated';
-import { requireAccessRight } from '@/middlewares/requireAccessRight';
+import { authorize } from '@/middlewares/authorize';
 import { requireEscalation } from '@/middlewares/requireEscalation';
 import * as auditLogsController from '@/controllers/system/audit-logs.controller';
 
@@ -39,7 +39,7 @@ router.use(isAuthenticated);
  */
 router.get('/',
   requireEscalation,
-  requireAccessRight('audit:logs:read'),
+  authorize('audit:logs:read'),
   auditLogsController.listAuditLogs
 );
 
@@ -52,7 +52,7 @@ router.get('/',
  */
 router.get('/:id',
   requireEscalation,
-  requireAccessRight('audit:logs:read'),
+  authorize('audit:logs:read'),
   auditLogsController.getAuditLogById
 );
 
@@ -66,7 +66,7 @@ router.get('/:id',
  */
 router.get('/export',
   requireEscalation,
-  requireAccessRight('audit:logs:export'),
+  authorize('audit:logs:export'),
   auditLogsController.exportAuditLogs
 );
 
@@ -79,7 +79,7 @@ router.get('/export',
  */
 router.get('/user/:userId',
   requireEscalation,
-  requireAccessRight('audit:logs:read'),
+  authorize('audit:logs:read'),
   auditLogsController.getUserActivity
 );
 
@@ -97,7 +97,7 @@ router.get('/user/:userId',
  */
 router.get('/entity/:entityType/:entityId',
   requireEscalation,
-  requireAccessRight(['audit:logs:read', 'audit:content:read', 'audit:enrollment:read', 'audit:billing:read']),
+  authorize.anyOf(['audit:logs:read', 'audit:content:read', 'audit:enrollment:read', 'audit:billing:read']),
   auditLogsController.getEntityHistory
 );
 

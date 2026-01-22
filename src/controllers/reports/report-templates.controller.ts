@@ -6,12 +6,11 @@
 import { Request, Response } from 'express';
 import mongoose from 'mongoose';
 import { asyncHandler } from '@/utils/asyncHandler';
-import { ApiError } from '@/utils/ApiError';
 import reportTemplateService from '@/services/reports/report-templates.service';
 
 export const createTemplate = asyncHandler(async (req: Request, res: Response) => {
   const userId = new mongoose.Types.ObjectId(req.user!.userId);
-  const userDepartmentIds = req.user!.departmentIds?.map((id: string) => new mongoose.Types.ObjectId(id)) || [];
+  const userDepartmentIds = (req.user!.departmentMemberships?.map(m => m.departmentId) || []).map((id: string) => new mongoose.Types.ObjectId(id));
 
   const template = await reportTemplateService.createReportTemplate({
     ...req.body,
@@ -28,7 +27,7 @@ export const createTemplate = asyncHandler(async (req: Request, res: Response) =
 
 export const listTemplates = asyncHandler(async (req: Request, res: Response) => {
   const userId = new mongoose.Types.ObjectId(req.user!.userId);
-  const userDepartmentIds = req.user!.departmentIds?.map((id: string) => new mongoose.Types.ObjectId(id)) || [];
+  const userDepartmentIds = (req.user!.departmentMemberships?.map(m => m.departmentId) || []).map((id: string) => new mongoose.Types.ObjectId(id));
   const userRoles = req.user!.roles || [];
 
   const page = parseInt(req.query.page as string) || 1;
@@ -58,7 +57,7 @@ export const listTemplates = asyncHandler(async (req: Request, res: Response) =>
 
 export const getTemplate = asyncHandler(async (req: Request, res: Response) => {
   const userId = new mongoose.Types.ObjectId(req.user!.userId);
-  const userDepartmentIds = req.user!.departmentIds?.map((id: string) => new mongoose.Types.ObjectId(id)) || [];
+  const userDepartmentIds = (req.user!.departmentMemberships?.map(m => m.departmentId) || []).map((id: string) => new mongoose.Types.ObjectId(id));
 
   const template = await reportTemplateService.getReportTemplateById(
     req.params.templateId,
@@ -71,7 +70,7 @@ export const getTemplate = asyncHandler(async (req: Request, res: Response) => {
 
 export const updateTemplate = asyncHandler(async (req: Request, res: Response) => {
   const userId = new mongoose.Types.ObjectId(req.user!.userId);
-  const userDepartmentIds = req.user!.departmentIds?.map((id: string) => new mongoose.Types.ObjectId(id)) || [];
+  const userDepartmentIds = (req.user!.departmentMemberships?.map(m => m.departmentId) || []).map((id: string) => new mongoose.Types.ObjectId(id));
 
   const template = await reportTemplateService.updateReportTemplate(
     req.params.templateId,
@@ -85,7 +84,7 @@ export const updateTemplate = asyncHandler(async (req: Request, res: Response) =
 
 export const deleteTemplate = asyncHandler(async (req: Request, res: Response) => {
   const userId = new mongoose.Types.ObjectId(req.user!.userId);
-  const userDepartmentIds = req.user!.departmentIds?.map((id: string) => new mongoose.Types.ObjectId(id)) || [];
+  const userDepartmentIds = (req.user!.departmentMemberships?.map(m => m.departmentId) || []).map((id: string) => new mongoose.Types.ObjectId(id));
 
   await reportTemplateService.deleteReportTemplate(req.params.templateId, userId, userDepartmentIds);
 
@@ -94,7 +93,7 @@ export const deleteTemplate = asyncHandler(async (req: Request, res: Response) =
 
 export const cloneTemplate = asyncHandler(async (req: Request, res: Response) => {
   const userId = new mongoose.Types.ObjectId(req.user!.userId);
-  const userDepartmentIds = req.user!.departmentIds?.map((id: string) => new mongoose.Types.ObjectId(id)) || [];
+  const userDepartmentIds = (req.user!.departmentMemberships?.map(m => m.departmentId) || []).map((id: string) => new mongoose.Types.ObjectId(id));
 
   const template = await reportTemplateService.cloneReportTemplate(
     req.params.templateId,

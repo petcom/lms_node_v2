@@ -17,7 +17,7 @@
 
 import { Types } from 'mongoose';
 import jwt from 'jsonwebtoken';
-import { GlobalAdmin, IGlobalAdmin } from '@/models/GlobalAdmin.model';
+import { GlobalAdmin } from '@/models/GlobalAdmin.model';
 import { RoleDefinition } from '@/models/RoleDefinition.model';
 import { Cache } from '@/config/redis';
 import { config } from '@/config/environment';

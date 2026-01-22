@@ -12,7 +12,7 @@ import { User } from '@/models/auth/User.model';
 import { Staff } from '@/models/auth/Staff.model';
 import Department from '@/models/organization/Department.model';
 import { ApiError } from '@/utils/ApiError';
-import { maskLastName, maskUserList } from '@/utils/dataMasking';
+import { maskLastName } from '@/utils/dataMasking';
 import { getDepartmentAndSubdepartments } from '@/utils/departmentHierarchy';
 
 /**
@@ -908,7 +908,7 @@ export class ReportsService {
           lastName: learner.person.lastName,
           email: user.email,
           studentId: (learner as any).studentId || learner._id.toString() || null,
-          dateOfBirth: learner.dateOfBirth || null
+          dateOfBirth: learner.person.dateOfBirth || null
         },
         institution: {
           name: 'Professional Development Institute',
@@ -1114,8 +1114,9 @@ export class ReportsService {
       const moduleProgress: any[] = [];
       if (includeModules) {
         for (const content of courseContents) {
+          if (!content.contentId) continue;
           const contentAttempts = scormAttempts.filter(a =>
-            a.contentId.toString() === content.contentId.toString()
+            a.contentId.toString() === content.contentId!.toString()
           );
           const latestAttempt = contentAttempts[contentAttempts.length - 1];
 
@@ -1140,7 +1141,7 @@ export class ReportsService {
           const moduleTimeSpent = contentAttempts.reduce((sum, a) => sum + (a.totalTime || 0), 0);
 
           moduleProgress.push({
-            moduleId: content.contentId.toString(),
+            moduleId: content.contentId!.toString(),
             moduleName: content.metadata?.title || `Module ${content.sequence}`,
             moduleOrder: content.sequence,
             status: moduleStatus,
@@ -1235,7 +1236,7 @@ export class ReportsService {
         }
 
         moduleAnalytics.push({
-          moduleId: content.contentId.toString(),
+          moduleId: content.contentId!.toString(),
           moduleName: content.metadata?.title || `Module ${content.sequence}`,
           moduleOrder: content.sequence,
           moduleType: content.metadata?.type || 'custom',
@@ -1730,7 +1731,7 @@ export class ReportsService {
 
       staffActivity.push({
         staffId: staffMember._id.toString(),
-        staffName: `${staffMember.firstName} ${staffMember.lastName}`,
+        staffName: `${staffMember.person.firstName} ${staffMember.person.lastName}`,
         role: (staffMember as any).role || 'Instructor' || 'Instructor',
         coursesManaged: managedCourses.length,
         activeEnrollments: staffEnrollments.length,

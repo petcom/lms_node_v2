@@ -66,7 +66,7 @@ const gradeOverrideSchema = Joi.object({
  */
 export const validateGradeOverride = (
   req: Request,
-  res: Response,
+  _res: Response,
   next: NextFunction
 ) => {
   const { error } = gradeOverrideSchema.validate(req.body, {

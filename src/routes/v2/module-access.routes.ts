@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { isAuthenticated } from '@/middlewares/isAuthenticated';
-import { requireAccessRight } from '@/middlewares/requireAccessRight';
+import { authorize } from '@/middlewares/authorize';
 import * as moduleAccessController from '@/controllers/progress/module-access.controller';
 
 const router = Router();
@@ -28,7 +28,7 @@ router.use(isAuthenticated);
  * Note: This route must be defined before /:accessId to avoid conflict
  */
 router.get('/analytics/drop-off',
-  requireAccessRight(['read:analytics', 'reports:department:read'], { requireAny: true }),
+  authorize.anyOf(['read:analytics', 'reports:department:read']),
   moduleAccessController.getDropOffAnalytics
 );
 
@@ -41,7 +41,7 @@ router.get('/analytics/drop-off',
  * Note: This route must be defined before /:accessId to avoid conflict
  */
 router.get('/my',
-  requireAccessRight(['grades:own:read']),
+  authorize('grades:own:read'),
   moduleAccessController.getMyAccess
 );
 
@@ -52,7 +52,7 @@ router.get('/my',
  * Access: read:analytics OR reports:department:read (for module-level), grades:own:read (for own enrollment)
  */
 router.get('/',
-  requireAccessRight(['read:analytics', 'reports:department:read', 'grades:own:read'], { requireAny: true }),
+  authorize.anyOf(['read:analytics', 'reports:department:read', 'grades:own:read']),
   moduleAccessController.listAccess
 );
 
@@ -63,7 +63,7 @@ router.get('/',
  * Access: read:courses (basic learner access)
  */
 router.post('/',
-  requireAccessRight(['read:courses']),
+  authorize('read:courses'),
   moduleAccessController.recordAccess
 );
 
@@ -73,7 +73,7 @@ router.post('/',
  * Access: read:analytics OR grades:own:read
  */
 router.get('/:accessId',
-  requireAccessRight(['read:analytics', 'grades:own:read'], { requireAny: true }),
+  authorize.anyOf(['read:analytics', 'grades:own:read']),
   moduleAccessController.getAccessRecord
 );
 
@@ -84,7 +84,7 @@ router.get('/:accessId',
  * Access: read:courses (learner updating own progress)
  */
 router.put('/:accessId',
-  requireAccessRight(['read:courses']),
+  authorize('read:courses'),
   moduleAccessController.updateAccess
 );
 

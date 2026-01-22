@@ -26,18 +26,13 @@ import { User } from '../models/auth/User.model';
 import { Staff } from '../models/auth/Staff.model';
 import { Learner } from '../models/auth/Learner.model';
 import { GlobalAdmin } from '../models/GlobalAdmin.model';
-import { Department } from '../models/organization/Department.model';
+import Department from '../models/organization/Department.model';
 import { RoleDefinition } from '../models/RoleDefinition.model';
 import { AccessRight } from '../models/AccessRight.model';
 
 // Master Department constants
 const MASTER_DEPARTMENT_ID = new mongoose.Types.ObjectId('000000000000000000000001');
 const MASTER_DEPARTMENT_NAME = 'System Administration';
-
-// Role definitions
-const LEARNER_ROLES = ['course-taker', 'auditor', 'learner-supervisor'] as const;
-const STAFF_ROLES = ['instructor', 'department-admin', 'content-admin', 'billing-admin'] as const;
-const GLOBAL_ADMIN_ROLES = ['system-admin', 'enrollment-admin', 'course-admin', 'theme-admin', 'financial-admin'] as const;
 
 // Legacy role mapping (V1 → V2)
 const LEGACY_ROLE_MAPPING: Record<string, { userTypes: string[], roles: string[] }> = {
@@ -539,7 +534,7 @@ async function migrateStaff(session: mongoose.ClientSession): Promise<number> {
   for (const staff of staffRecords) {
     // Skip if already migrated
     if ((staff as any).departmentMemberships && (staff as any).departmentMemberships.length > 0) {
-      console.log(`   ℹ️  Staff ${staff.userId} already migrated, skipping`);
+      console.log(`   ℹ️  Staff ${staff._id} already migrated, skipping`);
       continue;
     }
 
@@ -565,7 +560,7 @@ async function migrateStaff(session: mongoose.ClientSession): Promise<number> {
     (staff as any).departmentMemberships = departmentMemberships;
     await staff.save({ session });
     updated++;
-    console.log(`   ✓ Migrated staff: ${staff.userId} → roles: ${mapping.roles.join(', ')}`);
+    console.log(`   ✓ Migrated staff: ${staff._id} → roles: ${mapping.roles.join(', ')}`);
   }
 
   return updated;
@@ -581,7 +576,7 @@ async function migrateLearners(session: mongoose.ClientSession): Promise<number>
   for (const learner of learnerRecords) {
     // Skip if already migrated
     if ((learner as any).departmentMemberships && (learner as any).departmentMemberships.length > 0) {
-      console.log(`   ℹ️  Learner ${learner.userId} already migrated, skipping`);
+      console.log(`   ℹ️  Learner ${learner._id} already migrated, skipping`);
       continue;
     }
 
@@ -605,7 +600,7 @@ async function migrateLearners(session: mongoose.ClientSession): Promise<number>
     (learner as any).departmentMemberships = departmentMemberships;
     await learner.save({ session });
     updated++;
-    console.log(`   ✓ Migrated learner: ${learner.userId}`);
+    console.log(`   ✓ Migrated learner: ${learner._id}`);
   }
 
   return updated;

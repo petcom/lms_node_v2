@@ -260,7 +260,7 @@ export const getMyRoles = asyncHandler(async (req: Request, res: Response) => {
  */
 export const getMyRolesForDepartment = asyncHandler(async (req: Request, res: Response) => {
   const { departmentId } = req.params;
-  const { userType } = req.query;
+  // Note: userType query param is documented but currently unused - roles are checked across all userTypes
 
   // Extract authenticated user ID
   const userId = (req as any).user?.userId || (req as any).user?.id;

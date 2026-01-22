@@ -31,7 +31,7 @@ import { RoleDefinition, LEARNER_ROLES, STAFF_ROLES, GLOBAL_ADMIN_ROLES } from '
 
 // Configuration
 const config = {
-  mongoUri: process.env.MONGO_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017/lms_v2_dev'
+  mongoUri: process.env.MONGO_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017/lms_mock'
 };
 
 /**

@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { isAuthenticated } from '@/middlewares/isAuthenticated';
-import { requireAccessRight } from '@/middlewares/requireAccessRight';
+import { authorize } from '@/middlewares/authorize';
 import { requireEscalation } from '@/middlewares/requireEscalation';
 import { requireAdminRole } from '@/middlewares/requireAdminRole';
 import * as staffController from '@/controllers/users/staff.controller';
@@ -26,7 +26,7 @@ router.use(isAuthenticated);
  * Service Layer: Hierarchical scoping - top-level dept members see all subdepartments
  */
 router.get('/',
-  requireAccessRight('staff:department:read'),
+  authorize('staff:department:read'),
   staffController.listStaff
 );
 
@@ -39,7 +39,7 @@ router.get('/',
  */
 router.post('/',
   requireEscalation,
-  requireAccessRight('staff:department:manage'),
+  authorize('staff:department:manage'),
   staffController.registerStaff
 );
 
@@ -50,7 +50,7 @@ router.post('/',
  * Roles: instructor, department-admin, system-admin
  */
 router.get('/:id',
-  requireAccessRight('staff:department:read'),
+  authorize('staff:department:read'),
   staffController.getStaffById
 );
 
@@ -63,7 +63,7 @@ router.get('/:id',
  */
 router.put('/:id',
   requireEscalation,
-  requireAccessRight('staff:department:manage'),
+  authorize('staff:department:manage'),
   staffController.updateStaff
 );
 
@@ -77,7 +77,7 @@ router.put('/:id',
 router.delete('/:id',
   requireEscalation,
   requireAdminRole(['system-admin']),
-  requireAccessRight('staff:department:manage'),
+  authorize('staff:department:manage'),
   staffController.deleteStaff
 );
 
@@ -90,7 +90,7 @@ router.delete('/:id',
  */
 router.patch('/:id/departments',
   requireEscalation,
-  requireAccessRight('staff:department:manage'),
+  authorize('staff:department:manage'),
   staffController.updateStaffDepartments
 );
 

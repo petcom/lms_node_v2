@@ -32,7 +32,7 @@ import crypto from 'crypto';
 
 const ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 16; // 128 bits
-const AUTH_TAG_LENGTH = 16; // 128 bits
+// Auth tag length is 16 bytes (128 bits) - documented here for reference
 const KEY_LENGTH = 32; // 256 bits
 const DEFAULT_KEY_VERSION = '01';
 
@@ -285,7 +285,7 @@ export function encryptFieldIfModified(fieldName: string) {
  * IdentificationSchema.methods.getDecryptedIdNumber = createDecryptMethod('idNumber');
  * ```
  */
-export function createDecryptMethod(fieldName: string, methodName?: string) {
+export function createDecryptMethod(fieldName: string, _methodName?: string) {
   return function(this: any): string {
     const value = this[fieldName];
     if (!value) {

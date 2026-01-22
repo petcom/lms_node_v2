@@ -8,7 +8,7 @@
  */
 
 import mongoose from 'mongoose';
-import ProgramLevel, { IProgramLevel } from '@/models/academic/ProgramLevel.model';
+import ProgramLevel from '@/models/academic/ProgramLevel.model';
 import Program from '@/models/academic/Program.model';
 import { ApiError } from '@/utils/ApiError';
 import { logger } from '@/config/logger';
@@ -133,7 +133,7 @@ export class ProgramLevelsService {
     });
 
     if (existingName) {
-      throw ApiError.conflict('Level name already exists in this program', 'DUPLICATE_NAME');
+      throw ApiError.conflict('Level name already exists in this program');
     }
 
     const level = await ProgramLevel.create({
@@ -177,7 +177,7 @@ export class ProgramLevelsService {
       });
 
       if (existingName) {
-        throw ApiError.conflict('Level name already exists in this program', 'DUPLICATE_NAME');
+        throw ApiError.conflict('Level name already exists in this program');
       }
     }
 
@@ -216,8 +216,7 @@ export class ProgramLevelsService {
 
     if (levelCount <= 1) {
       throw ApiError.conflict(
-        'Cannot delete the only level in a program. Programs must have at least one level.',
-        'LAST_LEVEL'
+        'Cannot delete the only level in a program. Programs must have at least one level.'
       );
     }
 
@@ -262,8 +261,7 @@ export class ProgramLevelsService {
 
     if (newOrder > totalLevels) {
       throw ApiError.badRequest(
-        `Order value ${newOrder} exceeds number of levels in program (${totalLevels})`,
-        'INVALID_ORDER'
+        `Order value ${newOrder} exceeds number of levels in program (${totalLevels})`
       );
     }
 

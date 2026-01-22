@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { isAuthenticated } from '@/middlewares/isAuthenticated';
-import { requireAccessRight } from '@/middlewares/requireAccessRight';
+import { authorize } from '@/middlewares/authorize';
 import {
   validateCreateModule,
   validateUpdateModule,
@@ -43,7 +43,7 @@ router.use(isAuthenticated);
  */
 router.get(
   '/:courseId/modules',
-  requireAccessRight('content:lessons:read'),
+  authorize('content:lessons:read'),
   modulesController.listModules
 );
 
@@ -68,7 +68,7 @@ router.get(
  */
 router.post(
   '/:courseId/modules',
-  requireAccessRight('content:lessons:manage'),
+  authorize('content:lessons:manage'),
   validateCreateModule,
   modulesController.createModule
 );
@@ -84,7 +84,7 @@ router.post(
  */
 router.get(
   '/:courseId/modules/:moduleId',
-  requireAccessRight('content:lessons:read'),
+  authorize('content:lessons:read'),
   modulesController.getModule
 );
 
@@ -101,7 +101,7 @@ router.get(
  */
 router.put(
   '/:courseId/modules/:moduleId',
-  requireAccessRight('content:lessons:manage'),
+  authorize('content:lessons:manage'),
   validateUpdateModule,
   modulesController.updateModule
 );
@@ -120,7 +120,7 @@ router.put(
  */
 router.delete(
   '/:courseId/modules/:moduleId',
-  requireAccessRight('content:lessons:manage'),
+  authorize('content:lessons:manage'),
   modulesController.deleteModule
 );
 
@@ -140,7 +140,7 @@ router.delete(
  */
 router.patch(
   '/:courseId/modules/reorder',
-  requireAccessRight('content:lessons:manage'),
+  authorize('content:lessons:manage'),
   validateReorderModules,
   modulesController.reorderModules
 );

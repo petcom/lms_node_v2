@@ -339,8 +339,8 @@ export class PermissionsService {
           return {
             id: user._id.toString(),
             email: user.email,
-            firstName: staff?.firstName || '',
-            lastName: staff?.lastName || '',
+            firstName: staff?.person?.firstName || '',
+            lastName: staff?.person?.lastName || '',
             assignedAt: user.createdAt // Placeholder, would need UserRole junction table for accurate date
           };
         })
@@ -629,7 +629,7 @@ export class PermissionsService {
 
     // Get all roles for the user
     const roles = await Role.find({
-      name: { $in: user.roles }
+      name: { $in: user.userTypes }
     });
 
     // Calculate effective permissions from all roles

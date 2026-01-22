@@ -1,7 +1,7 @@
 /**
  * Purge Mock Data Script for LMS V2
  * 
- * Removes all data from lms_v2_mockdata database
+ * Removes all data from lms_mock database
  * WARNING: This will delete ALL data in the mock database!
  */
 
@@ -34,7 +34,7 @@ import { AuditLog } from '../src/models/system/AuditLog.model';
 import { Report } from '../src/models/system/Report.model';
 
 // Database connection
-const MOCK_DB_URI = process.env.MOCK_DB_URI || 'mongodb://localhost:27017/lms_v2_mockdata';
+const MOCK_DB_URI = process.env.MOCK_DB_URI || 'mongodb://localhost:27017/lms_mock';
 
 const collections = [
   { name: 'SCORM Attempts', model: ScormAttempt },

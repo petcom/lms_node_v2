@@ -7,7 +7,10 @@
  *
  * Key features:
  * - Attaches userTypes[] to req.user
- * - Attaches allAccessRights[] to req.user
+ * - Attaches allAccessRights[] to req.user (deprecated, for backward compatibility)
+ * - Attaches globalRights[] to req.user (Phase 2: rights with scope '*')
+ * - Attaches departmentRights{} to req.user (Phase 2: department-scoped rights)
+ * - Attaches departmentHierarchy{} to req.user (Phase 2: for child lookups)
  * - Checks for admin token and attaches admin context if present
  * - Supports both V1 and V2 token formats during transition
  *
@@ -20,6 +23,7 @@
  * ```
  *
  * Phase 5, Task 5.6 - Full Implementation
+ * Phase 2 Update - Unified permission structure (globalRights, departmentRights, departmentHierarchy)
  *
  * @module middlewares/isAuthenticated
  */
@@ -29,10 +33,25 @@ import { Types } from 'mongoose';
 import { verifyAccessToken } from '@/utils/jwt';
 import { User, UserType } from '@/models/auth/User.model';
 import { GlobalAdmin } from '@/models/GlobalAdmin.model';
-import { RoleDefinition } from '@/models/RoleDefinition.model';
 import { EscalationService } from '@/services/auth/escalation.service';
 import { ApiError } from '@/utils/ApiError';
 import { logger } from '@/config/logger';
+import { roleCache } from '@/services/auth/role-cache.service';
+import { departmentCacheService } from '@/services/auth/department-cache.service';
+import {
+  getUserPermissions,
+  setUserPermissions,
+  getUserPermissionVersion,
+  type UserPermissions
+} from '@/utils/permission-cache';
+
+/**
+ * Department membership info for authorization
+ */
+export interface DepartmentMembership {
+  departmentId: string;
+  roles: string[];
+}
 
 /**
  * Enhanced user context attached to request
@@ -41,12 +60,27 @@ export interface AuthenticatedUser {
   userId: string;
   email: string;
   userTypes: UserType[];
+
+  // Phase 2: Unified permission structure
+  /** Global rights (scope: '*') - Rights that apply everywhere (GlobalAdmin only currently) */
+  globalRights: string[];
+  /** Department-scoped rights - Rights that apply to specific departments */
+  departmentRights: Record<string, string[]>;
+  /** Department hierarchy for child lookups (parent -> children mapping) */
+  departmentHierarchy: Record<string, string[]>;
+
+  /** @deprecated Use globalRights + departmentRights instead. Kept for backward compatibility. */
   allAccessRights: string[];
+  departmentMemberships: DepartmentMembership[];
   canEscalateToAdmin: boolean;
   defaultDashboard: 'learner' | 'staff';
   lastSelectedDepartment?: string;
 
+  // Permission versioning for cache validation
+  permissionVersion?: number;
+
   // V1 compatibility (deprecated)
+  /** @deprecated Use departmentMemberships instead */
   roles?: string[];
 }
 
@@ -138,19 +172,35 @@ export const isAuthenticated = async (
       throw ApiError.unauthorized('User account is not active');
     }
 
-    // Get all access rights for user from all their roles
-    // This will be populated from departmentMemberships via RoleDefinition
-    const allAccessRights = await getUserAccessRights(user._id);
+    // Get all access rights and department memberships for user
+    // This is populated from Staff/Learner departmentMemberships via RoleDefinition
+    // Now uses Redis caching for improved performance
+    const authInfo = await getUserAuthorizationInfo(user._id);
+
+    // Get permission version for cache validation (null if Redis unavailable)
+    const permissionVersion = await getUserPermissionVersion(user._id.toString());
+
+    // Get department hierarchy for child lookups
+    const departmentHierarchy = departmentCacheService.getDepartmentHierarchy();
 
     // Build enhanced user context
     const authenticatedUser: AuthenticatedUser = {
       userId: user._id.toString(),
       email: user.email,
       userTypes: user.userTypes,
-      allAccessRights,
+
+      // Phase 2: Unified permission structure
+      globalRights: authInfo.globalRights,
+      departmentRights: authInfo.departmentRights,
+      departmentHierarchy,
+
+      // Backward compatibility (deprecated)
+      allAccessRights: authInfo.accessRights,
+      departmentMemberships: authInfo.departmentMemberships,
       canEscalateToAdmin: user.canEscalateToAdmin(),
       defaultDashboard: user.defaultDashboard,
-      lastSelectedDepartment: user.lastSelectedDepartment?.toString()
+      lastSelectedDepartment: user.lastSelectedDepartment?.toString(),
+      permissionVersion: permissionVersion ?? undefined
     };
 
     // V1 compatibility: Include roles if present in token (deprecated)
@@ -175,53 +225,186 @@ export const isAuthenticated = async (
 };
 
 /**
- * Get all access rights for user from their roles
+ * Result of fetching user authorization info
+ */
+interface UserAuthorizationInfo {
+  accessRights: string[];
+  departmentMemberships: DepartmentMembership[];
+  /** Global rights (scope: '*') - empty for non-admin users */
+  globalRights: string[];
+  /** Department-scoped rights */
+  departmentRights: Record<string, string[]>;
+}
+
+/**
+ * Get all access rights and department memberships for user from their roles
  *
- * Aggregates access rights from:
+ * Aggregates from:
  * 1. Staff department memberships
  * 2. Learner department memberships
- * 3. GlobalAdmin roles (if applicable)
+ * 3. GlobalAdmin roles (if applicable - handled separately via escalation)
+ *
+ * Now uses Redis caching (Tier 2) and role cache (Tier 1) for improved performance:
+ * - Checks Redis cache first for computed permissions
+ * - Falls back to database computation on cache miss
+ * - Caches computed permissions for future requests
+ * - Uses roleCache.getCombinedAccessRights() for role lookups
  *
  * @param userId - User's ObjectId
- * @returns Array of access rights (deduplicated)
+ * @returns Object with access rights (deduplicated) and department memberships
  */
-async function getUserAccessRights(userId: Types.ObjectId): Promise<string[]> {
-  const accessRightsSet = new Set<string>();
+async function getUserAuthorizationInfo(userId: Types.ObjectId): Promise<UserAuthorizationInfo> {
+  const userIdStr = userId.toString();
 
   try {
+    // Step 1: Check Redis cache for computed permissions
+    const cachedPermissions = await getUserPermissions(userIdStr);
+
+    if (cachedPermissions) {
+      // Cache HIT - extract accessRights and departmentMemberships from cached data
+      logger.debug(`getUserAuthorizationInfo: Cache HIT for user ${userIdStr}`);
+
+      // Combine globalRights and all departmentRights into a single accessRights array (backward compat)
+      const accessRightsSet = new Set<string>(cachedPermissions.globalRights || []);
+      const departmentMemberships: DepartmentMembership[] = [];
+      const departmentRights = cachedPermissions.departmentRights || {};
+
+      // Add department-scoped rights and build department memberships
+      for (const [deptId, rights] of Object.entries(departmentRights)) {
+        rights.forEach((right) => accessRightsSet.add(right));
+        // Note: cached permissions don't store role names, only rights
+        // We need to reconstruct memberships with empty roles array
+        // The actual roles can be computed from permissions if needed
+        departmentMemberships.push({
+          departmentId: deptId,
+          roles: [] // Roles not stored in cache, but rights are what matter for authorization
+        });
+      }
+
+      return {
+        accessRights: Array.from(accessRightsSet),
+        departmentMemberships,
+        globalRights: cachedPermissions.globalRights || [],
+        departmentRights
+      };
+    }
+
+    // Cache MISS - compute permissions from database
+    logger.debug(`getUserAuthorizationInfo: Cache MISS for user ${userIdStr}, computing from database`);
+
+    const accessRightsSet = new Set<string>();
+    const departmentMemberships: DepartmentMembership[] = [];
+    const departmentRights: Record<string, string[]> = {};
+
     // Import models dynamically to avoid circular dependencies
     const { Staff } = await import('@/models/auth/Staff.model');
     const { Learner } = await import('@/models/auth/Learner.model');
 
-    // Get Staff access rights
+    // Get Staff access rights and memberships
     const staff = await Staff.findById(userId);
     if (staff && staff.isActive) {
       for (const membership of staff.departmentMemberships) {
         if (membership.isActive) {
-          const rights = await RoleDefinition.getCombinedAccessRights(membership.roles);
+          const deptId = membership.departmentId.toString();
+
+          // Add to department memberships
+          departmentMemberships.push({
+            departmentId: deptId,
+            roles: membership.roles
+          });
+
+          // Get access rights for roles using roleCache
+          const rights = await roleCache.getCombinedAccessRights(membership.roles);
           rights.forEach((right) => accessRightsSet.add(right));
+
+          // Track department-specific rights for caching
+          if (!departmentRights[deptId]) {
+            departmentRights[deptId] = [];
+          }
+          departmentRights[deptId].push(...rights);
         }
       }
     }
 
-    // Get Learner access rights
+    // Get Learner access rights and memberships
     const learner = await Learner.findById(userId);
     if (learner && learner.isActive) {
       for (const membership of learner.departmentMemberships) {
         if (membership.isActive) {
-          const rights = await RoleDefinition.getCombinedAccessRights(membership.roles);
+          const deptId = membership.departmentId.toString();
+
+          // Add to department memberships (may already exist from staff, merge roles)
+          const existing = departmentMemberships.find(
+            m => m.departmentId === deptId
+          );
+          if (existing) {
+            // Merge roles
+            for (const role of membership.roles) {
+              if (!existing.roles.includes(role)) {
+                existing.roles.push(role);
+              }
+            }
+          } else {
+            departmentMemberships.push({
+              departmentId: deptId,
+              roles: membership.roles
+            });
+          }
+
+          // Get access rights for roles using roleCache
+          const rights = await roleCache.getCombinedAccessRights(membership.roles);
           rights.forEach((right) => accessRightsSet.add(right));
+
+          // Track department-specific rights for caching
+          if (!departmentRights[deptId]) {
+            departmentRights[deptId] = [];
+          }
+          departmentRights[deptId].push(...rights);
         }
       }
     }
 
+    // Deduplicate department rights
+    for (const deptId of Object.keys(departmentRights)) {
+      departmentRights[deptId] = [...new Set(departmentRights[deptId])];
+    }
+
+    // Step 2: Cache the computed permissions in Redis
+    const accessRightsArray = Array.from(accessRightsSet);
+
+    // globalRights is empty for non-admin users (staff/learner rights are department-scoped)
+    // GlobalAdmin rights are handled via escalation service, not here
+    const globalRights: string[] = [];
+
+    const permissionsToCache: UserPermissions = {
+      userId: userIdStr,
+      permissions: [], // Full permissions list not needed for basic auth
+      globalRights, // Empty for non-admin users
+      departmentRights,
+      departmentHierarchy: {}, // Hierarchy handled by departmentCacheService
+      computedAt: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(), // 15 min TTL
+      version: 1
+    };
+
+    // Cache asynchronously (don't wait for completion)
+    setUserPermissions(userIdStr, permissionsToCache).catch((error) => {
+      logger.warn(`Failed to cache permissions for user ${userIdStr}: ${error}`);
+    });
+
     // Note: GlobalAdmin access rights are handled separately via escalation
     // They are NOT included in allAccessRights until user escalates
 
-    return Array.from(accessRightsSet);
+    return {
+      accessRights: accessRightsArray,
+      departmentMemberships,
+      globalRights,
+      departmentRights
+    };
   } catch (error) {
-    logger.error(`Error fetching user access rights: ${error}`);
-    return [];
+    // Graceful degradation - log error and return empty permissions
+    logger.error(`Error fetching user authorization info for user ${userIdStr}: ${error}`);
+    return { accessRights: [], departmentMemberships: [], globalRights: [], departmentRights: {} };
   }
 }
 
@@ -264,13 +447,19 @@ async function attachAdminContextIfPresent(req: Request): Promise<void> {
       return;
     }
 
-    // Get admin roles and access rights
+    // Get admin roles and access rights using roleCache for performance
     const adminRoles = globalAdmin.getAllRoles();
-    const adminAccessRights = await RoleDefinition.getCombinedAccessRights(adminRoles);
+    const adminAccessRights = await roleCache.getCombinedAccessRights(adminRoles);
 
     // Attach admin context
     req.adminRoles = adminRoles;
     req.adminAccessRights = adminAccessRights;
+
+    // Merge admin access rights into user's globalRights for the authorize middleware
+    // This allows the unified authorization system to see admin permissions
+    if (req.user) {
+      req.user.globalRights = [...(req.user.globalRights || []), ...adminAccessRights];
+    }
 
     logger.debug(
       `Admin context attached: User ${userId} with admin roles [${adminRoles.join(', ')}]`

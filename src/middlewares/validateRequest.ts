@@ -7,7 +7,7 @@
  */
 
 import { Request, Response, NextFunction } from 'express';
-import { AnyZodObject, ZodError } from 'zod';
+import { z, ZodError } from 'zod';
 import { ApiError } from '@/utils/ApiError';
 
 /**
@@ -24,8 +24,8 @@ import { ApiError } from '@/utils/ApiError';
  * );
  * ```
  */
-export const validateRequest = (schema: AnyZodObject) => {
-  return async (req: Request, res: Response, next: NextFunction) => {
+export const validateRequest = (schema: z.ZodTypeAny) => {
+  return async (req: Request, _res: Response, next: NextFunction) => {
     try {
       await schema.parseAsync({
         body: req.body,
@@ -35,17 +35,13 @@ export const validateRequest = (schema: AnyZodObject) => {
       next();
     } catch (error) {
       if (error instanceof ZodError) {
-        const formattedErrors = error.errors.map((err) => ({
+        const formattedErrors = error.issues.map((err: z.ZodIssue) => ({
           path: err.path.join('.'),
           message: err.message
         }));
 
         return next(
-          new ApiError(
-            400,
-            'Validation failed',
-            formattedErrors.map((e) => `${e.path}: ${e.message}`).join(', ')
-          )
+          new ApiError(400, 'Validation failed', formattedErrors)
         );
       }
       next(error);

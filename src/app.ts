@@ -23,6 +23,7 @@ import listsRoutes from './routes/lists.routes';
 import programsRoutes from './routes/programs.routes';
 import coursesRoutes from './routes/courses.routes';
 import courseSegmentsRoutes from './routes/course-segments.routes';
+import modulesRoutes from './routes/v2/modules.routes';
 import classesRoutes from './routes/classes.routes';
 
 // Phase 3 routes
@@ -104,7 +105,8 @@ app.use('/api/v2/lists', listsRoutes);
 // API routes - Phase 2
 app.use('/api/v2/programs', programsRoutes);
 app.use('/api/v2/courses', coursesRoutes); // Main courses routes
-app.use('/api/v2/courses', courseSegmentsRoutes); // Nested module routes under /courses/:courseId/modules
+app.use('/api/v2/courses', modulesRoutes); // New modules routes with completionCriteria/presentationRules
+// Note: courseSegmentsRoutes replaced by modulesRoutes for /courses/:courseId/modules endpoints
 app.use('/api/v2/classes', classesRoutes);
 
 // API routes - Phase 3

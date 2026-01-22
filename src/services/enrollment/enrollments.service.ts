@@ -89,7 +89,8 @@ export class EnrollmentsService {
       const department = await Department.findById(departmentId).select('allowSelfEnrollment');
 
       // Default to false if setting not found or undefined
-      return department?.allowSelfEnrollment === true;
+      // allowSelfEnrollment is stored in metadata since it's not on IDepartment interface
+      return (department as any)?.allowSelfEnrollment === true;
     } catch (error) {
       console.error('Error checking self-enrollment setting:', error);
       // Default to false for safety
@@ -300,8 +301,8 @@ export class EnrollmentsService {
         type: 'program',
         learner: {
           id: learner._id.toString(),
-          firstName: learnerDetails?.firstName || '',
-          lastName: learnerDetails?.lastName || '',
+          firstName: learnerDetails?.person?.firstName || '',
+          lastName: learnerDetails?.person?.lastName || '',
           email: learner.email
         },
         program: {
@@ -402,8 +403,8 @@ export class EnrollmentsService {
         type: 'course',
         learner: {
           id: learner._id.toString(),
-          firstName: learnerDetails?.firstName || '',
-          lastName: learnerDetails?.lastName || '',
+          firstName: learnerDetails?.person?.firstName || '',
+          lastName: learnerDetails?.person?.lastName || '',
           email: learner.email
         },
         course: {
@@ -521,8 +522,8 @@ export class EnrollmentsService {
         type: 'class',
         learner: {
           id: learner._id.toString(),
-          firstName: learnerDetails?.firstName || '',
-          lastName: learnerDetails?.lastName || '',
+          firstName: learnerDetails?.person?.firstName || '',
+          lastName: learnerDetails?.person?.lastName || '',
           email: learner.email
         },
         class: {
@@ -654,8 +655,8 @@ export class EnrollmentsService {
         gradedAt: new Date(),
         gradedBy: grader ? {
           id: userId,
-          firstName: grader.firstName || '',
-          lastName: grader.lastName || ''
+          firstName: grader.person?.firstName || '',
+          lastName: grader.person?.lastName || ''
         } : null
       } : null,
       updatedAt: enrollment.updatedAt

@@ -26,7 +26,9 @@ import { Staff } from '@/models/auth/Staff.model';
 import { Learner } from '@/models/auth/Learner.model';
 import Class from '@/models/academic/Class.model';
 import ClassEnrollment from '@/models/enrollment/ClassEnrollment.model';
+import { LookupValue } from '@/models/LookupValue.model';
 import { describeIfMongo } from '../../helpers/mongo-guard';
+import { refreshDepartmentCache } from '../../helpers/department-cache';
 
 describeIfMongo('Service Layer Authorization Integration Tests', () => {
   let mongoServer: MongoMemoryServer;
@@ -55,6 +57,13 @@ describeIfMongo('Service Layer Authorization Integration Tests', () => {
     const mongoUri = mongoServer.getUri();
     await mongoose.connect(mongoUri);
 
+    // Create course-status lookup values required by Course model
+    await LookupValue.create([
+      { category: 'course-status', key: 'draft', displayAs: 'Draft', sortOrder: 1, isActive: true },
+      { category: 'course-status', key: 'published', displayAs: 'Published', sortOrder: 2, isActive: true },
+      { category: 'course-status', key: 'archived', displayAs: 'Archived', sortOrder: 3, isActive: true }
+    ]);
+
     // Create department hierarchy
     topLevelDepartment = await Department.create({
       name: 'Top Level Department',
@@ -78,6 +87,9 @@ describeIfMongo('Service Layer Authorization Integration Tests', () => {
       isActive: true
     });
 
+    // Refresh department cache to pick up hierarchy
+    await refreshDepartmentCache();
+
     // Create courses with different statuses
     draftCourse = await Course.create({
       name: 'Draft Course',
@@ -97,10 +109,9 @@ describeIfMongo('Service Layer Authorization Integration Tests', () => {
       code: 'PUB101',
       departmentId: topLevelDepartment._id,
       credits: 3,
-      duration: 15,
+      status: 'published',
       isActive: true,
       metadata: {
-        status: 'published',
         publishedAt: new Date()
       }
     });
@@ -110,10 +121,9 @@ describeIfMongo('Service Layer Authorization Integration Tests', () => {
       code: 'ARC101',
       departmentId: topLevelDepartment._id,
       credits: 3,
-      duration: 15,
+      status: 'archived',
       isActive: false,
       metadata: {
-        status: 'archived',
         archivedAt: new Date()
       }
     });
@@ -358,23 +368,33 @@ describeIfMongo('Service Layer Authorization Integration Tests', () => {
     describe('Draft Course Visibility', () => {
       it('should allow department members to view draft courses', async () => {
         const user = {
-          _id: instructorUser._id,
-          roles: ['instructor'],
+          userId: instructorUser._id.toString(),
+          globalRights: [],
+          departmentRights: {
+            [topLevelDepartment._id.toString()]: ['content:courses:read']
+          },
+          departmentHierarchy: {
+            [topLevelDepartment._id.toString()]: [subDepartment._id.toString()]
+          },
           departmentMemberships: [{ departmentId: topLevelDepartment._id }]
         };
 
-        const canView = await CoursesService.canViewCourse(draftCourse, user);
+        const canView = await CoursesService.canViewCourse(draftCourse, user as any);
         expect(canView).toBe(true);
       });
 
       it('should block non-department members from viewing draft courses', async () => {
         const user = {
-          _id: instructorUser._id,
-          roles: ['instructor'],
+          userId: instructorUser._id.toString(),
+          globalRights: [],
+          departmentRights: {
+            [otherDepartment._id.toString()]: ['content:courses:read']
+          },
+          departmentHierarchy: {},
           departmentMemberships: [{ departmentId: otherDepartment._id }]
         };
 
-        const canView = await CoursesService.canViewCourse(draftCourse, user);
+        const canView = await CoursesService.canViewCourse(draftCourse, user as any);
         expect(canView).toBe(false);
       });
 
@@ -391,12 +411,18 @@ describeIfMongo('Service Layer Authorization Integration Tests', () => {
         });
 
         const user = {
-          _id: instructorUser._id,
-          roles: ['instructor'],
+          userId: instructorUser._id.toString(),
+          globalRights: [],
+          departmentRights: {
+            [topLevelDepartment._id.toString()]: ['content:courses:read']
+          },
+          departmentHierarchy: {
+            [topLevelDepartment._id.toString()]: [subDepartment._id.toString()]
+          },
           departmentMemberships: [{ departmentId: topLevelDepartment._id }]
         };
 
-        const canView = await CoursesService.canViewCourse(subDeptCourse, user);
+        const canView = await CoursesService.canViewCourse(subDeptCourse, user as any);
         expect(canView).toBe(true);
 
         await Course.deleteOne({ _id: subDeptCourse._id });
@@ -406,23 +432,29 @@ describeIfMongo('Service Layer Authorization Integration Tests', () => {
     describe('Published Course Visibility', () => {
       it('should allow all users to view published courses', async () => {
         const user = {
-          _id: instructorUser._id,
-          roles: ['instructor'],
+          userId: instructorUser._id.toString(),
+          globalRights: [],
+          departmentRights: {
+            [otherDepartment._id.toString()]: ['content:courses:read']
+          },
+          departmentHierarchy: {},
           departmentMemberships: [{ departmentId: otherDepartment._id }]
         };
 
-        const canView = await CoursesService.canViewCourse(publishedCourse, user);
+        const canView = await CoursesService.canViewCourse(publishedCourse, user as any);
         expect(canView).toBe(true);
       });
 
       it('should allow learners to view published courses', async () => {
         const user = {
-          _id: learner1User._id,
-          roles: ['learner'],
+          userId: learner1User._id.toString(),
+          globalRights: [],
+          departmentRights: {},
+          departmentHierarchy: {},
           departmentMemberships: []
         };
 
-        const canView = await CoursesService.canViewCourse(publishedCourse, user);
+        const canView = await CoursesService.canViewCourse(publishedCourse, user as any);
         expect(canView).toBe(true);
       });
     });
@@ -430,23 +462,33 @@ describeIfMongo('Service Layer Authorization Integration Tests', () => {
     describe('Archived Course Visibility', () => {
       it('should allow department members to view archived courses', async () => {
         const user = {
-          _id: instructorUser._id,
-          roles: ['instructor'],
+          userId: instructorUser._id.toString(),
+          globalRights: [],
+          departmentRights: {
+            [topLevelDepartment._id.toString()]: ['content:courses:read']
+          },
+          departmentHierarchy: {
+            [topLevelDepartment._id.toString()]: [subDepartment._id.toString()]
+          },
           departmentMemberships: [{ departmentId: topLevelDepartment._id }]
         };
 
-        const canView = await CoursesService.canViewCourse(archivedCourse, user);
+        const canView = await CoursesService.canViewCourse(archivedCourse, user as any);
         expect(canView).toBe(true);
       });
 
       it('should block non-department members from viewing archived courses', async () => {
         const user = {
-          _id: instructorUser._id,
-          roles: ['instructor'],
+          userId: instructorUser._id.toString(),
+          globalRights: [],
+          departmentRights: {
+            [otherDepartment._id.toString()]: ['content:courses:read']
+          },
+          departmentHierarchy: {},
           departmentMemberships: [{ departmentId: otherDepartment._id }]
         };
 
-        const canView = await CoursesService.canViewCourse(archivedCourse, user);
+        const canView = await CoursesService.canViewCourse(archivedCourse, user as any);
         expect(canView).toBe(false);
       });
     });
@@ -457,45 +499,65 @@ describeIfMongo('Service Layer Authorization Integration Tests', () => {
       it('should allow creator to edit draft courses', async () => {
         const creatorId = draftCourse.metadata.createdBy;
         const user = {
-          _id: creatorId,
-          roles: ['content-admin'],
+          userId: creatorId.toString(),
+          globalRights: [],
+          departmentRights: {
+            [topLevelDepartment._id.toString()]: ['content:courses:manage']
+          },
+          departmentHierarchy: {
+            [topLevelDepartment._id.toString()]: [subDepartment._id.toString()]
+          },
           departmentMemberships: [{ departmentId: topLevelDepartment._id }]
         };
 
-        const canEdit = await CoursesService.canEditCourse(draftCourse, user);
+        const canEdit = await CoursesService.canEditCourse(draftCourse, user as any);
         expect(canEdit).toBe(true);
       });
 
       it('should allow department-admin to edit draft courses', async () => {
         const user = {
-          _id: deptAdminUser._id,
-          roles: ['department-admin'],
+          userId: deptAdminUser._id.toString(),
+          globalRights: [],
+          departmentRights: {
+            [topLevelDepartment._id.toString()]: ['content:courses:manage', 'departments:manage']
+          },
+          departmentHierarchy: {
+            [topLevelDepartment._id.toString()]: [subDepartment._id.toString()]
+          },
           departmentMemberships: [{ departmentId: topLevelDepartment._id }]
         };
 
-        const canEdit = await CoursesService.canEditCourse(draftCourse, user);
+        const canEdit = await CoursesService.canEditCourse(draftCourse, user as any);
         expect(canEdit).toBe(true);
       });
 
       it('should block non-creator instructor from editing draft courses', async () => {
         const user = {
-          _id: instructorUser._id,
-          roles: ['instructor'],
+          userId: instructorUser._id.toString(),
+          globalRights: [],
+          departmentRights: {
+            [topLevelDepartment._id.toString()]: ['content:courses:read']
+          },
+          departmentHierarchy: {
+            [topLevelDepartment._id.toString()]: [subDepartment._id.toString()]
+          },
           departmentMemberships: [{ departmentId: topLevelDepartment._id }]
         };
 
-        const canEdit = await CoursesService.canEditCourse(draftCourse, user);
+        const canEdit = await CoursesService.canEditCourse(draftCourse, user as any);
         expect(canEdit).toBe(false);
       });
 
       it('should allow system-admin to edit any draft course', async () => {
         const user = {
-          _id: systemAdminUser._id,
-          roles: ['system-admin'],
+          userId: systemAdminUser._id.toString(),
+          globalRights: ['*'],
+          departmentRights: {},
+          departmentHierarchy: {},
           departmentMemberships: [{ departmentId: topLevelDepartment._id }]
         };
 
-        const canEdit = await CoursesService.canEditCourse(draftCourse, user);
+        const canEdit = await CoursesService.canEditCourse(draftCourse, user as any);
         expect(canEdit).toBe(true);
       });
     });
@@ -503,34 +565,52 @@ describeIfMongo('Service Layer Authorization Integration Tests', () => {
     describe('Published Course Editing', () => {
       it('should allow only department-admin to edit published courses', async () => {
         const user = {
-          _id: deptAdminUser._id,
-          roles: ['department-admin'],
+          userId: deptAdminUser._id.toString(),
+          globalRights: [],
+          departmentRights: {
+            [topLevelDepartment._id.toString()]: ['content:courses:manage', 'departments:manage']
+          },
+          departmentHierarchy: {
+            [topLevelDepartment._id.toString()]: [subDepartment._id.toString()]
+          },
           departmentMemberships: [{ departmentId: topLevelDepartment._id }]
         };
 
-        const canEdit = await CoursesService.canEditCourse(publishedCourse, user);
+        const canEdit = await CoursesService.canEditCourse(publishedCourse, user as any);
         expect(canEdit).toBe(true);
       });
 
       it('should block instructor from editing published courses', async () => {
         const user = {
-          _id: instructorUser._id,
-          roles: ['instructor'],
+          userId: instructorUser._id.toString(),
+          globalRights: [],
+          departmentRights: {
+            [topLevelDepartment._id.toString()]: ['content:courses:read']
+          },
+          departmentHierarchy: {
+            [topLevelDepartment._id.toString()]: [subDepartment._id.toString()]
+          },
           departmentMemberships: [{ departmentId: topLevelDepartment._id }]
         };
 
-        const canEdit = await CoursesService.canEditCourse(publishedCourse, user);
+        const canEdit = await CoursesService.canEditCourse(publishedCourse, user as any);
         expect(canEdit).toBe(false);
       });
 
       it('should block content-admin from editing published courses', async () => {
         const user = {
-          _id: contentAdminUser._id,
-          roles: ['content-admin'],
+          userId: contentAdminUser._id.toString(),
+          globalRights: [],
+          departmentRights: {
+            [topLevelDepartment._id.toString()]: ['content:courses:read']
+          },
+          departmentHierarchy: {
+            [topLevelDepartment._id.toString()]: [subDepartment._id.toString()]
+          },
           departmentMemberships: [{ departmentId: topLevelDepartment._id }]
         };
 
-        const canEdit = await CoursesService.canEditCourse(publishedCourse, user);
+        const canEdit = await CoursesService.canEditCourse(publishedCourse, user as any);
         expect(canEdit).toBe(false);
       });
     });
@@ -539,19 +619,31 @@ describeIfMongo('Service Layer Authorization Integration Tests', () => {
       it('should block all users from editing archived courses', async () => {
         const users = [
           {
-            _id: deptAdminUser._id,
-            roles: ['department-admin'],
+            userId: deptAdminUser._id.toString(),
+            globalRights: [],
+            departmentRights: {
+              [topLevelDepartment._id.toString()]: ['content:courses:manage', 'departments:manage']
+            },
+            departmentHierarchy: {
+              [topLevelDepartment._id.toString()]: [subDepartment._id.toString()]
+            },
             departmentMemberships: [{ departmentId: topLevelDepartment._id }]
           },
           {
-            _id: contentAdminUser._id,
-            roles: ['content-admin'],
+            userId: contentAdminUser._id.toString(),
+            globalRights: [],
+            departmentRights: {
+              [topLevelDepartment._id.toString()]: ['content:courses:manage']
+            },
+            departmentHierarchy: {
+              [topLevelDepartment._id.toString()]: [subDepartment._id.toString()]
+            },
             departmentMemberships: [{ departmentId: topLevelDepartment._id }]
           }
         ];
 
         for (const user of users) {
-          const canEdit = await CoursesService.canEditCourse(archivedCourse, user);
+          const canEdit = await CoursesService.canEditCourse(archivedCourse, user as any);
           expect(canEdit).toBe(false);
         }
       });
@@ -561,7 +653,10 @@ describeIfMongo('Service Layer Authorization Integration Tests', () => {
   describe('Department Scoping with Hierarchy', () => {
     it('should expand top-level department to include subdepartments', async () => {
       const user = {
-        roles: ['instructor'],
+        globalRights: [],
+        departmentRights: {
+          [topLevelDepartment._id.toString()]: ['content:courses:read']
+        },
         departmentMemberships: [{ departmentId: topLevelDepartment._id }]
       };
 
@@ -574,7 +669,10 @@ describeIfMongo('Service Layer Authorization Integration Tests', () => {
 
     it('should not expand subdepartment to include parent', async () => {
       const user = {
-        roles: ['instructor'],
+        globalRights: [],
+        departmentRights: {
+          [subDepartment._id.toString()]: ['content:courses:read']
+        },
         departmentMemberships: [{ departmentId: subDepartment._id }]
       };
 
@@ -587,7 +685,8 @@ describeIfMongo('Service Layer Authorization Integration Tests', () => {
 
     it('should not scope for system-admin', async () => {
       const user = {
-        roles: ['system-admin'],
+        globalRights: ['*'], // System admin has wildcard global access
+        departmentRights: {},
         departmentMemberships: []
       };
 
@@ -599,7 +698,8 @@ describeIfMongo('Service Layer Authorization Integration Tests', () => {
 
     it('should return empty results for users with no department', async () => {
       const user = {
-        roles: ['instructor'],
+        globalRights: [],
+        departmentRights: {}, // No department access
         departmentMemberships: []
       };
 
@@ -817,12 +917,15 @@ describeIfMongo('Service Layer Authorization Integration Tests', () => {
       const courses = [draftCourse, publishedCourse, archivedCourse];
 
       const user = {
-        _id: instructorUser._id,
-        roles: ['instructor'],
+        userId: instructorUser._id.toString(),
+        globalRights: [],
+        departmentRights: {
+          [topLevelDepartment._id.toString()]: ['content:courses:read']
+        },
         departmentMemberships: [{ departmentId: topLevelDepartment._id }]
       };
 
-      const visible = await CoursesService.filterCoursesByVisibility(courses, user);
+      const visible = await CoursesService.filterCoursesByVisibility(courses, user as any);
       expect(visible.length).toBe(3); // All visible (draft, published, archived - all in same dept)
     });
 
@@ -840,12 +943,15 @@ describeIfMongo('Service Layer Authorization Integration Tests', () => {
       const courses = [draftCourse, otherCourse];
 
       const user = {
-        _id: instructorUser._id,
-        roles: ['instructor'],
+        userId: instructorUser._id.toString(),
+        globalRights: [],
+        departmentRights: {
+          [topLevelDepartment._id.toString()]: ['content:courses:read']
+        },
         departmentMemberships: [{ departmentId: topLevelDepartment._id }]
       };
 
-      const visible = await CoursesService.filterCoursesByVisibility(courses, user);
+      const visible = await CoursesService.filterCoursesByVisibility(courses, user as any);
       expect(visible.length).toBe(1); // Only draftCourse visible
       expect(visible[0]._id.toString()).toBe(draftCourse._id.toString());
 

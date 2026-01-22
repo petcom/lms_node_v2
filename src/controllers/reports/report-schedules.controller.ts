@@ -10,7 +10,7 @@ import reportScheduleService from '@/services/reports/report-schedules.service';
 
 export const createSchedule = asyncHandler(async (req: Request, res: Response) => {
   const userId = new mongoose.Types.ObjectId(req.user!.userId);
-  const userDepartmentIds = req.user!.departmentIds?.map((id: string) => new mongoose.Types.ObjectId(id)) || [];
+  const userDepartmentIds = (req.user!.departmentMemberships?.map(m => m.departmentId) || []).map((id: string) => new mongoose.Types.ObjectId(id));
 
   const schedule = await reportScheduleService.createReportSchedule({
     ...req.body,
@@ -28,7 +28,7 @@ export const createSchedule = asyncHandler(async (req: Request, res: Response) =
 
 export const listSchedules = asyncHandler(async (req: Request, res: Response) => {
   const userId = new mongoose.Types.ObjectId(req.user!.userId);
-  const userDepartmentIds = req.user!.departmentIds?.map((id: string) => new mongoose.Types.ObjectId(id)) || [];
+  const userDepartmentIds = (req.user!.departmentMemberships?.map(m => m.departmentId) || []).map((id: string) => new mongoose.Types.ObjectId(id));
 
   const page = parseInt(req.query.page as string) || 1;
   const limit = parseInt(req.query.limit as string) || 20;
@@ -57,7 +57,7 @@ export const listSchedules = asyncHandler(async (req: Request, res: Response) =>
 
 export const getSchedule = asyncHandler(async (req: Request, res: Response) => {
   const userId = new mongoose.Types.ObjectId(req.user!.userId);
-  const userDepartmentIds = req.user!.departmentIds?.map((id: string) => new mongoose.Types.ObjectId(id)) || [];
+  const userDepartmentIds = (req.user!.departmentMemberships?.map(m => m.departmentId) || []).map((id: string) => new mongoose.Types.ObjectId(id));
 
   const schedule = await reportScheduleService.getReportScheduleById(
     req.params.scheduleId,
@@ -70,7 +70,7 @@ export const getSchedule = asyncHandler(async (req: Request, res: Response) => {
 
 export const updateSchedule = asyncHandler(async (req: Request, res: Response) => {
   const userId = new mongoose.Types.ObjectId(req.user!.userId);
-  const userDepartmentIds = req.user!.departmentIds?.map((id: string) => new mongoose.Types.ObjectId(id)) || [];
+  const userDepartmentIds = (req.user!.departmentMemberships?.map(m => m.departmentId) || []).map((id: string) => new mongoose.Types.ObjectId(id));
 
   const schedule = await reportScheduleService.updateReportSchedule(
     req.params.scheduleId,
@@ -84,7 +84,7 @@ export const updateSchedule = asyncHandler(async (req: Request, res: Response) =
 
 export const pauseSchedule = asyncHandler(async (req: Request, res: Response) => {
   const userId = new mongoose.Types.ObjectId(req.user!.userId);
-  const userDepartmentIds = req.user!.departmentIds?.map((id: string) => new mongoose.Types.ObjectId(id)) || [];
+  const userDepartmentIds = (req.user!.departmentMemberships?.map(m => m.departmentId) || []).map((id: string) => new mongoose.Types.ObjectId(id));
 
   const schedule = await reportScheduleService.pauseReportSchedule(
     req.params.scheduleId,
@@ -98,7 +98,7 @@ export const pauseSchedule = asyncHandler(async (req: Request, res: Response) =>
 
 export const resumeSchedule = asyncHandler(async (req: Request, res: Response) => {
   const userId = new mongoose.Types.ObjectId(req.user!.userId);
-  const userDepartmentIds = req.user!.departmentIds?.map((id: string) => new mongoose.Types.ObjectId(id)) || [];
+  const userDepartmentIds = (req.user!.departmentMemberships?.map(m => m.departmentId) || []).map((id: string) => new mongoose.Types.ObjectId(id));
 
   const schedule = await reportScheduleService.resumeReportSchedule(
     req.params.scheduleId,

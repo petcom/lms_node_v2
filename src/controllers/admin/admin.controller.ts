@@ -14,17 +14,68 @@
 
 import { Request, Response, NextFunction } from 'express';
 import * as roleManagementService from '@/services/admin/role-management.service';
-import {
-  AssignUserRoleRequest,
-  UpdateUserRoleRequest,
-  CreateGlobalAdminRequest,
-  UpdateGlobalAdminRolesRequest,
-  UpdateRoleAccessRightsRequest,
-  AddRoleAccessRightRequest,
-  BulkAssignRolesRequest,
-  BulkRemoveRolesRequest,
-  SearchUsersRequest
-} from '@contracts/api/admin-roles.contract';
+
+// Types inlined from contracts to avoid rootDir issues
+interface AssignUserRoleRequest {
+  departmentId: string;
+  roleName: string;
+  isPrimary?: boolean;
+  expiresAt?: Date;
+}
+
+interface UpdateUserRoleRequest {
+  departmentId?: string;
+  roles?: string[];
+  isPrimary?: boolean;
+  expiresAt?: Date | null;
+  isActive?: boolean;
+}
+
+interface CreateGlobalAdminRequest {
+  userId: string;
+  roles: string[];
+  masterDepartmentId: string;
+  isPrimary?: boolean;
+}
+
+interface UpdateGlobalAdminRolesRequest {
+  roles: string[];
+  departmentId?: string;
+}
+
+interface UpdateRoleAccessRightsRequest {
+  accessRightIds: string[];
+}
+
+interface AddRoleAccessRightRequest {
+  accessRightId: string;
+}
+
+interface BulkAssignRolesRequest {
+  assignments: Array<{
+    userId: string;
+    departmentId: string;
+    roleName: string;
+    isPrimary?: boolean;
+  }>;
+}
+
+interface BulkRemoveRolesRequest {
+  removals: Array<{
+    userId: string;
+    membershipId: string;
+  }>;
+}
+
+interface SearchUsersRequest {
+  query?: string;
+  userType?: 'staff' | 'learner' | 'all';
+  departmentId?: string;
+  hasRole?: string;
+  withoutRole?: string;
+  page?: number;
+  limit?: number;
+}
 
 // ============================================================================
 // USER ROLE ASSIGNMENT
@@ -97,7 +148,7 @@ export async function assignUserRole(
     const { userId } = req.params;
     const { departmentId, roleName, isPrimary, expiresAt }: AssignUserRoleRequest = req.body;
 
-    const adminUserId = req.user?.id;
+    const adminUserId = req.user?.userId;
 
     const result = await roleManagementService.assignUserRole(
       userId,
@@ -131,7 +182,7 @@ export async function updateUserRole(
     const { userId, membershipId } = req.params;
     const updates: UpdateUserRoleRequest = req.body;
 
-    const adminUserId = req.user?.id;
+    const adminUserId = req.user?.userId;
 
     const result = await roleManagementService.updateRoleMembership(
       userId,
@@ -162,7 +213,7 @@ export async function removeUserRole(
   try {
     const { userId, membershipId } = req.params;
 
-    const adminUserId = req.user?.id;
+    const adminUserId = req.user?.userId;
 
     const result = await roleManagementService.removeUserRole(
       userId,
@@ -212,7 +263,7 @@ export async function getUserRoleHistory(
  * List all global admins
  */
 export async function listGlobalAdmins(
-  req: Request,
+  _req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> {
@@ -245,7 +296,7 @@ export async function createGlobalAdmin(
       isPrimary
     }: CreateGlobalAdminRequest = req.body;
 
-    const adminUserId = req.user?.id;
+    const adminUserId = req.user?.userId;
 
     const result = await roleManagementService.createGlobalAdmin(
       userId,
@@ -277,7 +328,7 @@ export async function removeGlobalAdmin(
   try {
     const { userId } = req.params;
 
-    const adminUserId = req.user?.id;
+    const adminUserId = req.user?.userId;
 
     const result = await roleManagementService.removeGlobalAdmin(userId, adminUserId);
 
@@ -304,7 +355,7 @@ export async function updateGlobalAdminRoles(
     const { userId } = req.params;
     const { roles, departmentId }: UpdateGlobalAdminRolesRequest = req.body;
 
-    const adminUserId = req.user?.id;
+    const adminUserId = req.user?.userId;
 
     const result = await roleManagementService.updateGlobalAdminRoles(
       userId,
@@ -332,7 +383,7 @@ export async function updateGlobalAdminRoles(
  * List all role definitions
  */
 export async function getRoleDefinitions(
-  req: Request,
+  _req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> {
@@ -384,7 +435,7 @@ export async function updateRoleAccessRights(
     const { roleName } = req.params;
     const { accessRightIds }: UpdateRoleAccessRightsRequest = req.body;
 
-    const adminUserId = req.user?.id;
+    const adminUserId = req.user?.userId;
 
     const result = await roleManagementService.updateRoleAccessRights(
       roleName,
@@ -415,7 +466,7 @@ export async function addAccessRightToRole(
     const { roleName } = req.params;
     const { accessRightId }: AddRoleAccessRightRequest = req.body;
 
-    const adminUserId = req.user?.id;
+    const adminUserId = req.user?.userId;
 
     const result = await roleManagementService.addAccessRightToRole(
       roleName,
@@ -445,7 +496,7 @@ export async function removeAccessRightFromRole(
   try {
     const { roleName, rightId } = req.params;
 
-    const adminUserId = req.user?.id;
+    const adminUserId = req.user?.userId;
 
     const result = await roleManagementService.removeAccessRightFromRole(
       roleName,
@@ -479,7 +530,7 @@ export async function bulkAssignRoles(
   try {
     const { assignments }: BulkAssignRolesRequest = req.body;
 
-    const adminUserId = req.user?.id;
+    const adminUserId = req.user?.userId;
 
     const result = await roleManagementService.bulkAssignRoles(assignments, adminUserId);
 
@@ -505,7 +556,7 @@ export async function bulkRemoveRoles(
   try {
     const { removals }: BulkRemoveRolesRequest = req.body;
 
-    const adminUserId = req.user?.id;
+    const adminUserId = req.user?.userId;
 
     const result = await roleManagementService.bulkRemoveRoles(removals, adminUserId);
 

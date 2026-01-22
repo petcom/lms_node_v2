@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { isAuthenticated } from '@/middlewares/isAuthenticated';
-import { requireAccessRight } from '@/middlewares/requireAccessRight';
+import { authorize } from '@/middlewares/authorize';
 import { requireEscalation } from '@/middlewares/requireEscalation';
 import * as coursesController from '@/controllers/academic/courses.controller';
 
@@ -24,7 +24,7 @@ router.use(isAuthenticated);
  * Service Layer: Department members see all (including drafts). Learners see published courses across ALL departments.
  */
 router.get('/',
-  requireAccessRight('content:courses:read'),
+  authorize('content:courses:read'),
   coursesController.listCourses
 );
 
@@ -36,7 +36,7 @@ router.get('/',
  * Service Layer: Creates draft course (editable by creator only)
  */
 router.post('/',
-  requireAccessRight('content:lessons:manage'),
+  authorize('content:lessons:manage'),
   coursesController.createCourse
 );
 
@@ -47,7 +47,7 @@ router.post('/',
  * Roles: instructor, content-admin, department-admin
  */
 router.get('/:id/export',
-  requireAccessRight('content:courses:read'),
+  authorize('content:courses:read'),
   coursesController.exportCourse
 );
 
@@ -59,7 +59,7 @@ router.get('/:id/export',
  * Service Layer: Admin-only, makes course available to learners
  */
 router.post('/:id/publish',
-  requireAccessRight('content:courses:manage'),
+  authorize('content:courses:manage'),
   coursesController.publishCourse
 );
 
@@ -71,7 +71,7 @@ router.post('/:id/publish',
  * Service Layer: Admin-only, reverts to draft
  */
 router.post('/:id/unpublish',
-  requireAccessRight('content:courses:manage'),
+  authorize('content:courses:manage'),
   coursesController.unpublishCourse
 );
 
@@ -83,7 +83,7 @@ router.post('/:id/unpublish',
  * Service Layer: Admin-only, removes from active use
  */
 router.post('/:id/archive',
-  requireAccessRight('content:courses:manage'),
+  authorize('content:courses:manage'),
   coursesController.archiveCourse
 );
 
@@ -95,7 +95,7 @@ router.post('/:id/archive',
  * Service Layer: Admin-only, restores from archive
  */
 router.post('/:id/unarchive',
-  requireAccessRight('content:courses:manage'),
+  authorize('content:courses:manage'),
   coursesController.unarchiveCourse
 );
 
@@ -107,7 +107,7 @@ router.post('/:id/unarchive',
  * Service Layer: Creates copy as draft (owned by requester)
  */
 router.post('/:id/duplicate',
-  requireAccessRight('content:lessons:manage'),
+  authorize('content:lessons:manage'),
   coursesController.duplicateCourse
 );
 
@@ -120,7 +120,7 @@ router.post('/:id/duplicate',
  */
 router.patch('/:id/department',
   requireEscalation,
-  requireAccessRight(['content:courses:manage', 'system:department-settings:manage']),
+  authorize.anyOf(['content:courses:manage', 'system:department-settings:manage']),
   coursesController.updateCourseDepartment
 );
 
@@ -132,7 +132,7 @@ router.patch('/:id/department',
  * Service Layer: Assign/change course program
  */
 router.patch('/:id/program',
-  requireAccessRight('content:lessons:manage'),
+  authorize('content:lessons:manage'),
   coursesController.updateCourseProgram
 );
 
@@ -144,7 +144,7 @@ router.patch('/:id/program',
  * Service Layer: Department members see all statuses. Learners see published only.
  */
 router.get('/:id',
-  requireAccessRight('content:courses:read'),
+  authorize('content:courses:read'),
   coursesController.getCourseById
 );
 
@@ -156,7 +156,7 @@ router.get('/:id',
  * Service Layer: creator-only for drafts, admin-only for published
  */
 router.put('/:id',
-  requireAccessRight('content:courses:manage'),
+  authorize('content:courses:manage'),
   coursesController.updateCourse
 );
 
@@ -168,7 +168,7 @@ router.put('/:id',
  * Service Layer: creator-only for drafts, admin-only for published
  */
 router.patch('/:id',
-  requireAccessRight('content:lessons:manage'),
+  authorize('content:lessons:manage'),
   coursesController.patchCourse
 );
 
@@ -181,7 +181,7 @@ router.patch('/:id',
  */
 router.delete('/:id',
   requireEscalation,
-  requireAccessRight('content:courses:manage'),
+  authorize('content:courses:manage'),
   coursesController.deleteCourse
 );
 

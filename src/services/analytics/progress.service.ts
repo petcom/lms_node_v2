@@ -10,7 +10,7 @@ import CourseContent from '@/models/content/CourseContent.model';
 import { Learner } from '@/models/auth/Learner.model';
 import { User } from '@/models/auth/User.model';
 import { ApiError } from '@/utils/ApiError';
-import { maskLastName, maskUserList } from '@/utils/dataMasking';
+import { maskLastName } from '@/utils/dataMasking';
 import { getDepartmentAndSubdepartments } from '@/utils/departmentHierarchy';
 
 /**
@@ -345,7 +345,7 @@ export class ProgressService {
     // Build module progress
     const moduleProgress = courseContents.map(content => {
       const attempts = scormAttempts.filter(a =>
-        a.contentId.toString() === content.contentId.toString()
+        content.contentId && a.contentId.toString() === content.contentId.toString()
       );
 
       const latestAttempt = attempts[attempts.length - 1];
@@ -380,7 +380,7 @@ export class ProgressService {
       }
 
       return {
-        moduleId: content.contentId.toString(),
+        moduleId: content.contentId?.toString() || '',
         moduleTitle: content.metadata?.title || `Module ${content.moduleNumber || content.sequence}`,
         moduleType: content.metadata?.type || 'custom',
         order: content.sequence,
@@ -837,7 +837,7 @@ export class ProgressService {
         const contentIds = courseContents.map(cc => cc.contentId);
 
         const courseAttempts = allScormAttempts.filter(a =>
-          contentIds.some(id => id.toString() === a.contentId.toString())
+          contentIds.some(id => id && id.toString() === a.contentId.toString())
         );
 
         const completedModules = courseAttempts.filter(a =>
@@ -849,7 +849,7 @@ export class ProgressService {
           : 0;
 
         const courseExams = allExamResults.filter(e =>
-          contentIds.some(id => id.toString() === e.examId.toString())
+          contentIds.some(id => id && id.toString() === e.examId.toString())
         );
 
         const gradedCourseExams = courseExams.filter(e =>
@@ -1193,7 +1193,7 @@ export class ProgressService {
         const moduleProgress = filters.includeModules !== false
           ? courseContents.map(content => {
               const contentAttempts = attempts.filter(a =>
-                a.contentId.toString() === content.contentId.toString()
+                content.contentId && a.contentId.toString() === content.contentId.toString()
               );
               const latest = contentAttempts[contentAttempts.length - 1];
 
@@ -1211,7 +1211,7 @@ export class ProgressService {
               }
 
               return {
-                moduleId: content.contentId.toString(),
+                moduleId: content.contentId?.toString() || '',
                 moduleTitle: content.metadata?.title || `Module ${content.sequence}`,
                 moduleType: content.metadata?.type || 'custom',
                 order: content.sequence,

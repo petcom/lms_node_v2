@@ -11,7 +11,7 @@
 
 import { Router } from 'express';
 import { isAuthenticated } from '@/middlewares/isAuthenticated';
-import { requireAccessRight } from '@/middlewares/requireAccessRight';
+import { authorize } from '@/middlewares/authorize';
 import * as programLevelsController from '@/controllers/academic/program-levels.controller';
 
 const router = Router();
@@ -38,7 +38,7 @@ router.use(isAuthenticated);
  * Permission: content:courses:read (fallback to authenticated)
  */
 router.get('/:id',
-  requireAccessRight(['content:courses:read', 'content:programs:read'], { requireAny: true }),
+  authorize.anyOf(['content:courses:read', 'content:programs:read']),
   programLevelsController.getLevel
 );
 
@@ -57,7 +57,7 @@ router.get('/:id',
  * Permission: content:programs:manage
  */
 router.put('/:id',
-  requireAccessRight('content:programs:manage'),
+  authorize('content:programs:manage'),
   programLevelsController.updateLevel
 );
 
@@ -74,7 +74,7 @@ router.put('/:id',
  *   - Cannot delete the only level in a program
  */
 router.delete('/:id',
-  requireAccessRight('content:programs:manage'),
+  authorize('content:programs:manage'),
   programLevelsController.deleteLevel
 );
 
@@ -90,7 +90,7 @@ router.delete('/:id',
  * Permission: content:programs:manage
  */
 router.patch('/:id/reorder',
-  requireAccessRight('content:programs:manage'),
+  authorize('content:programs:manage'),
   programLevelsController.reorderLevel
 );
 

@@ -123,9 +123,10 @@ export class RoleService {
         return membership ? membership.roles : [];
       }
 
-      // Get the model based on userType
-      const model = userType === 'staff' ? Staff : Learner;
-      const record = await model.findById(userId);
+      // Get record based on userType
+      const record = userType === 'staff'
+        ? await Staff.findById(userId)
+        : await Learner.findById(userId);
 
       if (!record || !record.isActive) {
         return [];
@@ -192,9 +193,10 @@ export class RoleService {
         return visible;
       }
 
-      // Get the model based on userType
-      const model = userType === 'staff' ? Staff : Learner;
-      const record = await model.findById(userId);
+      // Get record based on userType
+      const record = userType === 'staff'
+        ? await Staff.findById(userId)
+        : await Learner.findById(userId);
 
       if (!record || !record.isActive) {
         return [];
@@ -302,8 +304,9 @@ export class RoleService {
       }
 
       // Get user's roles in parent department
-      const model = userType === 'staff' ? Staff : Learner;
-      const record = await model.findById(userId);
+      const record = userType === 'staff'
+        ? await Staff.findById(userId)
+        : await Learner.findById(userId);
 
       if (!record || !record.isActive) {
         return [];
@@ -541,8 +544,9 @@ export class RoleService {
         };
       }
 
-      const model = userType === 'staff' ? Staff : Learner;
-      const record = await model.findById(userId);
+      const record = userType === 'staff'
+        ? await Staff.findById(userId)
+        : await Learner.findById(userId);
 
       if (!record || !record.isActive) {
         return null;

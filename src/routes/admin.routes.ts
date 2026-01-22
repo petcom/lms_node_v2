@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { isAuthenticated } from '@/middlewares/isAuthenticated';
-import { requireAccessRight } from '@/middlewares/requireAccessRight';
+import { authorize } from '@/middlewares/authorize';
 import { requireEscalation } from '@/middlewares/requireEscalation';
 import { requireAdminRole } from '@/middlewares/requireAdminRole';
 import * as adminController from '@/controllers/admin/admin.controller';
@@ -31,7 +31,7 @@ router.use(isAuthenticated);
 // Apply common middleware to all routes: escalation + admin role + access right
 router.use(requireEscalation);
 router.use(requireAdminRole(['system-admin']));
-router.use(requireAccessRight('system:*'));
+router.use(authorize('system:*'));
 
 // ============================================================================
 // USER ROLE ASSIGNMENT

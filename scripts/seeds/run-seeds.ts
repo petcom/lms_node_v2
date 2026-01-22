@@ -7,7 +7,15 @@
  * Usage:
  *   npx ts-node scripts/seeds/run-seeds.ts
  *   npx ts-node scripts/seeds/run-seeds.ts --constants-only
+ *   npx ts-node scripts/seeds/run-seeds.ts --admin-only
+ *   npx ts-node scripts/seeds/run-seeds.ts --modules-only
+ *   npx ts-node scripts/seeds/run-seeds.ts --skip-modules
  *   npm run seed:all
+ *
+ * Seeds run in order:
+ *   1. Constants (LookupValues)
+ *   2. Admin User & Master Department
+ *   3. Sample Modules & Learning Units (requires courses from mock data)
  *
  * @module scripts/seeds/run-seeds
  */
@@ -16,13 +24,14 @@ import mongoose from 'mongoose';
 import { loadEnv } from '../utils/load-env';
 import { seedConstants } from './constants.seed';
 import { seedAdmin } from '../seed-admin';
+import { seedSampleModules } from './seed-sample-modules';
 
 // Load environment variables
 loadEnv();
 
 // Configuration
 const config = {
-  mongoUri: process.env.MONGO_URI || 'mongodb://localhost:27017/lms_v2'
+  mongoUri: process.env.MONGO_URI || 'mongodb://localhost:27017/lms_mock'
 };
 
 /**
@@ -33,8 +42,10 @@ function parseArgs() {
   return {
     constantsOnly: args.includes('--constants-only'),
     adminOnly: args.includes('--admin-only'),
+    modulesOnly: args.includes('--modules-only'),
     skipAdmin: args.includes('--skip-admin'),
-    skipConstants: args.includes('--skip-constants')
+    skipConstants: args.includes('--skip-constants'),
+    skipModules: args.includes('--skip-modules')
   };
 }
 
@@ -79,7 +90,7 @@ async function main(): Promise<void> {
     }
 
     // Add admin seed
-    if (!options.skipAdmin && !options.constantsOnly) {
+    if (!options.skipAdmin && !options.constantsOnly && !options.modulesOnly) {
       seedSequence.push({
         name: 'Admin User & Master Department',
         fn: async () => {
@@ -90,6 +101,18 @@ async function main(): Promise<void> {
           await mongoose.connect(config.mongoUri);
         },
         skip: options.skipAdmin
+      });
+    }
+
+    // Add modules seed (requires mock data to exist first)
+    if (!options.skipModules && !options.constantsOnly && !options.adminOnly) {
+      seedSequence.push({
+        name: 'Sample Modules & Learning Units',
+        fn: async () => {
+          // seedSampleModules uses the existing connection
+          await seedSampleModules();
+        },
+        skip: options.skipModules
       });
     }
 

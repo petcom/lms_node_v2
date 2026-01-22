@@ -98,7 +98,7 @@ export async function getDepartmentAndSubdepartments(
  * }
  */
 export async function isTopLevelDepartmentMember(
-  userId: string | Types.ObjectId,
+  _userId: string | Types.ObjectId,
   deptId: string | Types.ObjectId
 ): Promise<boolean> {
   // Dynamically import Department model
@@ -196,7 +196,7 @@ export async function getRootDepartment(
  * @example
  * const hasAccess = await hasHierarchicalAccess(
  *   userId,
- *   user.departmentIds,
+ *   user.departmentMemberships?.map(m => m.departmentId) || [],
  *   targetDepartmentId
  * );
  * if (!hasAccess) {
@@ -248,7 +248,7 @@ export async function hasHierarchicalAccess(
  *
  * @example
  * const deptIds = await getDepartmentIdsForQuery(
- *   user.departmentIds,
+ *   user.departmentMemberships?.map(m => m.departmentId) || [],
  *   user._id
  * );
  * const staff = await Staff.find({ departmentId: { $in: deptIds } });

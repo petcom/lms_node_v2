@@ -20,7 +20,7 @@ loadEnv();
 const DB_URI =
   process.env.DB_URI ||
   process.env.MONGODB_URI ||
-  'mongodb://localhost:27017/lms_v2_dev';
+  'mongodb://localhost:27017/lms_mock';
 
 const REPORT_JOB_RIGHTS = [
   {

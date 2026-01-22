@@ -133,7 +133,7 @@ export const createModule = asyncHandler(async (req: Request, res: Response) => 
     objectives
   };
 
-  const result = await ModulesService.createModule(courseId, moduleData, user.id);
+  const result = await ModulesService.createModule(courseId, moduleData, user.userId);
   res.status(201).json(ApiResponse.success(result, 'Module created successfully'));
 });
 

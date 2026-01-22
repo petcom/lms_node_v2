@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { isAuthenticated } from '@/middlewares/isAuthenticated';
-import { requireAccessRight } from '@/middlewares/requireAccessRight';
+import { authorize } from '@/middlewares/authorize';
 import * as questionsController from '@/controllers/content/questions.controller';
 
 const router = Router();
@@ -34,7 +34,7 @@ router.use(isAuthenticated);
  * - sort: string (default: -createdAt)
  */
 router.get('/',
-  requireAccessRight(['content:assessments:manage', 'content:lessons:read']),
+  authorize.anyOf(['content:assessments:manage', 'content:lessons:read']),
   questionsController.listQuestions
 );
 
@@ -52,7 +52,7 @@ router.get('/',
  * - overwriteExisting: boolean (optional, default: false)
  */
 router.post('/bulk',
-  requireAccessRight('content:assessments:manage'),
+  authorize('content:assessments:manage'),
   questionsController.bulkImportQuestions
 );
 
@@ -75,7 +75,7 @@ router.post('/bulk',
  * - department: ObjectId (optional)
  */
 router.post('/',
-  requireAccessRight('content:assessments:manage'),
+  authorize('content:assessments:manage'),
   questionsController.createQuestion
 );
 
@@ -92,7 +92,7 @@ router.post('/',
  * - lastUsed: date when question was last included in an assessment
  */
 router.get('/:id',
-  requireAccessRight(['content:assessments:manage', 'content:lessons:read']),
+  authorize.anyOf(['content:assessments:manage', 'content:lessons:read']),
   questionsController.getQuestionById
 );
 
@@ -117,7 +117,7 @@ router.get('/:id',
  * Note: Cannot update questions in use in active assessments
  */
 router.put('/:id',
-  requireAccessRight('content:assessments:manage'),
+  authorize('content:assessments:manage'),
   questionsController.updateQuestion
 );
 
@@ -131,7 +131,7 @@ router.put('/:id',
  * Note: Cannot delete questions in use in assessments
  */
 router.delete('/:id',
-  requireAccessRight('content:assessments:manage'),
+  authorize('content:assessments:manage'),
   questionsController.deleteQuestion
 );
 

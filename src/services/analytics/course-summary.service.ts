@@ -186,9 +186,7 @@ export class CourseSummaryService {
       const deniedIds = departmentIds.filter(id => !accessibleDepartmentIds.includes(id));
       if (deniedIds.length > 0) {
         throw ApiError.forbidden(
-          'User does not have required role in one or more specified departments',
-          'DEPARTMENT_ACCESS_DENIED',
-          { deniedDepartmentIds: deniedIds }
+          'User does not have required role in one or more specified departments'
         );
       }
       targetDepartmentIds = departmentIds.map(id => new mongoose.Types.ObjectId(id));

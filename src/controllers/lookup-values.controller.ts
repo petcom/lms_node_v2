@@ -16,8 +16,18 @@
  */
 
 import { Request, Response, NextFunction } from 'express';
-import { UserTypeObject, RoleObject } from '@contracts/api/lookup-values.contract';
 import { ApiError } from '@/utils/ApiError';
+
+// Types inlined from contracts to avoid rootDir issues
+interface UserTypeObject {
+  _id: 'learner' | 'staff' | 'global-admin';
+  displayAs: string;
+}
+
+interface RoleObject {
+  _id: string;
+  displayAs: string;
+}
 
 /**
  * IRoleRegistry Interface (mocked initially)
@@ -218,7 +228,7 @@ export class LookupValuesController {
 
       // Apply isActive filter
       if (isActive !== undefined) {
-        const activeFilter = isActive === 'true' || isActive === true;
+        const activeFilter = isActive === 'true';
         data = data.filter(item => item.isActive === activeFilter);
       }
 
@@ -315,7 +325,7 @@ export class LookupValuesController {
    * @param res - Express response
    * @param next - Express next function
    */
-  static async listUserTypes(req: Request, res: Response, next: NextFunction): Promise<void> {
+  static async listUserTypes(_req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const userTypes = LookupValuesController.registry.getValidUserTypes();
       const userTypeObjects: UserTypeObject[] = userTypes.map(ut => ({

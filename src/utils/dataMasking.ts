@@ -23,8 +23,6 @@
  * @module utils/dataMasking
  */
 
-import { IUser } from '@/models/User.model';
-
 /**
  * Mask last name to initial format: "FirstName L."
  *

@@ -241,7 +241,7 @@ export class AuditLogsService {
     let userEmail = user.email;
     let userRole = 'learner';
 
-    if (user.roles.includes('learner')) {
+    if (user.userTypes.includes('learner')) {
       const learner = await Learner.findById(userId);
       if (learner) {
         userName = `${learner.person.firstName} ${learner.person.lastName}`;
@@ -251,7 +251,7 @@ export class AuditLogsService {
       if (staff) {
         userName = `${staff.person.firstName} ${staff.person.lastName}`;
       }
-      userRole = user.roles[0] || 'staff';
+      userRole = user.userTypes[0] || 'staff';
     }
 
     // Build query
@@ -550,12 +550,12 @@ export class AuditLogsService {
     }
 
     // Global admins see all logs
-    if (user.roles.includes('system-admin')) {
+    if (user.userTypes.includes('global-admin')) {
       return;
     }
 
     // Staff see logs scoped to their departments
-    if (user.roles.some((r) => ['instructor', 'content-admin', 'department-admin'].includes(r))) {
+    if (user.userTypes.some((r: string) => ['staff', 'global-admin'].includes(r))) {
       const staff = await Staff.findById(userId);
       if (staff) {
         const departmentIds = staff.departmentMemberships.map((dm) => dm.departmentId);
@@ -576,7 +576,7 @@ export class AuditLogsService {
       throw ApiError.unauthorized('Invalid user');
     }
 
-    if (user.roles.includes('system-admin')) {
+    if (user.userTypes.includes('global-admin')) {
       return;
     }
 
@@ -610,16 +610,16 @@ export class AuditLogsService {
     }
 
     // Global admins can view all activity
-    if (requestingUser.roles.includes('system-admin')) {
+    if (requestingUser.userTypes.includes('global-admin')) {
       return;
     }
 
     // Staff can view activity for users in their departments
-    if (requestingUser.roles.some((r) => ['instructor', 'content-admin', 'department-admin'].includes(r))) {
+    if (requestingUser.userTypes.some((r: string) => ['staff', 'global-admin'].includes(r))) {
       const staff = await Staff.findById(requestingUserId);
       if (staff) {
         const targetUser = await User.findById(targetUserId);
-        if (targetUser && targetUser.roles.includes('learner')) {
+        if (targetUser && targetUser.userTypes.includes('learner')) {
           // For simplicity, allow staff to view learner activity
           // In production, would check enrollment/department relationships
           return;

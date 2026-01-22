@@ -19,9 +19,10 @@
         },
         "code": {
           "type": "string",
-          "pattern": "^[A-Z]{2,4}[0-9]{3}[A-Z]?$",
-          "description": "Course code: 2-4 uppercase letters followed by 3 digits and optional letter (e.g., CS101, MATH200A)",
-          "examples": ["CS101", "MATH200", "ENG101A", "PHYS150"]
+          "pattern": "^[A-Za-z0-9]+$",
+          "maxLength": 35,
+          "description": "Course code: letters and numbers only, max 35 characters",
+          "examples": ["CS101", "MATH200", "IntroToPython", "cog101"]
         },
         "department": {
           "type": "string",
@@ -443,8 +444,9 @@
   ],
   "validations": {
     "course.code": {
-      "pattern": "^[A-Z]{2,4}[0-9]{3}[A-Z]?$",
-      "description": "Course code must be 2-4 uppercase letters followed by 3 digits and optional letter (e.g., CS101, MATH200A)"
+      "pattern": "^[A-Za-z0-9]+$",
+      "maxLength": 35,
+      "description": "Course code must contain only letters and numbers (max 35 characters)"
     },
     "course.title": {
       "description": "Course title is required and must be 1-255 characters long"

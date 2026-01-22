@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { isAuthenticated } from '@/middlewares/isAuthenticated';
-import { requireAccessRight } from '@/middlewares/requireAccessRight';
+import { authorize } from '@/middlewares/authorize';
 import * as enrollmentsController from '@/controllers/enrollment/enrollments.controller';
 
 const router = Router();
@@ -22,7 +22,7 @@ router.use(isAuthenticated);
  * Service Layer: Staff see department enrollments, learners see own
  */
 router.get('/',
-  requireAccessRight(['enrollment:department:read', 'enrollment:own:read']),
+  authorize.anyOf(['enrollment:department:read', 'enrollment:own:read']),
   enrollmentsController.listEnrollments
 );
 
@@ -33,7 +33,7 @@ router.get('/',
  * Service Layer: Check allowSelfEnrollment setting for learner self-enrollment
  */
 router.post('/program',
-  requireAccessRight(['enrollment:own:manage', 'enrollment:department:manage']),
+  authorize.anyOf(['enrollment:own:manage', 'enrollment:department:manage']),
   enrollmentsController.enrollProgram
 );
 
@@ -44,7 +44,7 @@ router.post('/program',
  * Service Layer: Check allowSelfEnrollment setting for learner self-enrollment
  */
 router.post('/course',
-  requireAccessRight(['enrollment:own:manage', 'enrollment:department:manage']),
+  authorize.anyOf(['enrollment:own:manage', 'enrollment:department:manage']),
   enrollmentsController.enrollCourse
 );
 
@@ -55,7 +55,7 @@ router.post('/course',
  * Service Layer: Check allowSelfEnrollment setting for learner self-enrollment
  */
 router.post('/class',
-  requireAccessRight(['enrollment:own:manage', 'enrollment:department:manage']),
+  authorize.anyOf(['enrollment:own:manage', 'enrollment:department:manage']),
   enrollmentsController.enrollClass
 );
 
@@ -65,7 +65,7 @@ router.post('/class',
  * Access Right: enrollment:department:read
  */
 router.get('/program/:programId',
-  requireAccessRight('enrollment:department:read'),
+  authorize('enrollment:department:read'),
   enrollmentsController.listProgramEnrollments
 );
 
@@ -75,7 +75,7 @@ router.get('/program/:programId',
  * Access Right: enrollment:department:read
  */
 router.get('/course/:courseId',
-  requireAccessRight('enrollment:department:read'),
+  authorize('enrollment:department:read'),
   enrollmentsController.listCourseEnrollments
 );
 
@@ -85,7 +85,7 @@ router.get('/course/:courseId',
  * Access Right: enrollment:department:read
  */
 router.get('/class/:classId',
-  requireAccessRight('enrollment:department:read'),
+  authorize('enrollment:department:read'),
   enrollmentsController.listClassEnrollments
 );
 
@@ -95,7 +95,7 @@ router.get('/class/:classId',
  * Access Right: enrollment:department:read OR enrollment:own:read
  */
 router.get('/:id',
-  requireAccessRight(['enrollment:department:read', 'enrollment:own:read']),
+  authorize.anyOf(['enrollment:department:read', 'enrollment:own:read']),
   enrollmentsController.getEnrollmentById
 );
 
@@ -105,7 +105,7 @@ router.get('/:id',
  * Access Right: enrollment:department:manage
  */
 router.patch('/:id/status',
-  requireAccessRight('enrollment:department:manage'),
+  authorize('enrollment:department:manage'),
   enrollmentsController.updateEnrollmentStatus
 );
 
@@ -115,7 +115,7 @@ router.patch('/:id/status',
  * Access Right: enrollment:own:manage OR enrollment:department:manage
  */
 router.delete('/:id',
-  requireAccessRight(['enrollment:own:manage', 'enrollment:department:manage']),
+  authorize.anyOf(['enrollment:own:manage', 'enrollment:department:manage']),
   enrollmentsController.withdrawEnrollment
 );
 

@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { isAuthenticated } from '@/middlewares/isAuthenticated';
-import { requireAccessRight } from '@/middlewares/requireAccessRight';
+import { authorize } from '@/middlewares/authorize';
 import * as assessmentsController from '@/controllers/content/assessments.controller';
 import {
   validateCreateAssessment,
@@ -36,7 +36,7 @@ router.use(isAuthenticated);
  * - sort: string (default: -createdAt)
  */
 router.get('/',
-  requireAccessRight(['content:assessments:manage', 'content:assessments:read']),
+  authorize.anyOf(['content:assessments:manage', 'content:assessments:read']),
   assessmentsController.listAssessments
 );
 
@@ -59,7 +59,7 @@ router.get('/',
  * - feedback: object (optional)
  */
 router.post('/',
-  requireAccessRight('content:assessments:manage'),
+  authorize('content:assessments:manage'),
   validateCreateAssessment,
   assessmentsController.createAssessment
 );
@@ -77,7 +77,7 @@ router.post('/',
  * - Statistics (for staff users)
  */
 router.get('/:assessmentId',
-  requireAccessRight(['content:assessments:manage', 'content:assessments:read']),
+  authorize.anyOf(['content:assessments:manage', 'content:assessments:read']),
   assessmentsController.getAssessment
 );
 
@@ -101,7 +101,7 @@ router.get('/:assessmentId',
  * Note: Cannot change style on published assessments
  */
 router.put('/:assessmentId',
-  requireAccessRight('content:assessments:manage'),
+  authorize('content:assessments:manage'),
   validateUpdateAssessment,
   assessmentsController.updateAssessment
 );
@@ -116,7 +116,7 @@ router.put('/:assessmentId',
  * Note: Cannot delete published assessments
  */
 router.delete('/:assessmentId',
-  requireAccessRight('content:assessments:manage'),
+  authorize('content:assessments:manage'),
   assessmentsController.deleteAssessment
 );
 
@@ -130,7 +130,7 @@ router.delete('/:assessmentId',
  * Note: After publishing, some fields become read-only
  */
 router.post('/:assessmentId/publish',
-  requireAccessRight('content:assessments:manage'),
+  authorize('content:assessments:manage'),
   assessmentsController.publishAssessment
 );
 
@@ -144,7 +144,7 @@ router.post('/:assessmentId/publish',
  * Note: Cannot be used in new learning units after archiving
  */
 router.post('/:assessmentId/archive',
-  requireAccessRight('content:assessments:manage'),
+  authorize('content:assessments:manage'),
   assessmentsController.archiveAssessment
 );
 

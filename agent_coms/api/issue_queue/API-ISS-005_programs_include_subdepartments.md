@@ -1,6 +1,6 @@
 # API-ISS-005: Programs Include Subdepartments Parameter
 
-## Status: IN PROGRESS
+## Status: COMPLETE
 ## Priority: Low
 ## Created: 2026-01-21
 ## Requested By: UI Team

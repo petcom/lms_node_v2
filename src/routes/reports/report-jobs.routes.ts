@@ -8,18 +8,100 @@
  */
 
 import { Router } from 'express';
+import { z } from 'zod';
 import * as controller from '@/controllers/reports/report-jobs.controller';
 import { isAuthenticated } from '@/middlewares/isAuthenticated';
-import { requireAccessRight } from '@/middlewares/requireAccessRight';
+import { authorize } from '@/middlewares/authorize';
 import { validateRequest } from '@/middlewares/validateRequest';
-import {
-  createReportJobSchema,
-  listReportJobsSchema,
-  getReportJobSchema,
-  cancelReportJobSchema,
-  retryReportJobSchema,
-  downloadReportSchema
-} from '@contracts/api/report-jobs.contract';
+
+// Inlined schemas from @contracts/api/report-jobs.contract to avoid rootDir issues
+const objectIdSchema = z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid ObjectId format');
+const isoDateSchema = z.string().datetime();
+
+const reportParametersSchema = z.object({
+  dateRange: z
+    .object({
+      startDate: isoDateSchema,
+      endDate: isoDateSchema
+    })
+    .optional(),
+  filters: z
+    .object({
+      departmentIds: z.array(objectIdSchema).optional(),
+      courseIds: z.array(objectIdSchema).optional(),
+      classIds: z.array(objectIdSchema).optional(),
+      learnerIds: z.array(objectIdSchema).optional(),
+      contentIds: z.array(objectIdSchema).optional(),
+      eventTypes: z.array(z.string()).optional(),
+      statuses: z.array(z.string()).optional()
+    })
+    .optional(),
+  groupBy: z.array(z.string()).optional(),
+  measures: z.array(z.string()).optional(),
+  includeInactive: z.boolean().optional()
+});
+
+const outputConfigSchema = z.object({
+  format: z.string().min(1, 'Output format is required'),
+  filename: z.string().optional()
+});
+
+const createReportJobSchema = z.object({
+  body: z.object({
+    reportType: z.string().min(1, 'Report type is required'),
+    name: z.string().min(1, 'Name is required').max(200, 'Name cannot exceed 200 characters'),
+    description: z.string().max(1000, 'Description cannot exceed 1000 characters').optional(),
+    parameters: reportParametersSchema,
+    output: outputConfigSchema,
+    priority: z.string().optional(),
+    visibility: z.string().optional(),
+    scheduledFor: isoDateSchema.optional(),
+    templateId: objectIdSchema.optional(),
+    departmentId: objectIdSchema.optional()
+  })
+});
+
+const listReportJobsSchema = z.object({
+  query: z.object({
+    status: z.union([z.string(), z.array(z.string())]).optional(),
+    reportType: z.union([z.string(), z.array(z.string())]).optional(),
+    requestedBy: objectIdSchema.optional(),
+    departmentId: objectIdSchema.optional(),
+    fromDate: isoDateSchema.optional(),
+    toDate: isoDateSchema.optional(),
+    page: z.coerce.number().int().positive().default(1),
+    limit: z.coerce.number().int().positive().max(100).default(20),
+    sortBy: z.enum(['createdAt', 'status', 'priority', 'updatedAt']).optional(),
+    sortOrder: z.enum(['asc', 'desc']).optional()
+  })
+});
+
+const getReportJobSchema = z.object({
+  params: z.object({
+    jobId: objectIdSchema
+  })
+});
+
+const cancelReportJobSchema = z.object({
+  params: z.object({
+    jobId: objectIdSchema
+  }),
+  body: z.object({
+    reason: z.string().max(500).optional()
+  })
+});
+
+const retryReportJobSchema = z.object({
+  params: z.object({
+    jobId: objectIdSchema
+  })
+});
+
+const downloadReportSchema = z.object({
+  params: z.object({
+    jobId: objectIdSchema
+  })
+});
 
 const router = Router();
 
@@ -33,7 +115,7 @@ router.use(isAuthenticated);
  */
 router.post(
   '/',
-  requireAccessRight('reports:jobs:create'),
+  authorize('reports:jobs:create'),
   validateRequest(createReportJobSchema),
   controller.createReportJob
 );
@@ -45,7 +127,7 @@ router.post(
  */
 router.get(
   '/',
-  requireAccessRight('reports:jobs:read'),
+  authorize('reports:jobs:read'),
   validateRequest(listReportJobsSchema),
   controller.listReportJobs
 );
@@ -57,7 +139,7 @@ router.get(
  */
 router.get(
   '/:jobId',
-  requireAccessRight('reports:jobs:read'),
+  authorize('reports:jobs:read'),
   validateRequest(getReportJobSchema),
   controller.getReportJob
 );
@@ -69,7 +151,7 @@ router.get(
  */
 router.post(
   '/:jobId/cancel',
-  requireAccessRight('reports:jobs:cancel'),
+  authorize('reports:jobs:cancel'),
   validateRequest(cancelReportJobSchema),
   controller.cancelReportJob
 );
@@ -81,7 +163,7 @@ router.post(
  */
 router.get(
   '/:jobId/download',
-  requireAccessRight('reports:jobs:read'),
+  authorize('reports:jobs:read'),
   validateRequest(downloadReportSchema),
   controller.downloadReport
 );
@@ -93,7 +175,7 @@ router.get(
  */
 router.post(
   '/:jobId/retry',
-  requireAccessRight('reports:jobs:create'),
+  authorize('reports:jobs:create'),
   validateRequest(retryReportJobSchema),
   controller.retryReportJob
 );

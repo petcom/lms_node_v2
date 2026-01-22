@@ -295,9 +295,9 @@ export class ClassesService {
         throw ApiError.badRequest(`Instructor not found or inactive: ${instructorId}`);
       }
 
-      // Check if user has instructor role
+      // Check if user has staff userType (instructors are staff members)
       const user = await User.findById(instructorId);
-      if (!user || !user.roles.includes('instructor')) {
+      if (!user || !(user.userTypes.includes('staff') || user.userTypes.includes('global-admin'))) {
         throw ApiError.badRequest(`User is not an instructor: ${instructorId}`);
       }
     }
@@ -537,8 +537,9 @@ export class ClassesService {
           throw ApiError.badRequest(`Instructor not found or inactive: ${instructorId}`);
         }
 
+        // Check if user has staff userType (instructors are staff members)
         const user = await User.findById(instructorId);
-        if (!user || !user.roles.includes('instructor')) {
+        if (!user || !(user.userTypes.includes('staff') || user.userTypes.includes('global-admin'))) {
           throw ApiError.badRequest(`User is not an instructor: ${instructorId}`);
         }
       }
@@ -727,7 +728,7 @@ export class ClassesService {
 
         // Check if learner exists
         const user = await User.findById(learnerId);
-        if (!user || !user.roles.includes('learner')) {
+        if (!user || !user.userTypes.includes('learner')) {
           errors.push({
             learnerId,
             reason: 'Learner not found or invalid role'

@@ -1,7 +1,7 @@
 /**
  * Mock Data Seeding Script for LMS V2
  * 
- * Creates comprehensive test data in lms_v2_mockdata database:
+ * Creates comprehensive test data in lms_mock database:
  * - 6 Users (4 staff, 2 learners)
  * - 3 Departments with hierarchy
  * - 1 Academic Year + 2 Terms
@@ -42,7 +42,7 @@ import { AuditLog } from '../src/models/system/AuditLog.model';
 import { Report } from '../src/models/system/Report.model';
 
 // Database connection
-const MOCK_DB_URI = process.env.MOCK_DB_URI || 'mongodb://localhost:27017/lms_v2_mockdata';
+const MOCK_DB_URI = process.env.MOCK_DB_URI || 'mongodb://localhost:27017/lms_mock';
 
 // Data storage
 const mockData = {

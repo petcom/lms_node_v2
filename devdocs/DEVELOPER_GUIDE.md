@@ -158,7 +158,7 @@ PORT=3000
 
 # Database
 MONGODB_URI=mongodb://localhost:27017/lms_v2
-MONGODB_URI_TEST=mongodb://localhost:27017/lms_v2_test
+MONGODB_URI_TEST=mongodb://localhost:27017/lms_test
 
 # JWT
 JWT_SECRET=your-super-secret-jwt-key

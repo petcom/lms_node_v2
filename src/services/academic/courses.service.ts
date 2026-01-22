@@ -6,7 +6,8 @@ import Program from '@/models/academic/Program.model';
 import { Staff } from '@/models/auth/Staff.model';
 import { User } from '@/models/auth/User.model';
 import { ApiError } from '@/utils/ApiError';
-import { getDepartmentAndSubdepartments } from '@/utils/departmentHierarchy';
+import { authorize, getDepartmentsWithRight } from '@/services/auth/authorize.service';
+import type { AuthenticatedUser } from '@/middlewares/isAuthenticated';
 
 interface ListCoursesFilters {
   page?: number;
@@ -234,9 +235,9 @@ export class CoursesService {
    */
   static async createCourse(courseData: CreateCourseInput, createdBy?: string): Promise<any> {
     // Validate code format (ABC123)
-    const codePattern = /^[A-Z]{2,4}[0-9]{3}$/;
-    if (!codePattern.test(courseData.code)) {
-      throw ApiError.badRequest('Course code must match pattern: 2-4 uppercase letters followed by 3 digits (e.g., CS101)');
+    const codePattern = /^[A-Za-z0-9]+$/;
+    if (!codePattern.test(courseData.code) || courseData.code.length > 35) {
+      throw ApiError.badRequest('Course code must contain only letters and numbers (max 35 characters)');
     }
 
     // Validate department exists
@@ -271,10 +272,10 @@ export class CoursesService {
       const instructorChecks = await Promise.all(
         courseData.instructors.map(async (id) => {
           const user = await User.findById(id);
-          return user && (user.roles.includes('instructor') || user.roles.includes('content-admin'));
+          return user && (user.userTypes.includes('staff') || user.userTypes.includes('global-admin'));
         })
       );
-      if (instructorChecks.some((valid) => !valid)) {
+      if (instructorChecks.some((valid: boolean | null | undefined) => !valid)) {
         throw ApiError.badRequest('One or more instructor IDs are invalid or do not have instructor role');
       }
     }
@@ -363,7 +364,7 @@ export class CoursesService {
             firstName: staff.person.firstName,
             lastName: staff.person.lastName,
             email: user.email,
-            role: user.roles.includes('instructor') ? 'instructor' : 'content-admin'
+            role: user.userTypes.includes('staff') ? 'instructor' : 'staff'
           };
         }
         return null;
@@ -393,8 +394,8 @@ export class CoursesService {
       if (creator) {
         createdBy = {
           id: creator._id.toString(),
-          firstName: creator.firstName,
-          lastName: creator.lastName
+          firstName: creator.person.firstName,
+          lastName: creator.person.lastName
         };
       }
     }
@@ -449,9 +450,9 @@ export class CoursesService {
     }
 
     // Validate code format
-    const codePattern = /^[A-Z]{2,4}[0-9]{3}$/;
-    if (!codePattern.test(updateData.code)) {
-      throw ApiError.badRequest('Course code must match pattern: 2-4 uppercase letters followed by 3 digits (e.g., CS101)');
+    const codePattern = /^[A-Za-z0-9]+$/;
+    if (!codePattern.test(updateData.code) || updateData.code.length > 35) {
+      throw ApiError.badRequest('Course code must contain only letters and numbers (max 35 characters)');
     }
 
     // Validate department exists
@@ -486,10 +487,10 @@ export class CoursesService {
       const instructorChecks = await Promise.all(
         updateData.instructors.map(async (id) => {
           const user = await User.findById(id);
-          return user && (user.roles.includes('instructor') || user.roles.includes('content-admin'));
+          return user && (user.userTypes.includes('staff') || user.userTypes.includes('global-admin'));
         })
       );
-      if (instructorChecks.some((valid) => !valid)) {
+      if (instructorChecks.some((valid: boolean | null | undefined) => !valid)) {
         throw ApiError.badRequest('One or more instructor IDs are invalid or do not have instructor role');
       }
     }
@@ -542,10 +543,10 @@ export class CoursesService {
       const instructorChecks = await Promise.all(
         patchData.instructors.map(async (id) => {
           const user = await User.findById(id);
-          return user && (user.roles.includes('instructor') || user.roles.includes('content-admin'));
+          return user && (user.userTypes.includes('staff') || user.userTypes.includes('global-admin'));
         })
       );
-      if (instructorChecks.some((valid) => !valid)) {
+      if (instructorChecks.some((valid: boolean | null | undefined) => !valid)) {
         throw ApiError.badRequest('One or more instructor IDs are invalid or do not have instructor role');
       }
     }
@@ -768,9 +769,9 @@ export class CoursesService {
     }
 
     // Validate new code format
-    const codePattern = /^[A-Z]{2,4}[0-9]{3}$/;
-    if (!codePattern.test(options.newCode)) {
-      throw ApiError.badRequest('Course code must match pattern: 2-4 uppercase letters followed by 3 digits (e.g., CS101)');
+    const codePattern = /^[A-Za-z0-9]+$/;
+    if (!codePattern.test(options.newCode) || options.newCode.length > 35) {
+      throw ApiError.badRequest('Course code must contain only letters and numbers (max 35 characters)');
     }
 
     // Determine target department
@@ -1019,141 +1020,110 @@ export class CoursesService {
   /**
    * Check if user can view a course based on visibility rules
    *
+   * Uses the unified authorization system with additional business logic for visibility.
+   *
    * Business Rules:
-   * - Draft courses: visible to all department members
-   * - Published courses: visible to all users
-   * - Archived courses: visible to department members only
+   * - Published courses: visible to all authenticated users
+   * - Draft/Archived courses: requires 'content:courses:read' right in course's department
+   * - Course creator can always view their own course (via 'own' scope)
+   *
+   * @param course - Course document (raw DB or transformed API object)
+   * @param user - Authenticated user from request context
+   * @param _departmentContext - (Deprecated) Previously used for navigation context
    */
-  static async canViewCourse(course: any, user: any): Promise<boolean> {
+  static async canViewCourse(course: any, user: AuthenticatedUser, _departmentContext?: string): Promise<boolean> {
     // Handle transformed API object (has 'status' field) vs raw DB object (has 'isActive' field)
     const courseStatus = course.status || (!course.isActive ? 'archived' : (course.metadata?.status === 'published' ? 'published' : 'draft'));
 
-    // Published courses are visible to everyone
+    // Published courses are visible to all authenticated users
     if (courseStatus === 'published') {
       return true;
     }
 
-    // Draft and archived courses visible to department members only
-    if (courseStatus === 'draft' || courseStatus === 'archived') {
-      // Get user's department IDs
-      const userDepartmentIds = user.departmentMemberships?.map((m: any) => m.departmentId?.toString() || m.departmentId) || [];
+    // For draft/archived courses, use unified authorization
+    const courseDeptId = course.departmentId?.toString() || course.department?.id;
+    const creatorId = course.metadata?.createdBy?.toString() || course.createdBy?.id;
+    const courseId = course._id?.toString() || course.id;
 
-      // Check if user is in the course's department or subdepartment
-      // Handle both raw DB object (departmentId) and transformed API object (department.id)
-      const courseDeptId = course.departmentId?.toString() || course.department?.id;
-
-      // If we can't determine course department, deny access
-      if (!courseDeptId) {
-        return false;
+    const result = await authorize(user, 'content:courses:read', {
+      resource: {
+        type: 'course',
+        id: courseId,
+        departmentId: courseDeptId,
+        createdBy: creatorId
       }
+    });
 
-      // Check direct membership
-      if (userDepartmentIds.includes(courseDeptId)) {
-        return true;
-      }
-
-      // Check hierarchical membership (user in parent department sees subdepartment courses)
-      for (const userDeptId of userDepartmentIds) {
-        const deptHierarchy = await getDepartmentAndSubdepartments(userDeptId);
-        if (deptHierarchy.includes(courseDeptId)) {
-          return true;
-        }
-      }
-
-      return false;
-    }
-
-    return false;
+    return result.allowed;
   }
 
   /**
-   * Check if user can edit a course based on creator and status rules
+   * Check if user can edit a course based on authorization and status rules
+   *
+   * Uses the unified authorization system with additional business logic for status.
    *
    * Business Rules:
-   * - Draft courses: editable by creator + department-admin
-   * - Published courses: editable by department-admin only
    * - Archived courses: not editable (must unarchive first)
+   * - Draft/Published courses: requires 'content:courses:manage' right in course's department
+   * - Course creator can edit their own draft courses (via 'own' scope)
+   *
+   * @param course - Course document (raw DB or transformed API object)
+   * @param user - Authenticated user from request context
    */
-  static async canEditCourse(course: any, user: any): Promise<boolean> {
+  static async canEditCourse(course: any, user: AuthenticatedUser): Promise<boolean> {
     // Handle transformed API object (has 'status' field) vs raw DB object (has 'isActive' field)
     const courseStatus = course.status || (!course.isActive ? 'archived' : (course.metadata?.status === 'published' ? 'published' : 'draft'));
 
-    // Archived courses cannot be edited
+    // Archived courses cannot be edited - this is business logic, not authorization
     if (courseStatus === 'archived') {
       return false;
     }
 
-    // Get user roles
-    const userRoles = user.roles || [];
-    const isDepartmentAdmin = userRoles.includes('department-admin');
-    const isSystemAdmin = userRoles.includes('system-admin');
-
-    // System admin can edit anything
-    if (isSystemAdmin) {
-      return true;
-    }
-
-    // Check if user is in the same department
-    const userDepartmentIds = user.departmentMemberships?.map((m: any) => m.departmentId?.toString() || m.departmentId) || [];
-    // Handle both raw DB object (departmentId) and transformed API object (department.id)
+    // Use unified authorization for edit permission
     const courseDeptId = course.departmentId?.toString() || course.department?.id;
+    const creatorId = course.metadata?.createdBy?.toString() || course.createdBy?.id;
+    const courseId = course._id?.toString() || course.id;
 
-    // If we can't determine course department, deny access
-    if (!courseDeptId) {
-      return false;
-    }
+    const result = await authorize(user, 'content:courses:manage', {
+      resource: {
+        type: 'course',
+        id: courseId,
+        departmentId: courseDeptId,
+        createdBy: creatorId
+      }
+    });
 
-    const isInDepartment = userDepartmentIds.includes(courseDeptId);
-
-    // For published courses: only department-admin can edit
-    if (courseStatus === 'published') {
-      return isDepartmentAdmin && isInDepartment;
-    }
-
-    // For draft courses: creator or department-admin can edit
-    if (courseStatus === 'draft') {
-      // Handle both raw DB object (metadata.createdBy as ObjectId) and transformed API object (createdBy.id)
-      const creatorId = course.metadata?.createdBy?.toString() || course.createdBy?.id;
-      const userId = user._id?.toString() || user.userId;
-      const isCreator = creatorId && userId && creatorId === userId;
-      return isCreator || (isDepartmentAdmin && isInDepartment);
-    }
-
-    return false;
+    return result.allowed;
   }
 
   /**
    * Apply department scoping to course list query
    *
-   * Filters courses based on user's department membership and hierarchical access
+   * Uses the unified authorization system to determine which departments
+   * the user can read courses from, including hierarchical access.
+   *
+   * @param query - MongoDB query object to modify
+   * @param user - Authenticated user from request context
    */
-  static async applyDepartmentScoping(query: any, user: any): Promise<any> {
-    // System admin sees all
-    if (user.roles?.includes('system-admin')) {
+  static async applyDepartmentScoping(query: any, user: AuthenticatedUser): Promise<any> {
+    // Check if user has global access FIRST (indicated by having '*' global right)
+    // In this case, don't add department filter - they can see all
+    if (user.globalRights?.includes('*') || user.globalRights?.includes('content:*') || user.globalRights?.includes('content:courses:*') || user.globalRights?.includes('content:courses:read')) {
       return query;
     }
 
-    // Get user's department IDs with hierarchical expansion
-    const userDepartmentIds = user.departmentMemberships?.map((m: any) => m.departmentId.toString()) || [];
+    // Use unified authorization to get departments where user has read access
+    // This handles department rights and hierarchy automatically
+    const accessibleDepartments = getDepartmentsWithRight(user, 'content:courses:read', true);
 
-    if (userDepartmentIds.length === 0) {
-      // No department membership - no courses visible
+    if (accessibleDepartments.length === 0) {
+      // No department access - return empty result set
       query.departmentId = { $in: [] };
       return query;
     }
 
-    // Expand department IDs to include subdepartments for top-level members
-    const expandedDeptIds: string[] = [];
-    for (const deptId of userDepartmentIds) {
-      const deptHierarchy = await getDepartmentAndSubdepartments(deptId);
-      expandedDeptIds.push(...deptHierarchy);
-    }
-
-    // Remove duplicates
-    const uniqueDeptIds = [...new Set(expandedDeptIds)];
-
     // Add department filter to query
-    query.departmentId = { $in: uniqueDeptIds };
+    query.departmentId = { $in: accessibleDepartments };
 
     return query;
   }
@@ -1161,13 +1131,18 @@ export class CoursesService {
   /**
    * Filter courses based on visibility rules
    *
-   * Applies business rules for draft/published/archived course visibility
+   * Uses canViewCourse() which leverages the unified authorization system.
+   * Applies business rules for draft/published/archived course visibility.
+   *
+   * @param courses - Array of course documents to filter
+   * @param user - Authenticated user from request context
+   * @param departmentContext - (Deprecated) Previously used for navigation context
    */
-  static async filterCoursesByVisibility(courses: any[], user: any): Promise<any[]> {
+  static async filterCoursesByVisibility(courses: any[], user: AuthenticatedUser, departmentContext?: string): Promise<any[]> {
     const visibleCourses: any[] = [];
 
     for (const course of courses) {
-      const canView = await this.canViewCourse(course, user);
+      const canView = await this.canViewCourse(course, user, departmentContext);
       if (canView) {
         visibleCourses.push(course);
       }

@@ -1209,7 +1209,7 @@ export class ContentService {
     }
 
     // Check if global admin
-    if (user.roles?.includes('global-admin')) {
+    if ((user as any).roles?.includes('global-admin')) {
       // Return all department IDs
       const allDepartments = await Department.find({ isActive: true }).lean();
       return allDepartments.map(dept => dept._id.toString());

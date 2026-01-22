@@ -90,7 +90,7 @@ export const getCourseSummary = asyncHandler(async (req: Request, res: Response)
   }
 
   // Parse includeArchived boolean
-  const parsedIncludeArchived = includeArchived === 'true' || includeArchived === true;
+  const parsedIncludeArchived = includeArchived === 'true';
 
   logger.info('Course summary analytics requested', {
     userId: user._id,
@@ -117,7 +117,7 @@ export const getCourseSummary = asyncHandler(async (req: Request, res: Response)
  * Currently returns JSON with export metadata - actual file generation
  * can be implemented with libraries like PDFKit, csv-stringify, or exceljs.
  */
-export const exportCourseSummary = asyncHandler(async (req: Request, res: Response) => {
+export const exportCourseSummary = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const user = (req as any).user;
 
   // Get departments where user has analytics access
@@ -146,8 +146,7 @@ export const exportCourseSummary = asyncHandler(async (req: Request, res: Respon
   }
   if (!VALID_EXPORT_FORMATS.includes(format)) {
     throw ApiError.badRequest(
-      `Invalid format. Must be one of: ${VALID_EXPORT_FORMATS.join(', ')}`,
-      'INVALID_FORMAT'
+      `Invalid format. Must be one of: ${VALID_EXPORT_FORMATS.join(', ')}`
     );
   }
 
@@ -236,7 +235,8 @@ export const exportCourseSummary = asyncHandler(async (req: Request, res: Respon
     
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    return res.send(csvContent);
+    res.send(csvContent);
+    return;
   }
 
   // For PDF and Excel, return JSON with a note about implementation

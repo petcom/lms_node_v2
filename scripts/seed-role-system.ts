@@ -19,7 +19,7 @@ import { seedAccessRights } from './seed-access-rights';
 import { seedAdmin } from './seed-admin';
 
 // MongoDB connection URI
-const MONGO_URI = process.env.MONGO_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017/lms_v2';
+const MONGO_URI = process.env.MONGO_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017/lms_mock';
 
 /**
  * Combined seed function that runs all seed scripts in order

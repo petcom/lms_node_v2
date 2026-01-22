@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { isAuthenticated } from '@/middlewares/isAuthenticated';
-import { requireAccessRight } from '@/middlewares/requireAccessRight';
+import { authorize } from '@/middlewares/authorize';
 import * as learningUnitsController from '@/controllers/academic/learning-units.controller';
 import {
   validateCreateLearningUnit,
@@ -27,7 +27,7 @@ router.use(isAuthenticated);
  * Access Right: content:courses:read
  */
 router.get('/',
-  requireAccessRight('content:courses:read'),
+  authorize('content:courses:read'),
   learningUnitsController.listLearningUnits
 );
 
@@ -37,7 +37,7 @@ router.get('/',
  * Access Right: content:lessons:manage
  */
 router.post('/',
-  requireAccessRight('content:lessons:manage'),
+  authorize('content:lessons:manage'),
   validateCreateLearningUnit,
   learningUnitsController.createLearningUnit
 );
@@ -48,7 +48,7 @@ router.post('/',
  * Access Right: content:lessons:manage
  */
 router.put('/reorder',
-  requireAccessRight('content:lessons:manage'),
+  authorize('content:lessons:manage'),
   validateReorderLearningUnits,
   learningUnitsController.reorderLearningUnits
 );
@@ -59,7 +59,7 @@ router.put('/reorder',
  * Access Right: content:courses:read
  */
 router.get('/:learningUnitId',
-  requireAccessRight('content:courses:read'),
+  authorize('content:courses:read'),
   learningUnitsController.getLearningUnit
 );
 
@@ -69,7 +69,7 @@ router.get('/:learningUnitId',
  * Access Right: content:lessons:manage
  */
 router.put('/:learningUnitId',
-  requireAccessRight('content:lessons:manage'),
+  authorize('content:lessons:manage'),
   validateUpdateLearningUnit,
   learningUnitsController.updateLearningUnit
 );
@@ -80,7 +80,7 @@ router.put('/:learningUnitId',
  * Access Right: content:lessons:manage
  */
 router.delete('/:learningUnitId',
-  requireAccessRight('content:lessons:manage'),
+  authorize('content:lessons:manage'),
   learningUnitsController.deleteLearningUnit
 );
 
@@ -90,7 +90,7 @@ router.delete('/:learningUnitId',
  * Access Right: content:lessons:manage
  */
 router.put('/:learningUnitId/move',
-  requireAccessRight('content:lessons:manage'),
+  authorize('content:lessons:manage'),
   validateMoveLearningUnit,
   learningUnitsController.moveLearningUnit
 );

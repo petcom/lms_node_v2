@@ -5,6 +5,8 @@ import { Staff } from '@/models/auth/Staff.model';
 import Department from '@/models/organization/Department.model';
 import { ApiError } from '@/utils/ApiError';
 import { getDepartmentAndSubdepartments, isTopLevelDepartmentMember } from '@/utils/departmentHierarchy';
+import { invalidateAndIncrementVersion } from '@/utils/permission-cache';
+import { logger } from '@/config/logger';
 
 interface DepartmentAssignment {
   departmentId: string;
@@ -246,8 +248,11 @@ export class StaffService {
     }
 
     // Check permissions
-    const isGlobalAdmin = requester.roles.includes('system-admin');
-    const isDeptAdmin = requester.roles.includes('department-admin');
+    const isGlobalAdmin = requester.userTypes.includes('global-admin');
+    const requesterStaffForCheck = await Staff.findById(requesterId);
+    const isDeptAdmin = requesterStaffForCheck?.departmentMemberships.some(
+      (dm) => dm.roles.includes('dept-admin')
+    ) ?? false;
 
     if (!isGlobalAdmin && !isDeptAdmin) {
       throw ApiError.forbidden('Insufficient permissions to create staff');
@@ -314,7 +319,9 @@ export class StaffService {
     const departmentMemberships = staffData.departmentAssignments.map((da) => ({
       departmentId: new mongoose.Types.ObjectId(da.departmentId),
       roles: [da.role],
-      isPrimary: false
+      isPrimary: false,
+      joinedAt: new Date(),
+      isActive: true
     }));
 
     // Set first as primary
@@ -371,9 +378,14 @@ export class StaffService {
     }
 
     // Check permissions
-    const isGlobalAdmin = requester.roles.includes('system-admin');
-    const isDeptAdmin = requester.roles.includes('department-admin');
-    const isStaff = requester.roles.some((r) => ['instructor', 'content-admin'].includes(r));
+    const isGlobalAdmin = requester.userTypes.includes('global-admin');
+    const requesterStaffForCheck = await Staff.findById(requesterId);
+    const isDeptAdmin = requesterStaffForCheck?.departmentMemberships.some(
+      (dm) => dm.roles.includes('dept-admin')
+    ) ?? false;
+    const isStaff = requesterStaffForCheck?.departmentMemberships.some(
+      (dm) => dm.roles.some((r: string) => ['instructor', 'content-admin'].includes(r))
+    ) ?? false;
 
     if (!isGlobalAdmin && !isDeptAdmin && !isStaff) {
       throw ApiError.forbidden('Insufficient permissions to view staff');
@@ -457,8 +469,11 @@ export class StaffService {
     }
 
     // Check permissions
-    const isGlobalAdmin = requester.roles.includes('system-admin');
-    const isDeptAdmin = requester.roles.includes('department-admin');
+    const isGlobalAdmin = requester.userTypes.includes('global-admin');
+    const requesterStaffForCheck = await Staff.findById(requesterId);
+    const isDeptAdmin = requesterStaffForCheck?.departmentMemberships.some(
+      (dm) => dm.roles.includes('dept-admin')
+    ) ?? false;
 
     if (!isGlobalAdmin && !isDeptAdmin) {
       throw ApiError.forbidden('Insufficient permissions to update staff');
@@ -477,7 +492,7 @@ export class StaffService {
 
     // Check department scoping for dept-admin
     if (!isGlobalAdmin) {
-      const requesterStaff = await Staff.findById(requesterId);
+      const requesterStaff = requesterStaffForCheck;
       if (!requesterStaff) {
         throw ApiError.forbidden('Insufficient permissions');
       }
@@ -567,8 +582,11 @@ export class StaffService {
     }
 
     // Check permissions
-    const isGlobalAdmin = requester.roles.includes('system-admin');
-    const isDeptAdmin = requester.roles.includes('department-admin');
+    const isGlobalAdmin = requester.userTypes.includes('global-admin');
+    const requesterStaffForCheck = await Staff.findById(requesterId);
+    const isDeptAdmin = requesterStaffForCheck?.departmentMemberships.some(
+      (dm) => dm.roles.includes('dept-admin')
+    ) ?? false;
 
     if (!isGlobalAdmin && !isDeptAdmin) {
       throw ApiError.forbidden('Insufficient permissions to delete staff');
@@ -587,7 +605,7 @@ export class StaffService {
 
     // Check department scoping for dept-admin
     if (!isGlobalAdmin) {
-      const requesterStaff = await Staff.findById(requesterId);
+      const requesterStaff = requesterStaffForCheck;
       if (!requesterStaff) {
         throw ApiError.forbidden('Insufficient permissions');
       }
@@ -630,6 +648,15 @@ export class StaffService {
     await user.save();
     await staff.save();
 
+    // Invalidate permission cache after staff deletion/deactivation
+    try {
+      const newVersion = await invalidateAndIncrementVersion(staffId);
+      logger.info(`[StaffService] Invalidated permission cache for user ${staffId} after deletion (version: ${newVersion})`);
+    } catch (cacheError) {
+      logger.error(`[StaffService] Failed to invalidate permission cache for user ${staffId}:`, cacheError);
+      // Continue - cache invalidation failure should not fail the operation
+    }
+
     return {
       id: staff._id.toString(),
       status: 'withdrawn',
@@ -651,8 +678,11 @@ export class StaffService {
     }
 
     // Check permissions
-    const isGlobalAdmin = requester.roles.includes('system-admin');
-    const isDeptAdmin = requester.roles.includes('department-admin');
+    const isGlobalAdmin = requester.userTypes.includes('global-admin');
+    const requesterStaffForCheck = await Staff.findById(requesterId);
+    const isDeptAdmin = requesterStaffForCheck?.departmentMemberships.some(
+      (dm) => dm.roles.includes('dept-admin')
+    ) ?? false;
 
     if (!isGlobalAdmin && !isDeptAdmin) {
       throw ApiError.forbidden('Insufficient permissions to update departments');
@@ -674,13 +704,13 @@ export class StaffService {
 
     // Check if dept-admin can modify these departments
     if (!isGlobalAdmin) {
-      const requesterStaff = await Staff.findById(requesterId);
+      const requesterStaff = requesterStaffForCheck;
       if (!requesterStaff) {
         throw ApiError.forbidden('Insufficient permissions');
       }
 
       const managedDeptIds = requesterStaff.departmentMemberships
-        .filter((dm) => dm.roles.includes('department-admin'))
+        .filter((dm) => dm.roles.includes('dept-admin'))
         .map((dm) => dm.departmentId.toString());
 
       for (const deptId of departmentIds) {
@@ -702,7 +732,9 @@ export class StaffService {
             staff.departmentMemberships.push({
               departmentId: new mongoose.Types.ObjectId(assignment.departmentId),
               roles: [assignment.role],
-              isPrimary: staff.departmentMemberships.length === 0
+              isPrimary: staff.departmentMemberships.length === 0,
+              joinedAt: new Date(),
+              isActive: true
             });
           }
         }
@@ -753,7 +785,9 @@ export class StaffService {
         staff.departmentMemberships = updateData.departmentAssignments.map((da, idx) => ({
           departmentId: new mongoose.Types.ObjectId(da.departmentId),
           roles: [da.role],
-          isPrimary: idx === 0
+          isPrimary: idx === 0,
+          joinedAt: new Date(),
+          isActive: true
         }));
         break;
     }
@@ -764,6 +798,15 @@ export class StaffService {
     }
 
     await staff.save();
+
+    // Invalidate permission cache after department membership change
+    try {
+      const newVersion = await invalidateAndIncrementVersion(staffId);
+      logger.info(`[StaffService] Invalidated permission cache for user ${staffId} after department update (version: ${newVersion})`);
+    } catch (cacheError) {
+      logger.error(`[StaffService] Failed to invalidate permission cache for user ${staffId}:`, cacheError);
+      // Continue - cache invalidation failure should not fail the operation
+    }
 
     // Build response
     const departmentsData = await Promise.all(

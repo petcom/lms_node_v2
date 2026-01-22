@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { isAuthenticated } from '@/middlewares/isAuthenticated';
-import { requireAccessRight } from '@/middlewares/requireAccessRight';
+import { authorize } from '@/middlewares/authorize';
 import * as progressController from '@/controllers/analytics/progress.controller';
 
 const router = Router();
@@ -23,7 +23,7 @@ router.use(isAuthenticated);
  * Access: reports:department:read OR reports:own-classes:read (instructors see own classes only)
  */
 router.get('/reports/summary',
-  requireAccessRight(['reports:department:read', 'reports:own-classes:read'], { requireAny: true }),
+  authorize.anyOf(['reports:department:read', 'reports:own-classes:read']),
   progressController.getProgressSummary
 );
 
@@ -34,7 +34,7 @@ router.get('/reports/summary',
  * Access: reports:department:read OR reports:own-classes:read (instructors see own classes only)
  */
 router.get('/reports/detailed',
-  requireAccessRight(['reports:department:read', 'reports:own-classes:read'], { requireAny: true }),
+  authorize.anyOf(['reports:department:read', 'reports:own-classes:read']),
   progressController.getDetailedProgressReport
 );
 
@@ -45,7 +45,7 @@ router.get('/reports/detailed',
  * Access: grades:own-classes:manage (instructors), grades:department:read (department-admin)
  */
 router.post('/update',
-  requireAccessRight(['grades:own-classes:manage', 'grades:department:read']),
+  authorize.anyOf(['grades:own-classes:manage', 'grades:department:read']),
   progressController.updateProgress
 );
 
@@ -56,7 +56,7 @@ router.post('/update',
  * Access: learner:grades:read (learner own), grades:own:read (learner own)
  */
 router.get('/learner/:learnerId/program/:programId',
-  requireAccessRight(['learner:grades:read', 'grades:own:read']),
+  authorize.anyOf(['learner:grades:read', 'grades:own:read']),
   progressController.getLearnerProgramProgress
 );
 
@@ -68,7 +68,7 @@ router.get('/learner/:learnerId/program/:programId',
  * Service layer: Instructors filter to show ONLY their classes
  */
 router.get('/learner/:learnerId',
-  requireAccessRight(['learner:grades:read', 'grades:own:read']),
+  authorize.anyOf(['learner:grades:read', 'grades:own:read']),
   progressController.getLearnerProgress
 );
 
@@ -79,7 +79,7 @@ router.get('/learner/:learnerId',
  * Access: grades:own:read (learner enrolled), reports:department:read (department-admin)
  */
 router.get('/program/:programId',
-  requireAccessRight(['grades:own:read', 'reports:department:read']),
+  authorize.anyOf(['grades:own:read', 'reports:department:read']),
   progressController.getProgramProgress
 );
 
@@ -90,7 +90,7 @@ router.get('/program/:programId',
  * Access: grades:own:read (learner enrolled), reports:own-classes:read (instructor own classes)
  */
 router.get('/course/:courseId',
-  requireAccessRight(['grades:own:read', 'reports:own-classes:read']),
+  authorize.anyOf(['grades:own:read', 'reports:own-classes:read']),
   progressController.getCourseProgress
 );
 
@@ -101,7 +101,7 @@ router.get('/course/:courseId',
  * Access: grades:own:read (learner enrolled), reports:own-classes:read (instructor own classes)
  */
 router.get('/class/:classId',
-  requireAccessRight(['grades:own:read', 'reports:own-classes:read']),
+  authorize.anyOf(['grades:own:read', 'reports:own-classes:read']),
   progressController.getClassProgress
 );
 

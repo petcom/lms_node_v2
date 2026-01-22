@@ -42,7 +42,7 @@ import { AccessRight, AccessRightDomain } from '../src/models/AccessRight.model'
 import { RoleDefinition } from '../src/models/RoleDefinition.model';
 
 // Database connection
-const DB_URI = process.env.DB_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017/lms_v2_dev';
+const DB_URI = process.env.DB_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017/lms_mock';
 
 /**
  * Access right definition interface

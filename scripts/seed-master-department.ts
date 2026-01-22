@@ -17,7 +17,7 @@
  *   npm run seed:master-department
  *
  * Environment variables:
- *   MONGO_URI - MongoDB connection string (default: mongodb://localhost:27017/lms_v2)
+ *   MONGO_URI - MongoDB connection string (default: mongodb://localhost:27017/lms_mock)
  *
  * @module scripts/seed-master-department
  */
@@ -34,7 +34,7 @@ import { MASTER_DEPARTMENT_ID, MASTER_DEPARTMENT_NAME } from '../src/models/auth
 
 // Configuration
 const config = {
-  mongoUri: process.env.MONGO_URI || 'mongodb://localhost:27017/lms_v2'
+  mongoUri: process.env.MONGO_URI || 'mongodb://localhost:27017/lms_mock'
 };
 
 /**

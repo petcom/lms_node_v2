@@ -1,6 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
 import { GradeOverrideService } from '@/services/grades/grade-override.service';
-import { ApiError } from '@/utils/ApiError';
 
 const gradeOverrideService = new GradeOverrideService();
 
