@@ -1,8 +1,7 @@
 import mongoose from 'mongoose';
 import AssessmentAttempt, {
   IAssessmentAttempt,
-  IQuestionAttempt,
-  AssessmentAttemptStatus
+  IQuestionAttempt
 } from '@/models/progress/AssessmentAttempt.model';
 import Assessment, { IAssessment } from '@/models/content/Assessment.model';
 import Question from '@/models/assessment/Question.model';
@@ -309,7 +308,7 @@ export class AssessmentAttemptsService {
     // Determine what to show based on settings
     const showCorrectAnswers = this.shouldShowCorrectAnswers(
       assessment,
-      attempt,
+      attempt as unknown as IAssessmentAttempt,
       learnerId
     );
 
@@ -361,7 +360,7 @@ export class AssessmentAttemptsService {
     const totalPages = Math.ceil(total / limit);
 
     return {
-      attempts: attempts as IAssessmentAttempt[],
+      attempts: attempts as unknown as IAssessmentAttempt[],
       pagination: {
         page,
         limit,
