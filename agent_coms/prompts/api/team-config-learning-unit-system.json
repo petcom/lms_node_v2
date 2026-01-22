@@ -1,0 +1,513 @@
+{
+  "team": {
+    "name": "API Team - Learning Unit System",
+    "version": "1.0.0",
+    "description": "Backend implementation of Module/LearningUnit hierarchy with Assessments",
+    "created": "2026-01-21"
+  },
+  "reference": {
+    "guidance": "./agent_coms/dev_guidance/FEATURE_DEVELOPMENT_CHECKLIST.md",
+    "implementationPlan": "devdocs/plans/Learning_Unit_System_Implementation.md",
+    "uiRequests": [
+      "agent_coms/messages/UI-2026-01-21-module-entity-request.md",
+      "agent_coms/messages/UI-2026-01-21-entity-modifications-request.md",
+      "agent_coms/messages/UI-2026-01-21-assessment-module-spec.md",
+      "agent_coms/messages/UI-2026-01-21-module-access-entity-request.md",
+      "agent_coms/messages/UI-2026-01-21-question-entity-modification.md"
+    ]
+  },
+  "agents": {
+    "qaArchitect": {
+      "id": "agent-qa-architect",
+      "model": "opus-4.5",
+      "role": "QA/Architect/Gate",
+      "description": "Reviews all code, enforces architecture decisions, approves phase gates",
+      "responsibilities": [
+        "Review all PRs before merge",
+        "Enforce coding standards from FEATURE_DEVELOPMENT_CHECKLIST.md",
+        "Validate phase gate criteria met",
+        "Resolve architectural decisions",
+        "Ensure no breaking changes to existing endpoints",
+        "Approve contract exports to UI team",
+        "Final sign-off on migrations"
+      ],
+      "gateApproval": {
+        "required": true,
+        "criteria": [
+          "Code compiles without errors",
+          "Tests pass with >80% coverage",
+          "No TypeScript errors (npx tsc --noEmit)",
+          "Follows project conventions",
+          "Contracts match implementation"
+        ]
+      }
+    },
+    "developers": [
+      {
+        "id": "agent-models",
+        "model": "sonnet-4.5",
+        "role": "Models Specialist",
+        "description": "Creates and updates Mongoose models",
+        "phaseAssignments": {
+          "phase1": [
+            "1.1 - Module.model.ts",
+            "1.2 - LearningUnit.model.ts (rename CourseContent)",
+            "1.3 - Assessment.model.ts",
+            "1.4 - ModuleAccess.model.ts",
+            "1.5 - Question.model.ts update",
+            "1.6 - AssessmentAttempt.model.ts"
+          ]
+        },
+        "workingDirectories": [
+          "src/models/academic/",
+          "src/models/content/",
+          "src/models/progress/",
+          "tests/unit/models/"
+        ],
+        "contextFiles": [
+          "src/models/content/CourseContent.model.ts",
+          "src/models/content/Question.model.ts",
+          "src/models/academic/Course.model.ts"
+        ]
+      },
+      {
+        "id": "agent-services",
+        "model": "sonnet-4.5",
+        "role": "Services Specialist",
+        "description": "Implements business logic services",
+        "phaseAssignments": {
+          "phase2": [
+            "2.1 - modules.service.ts",
+            "2.2 - learning-units.service.ts",
+            "2.3 - assessments.service.ts",
+            "2.4 - module-access.service.ts",
+            "2.5 - assessment-attempts.service.ts",
+            "2.6 - questions.service.ts update"
+          ]
+        },
+        "workingDirectories": [
+          "src/services/academic/",
+          "src/services/content/",
+          "src/services/progress/",
+          "tests/unit/services/"
+        ],
+        "contextFiles": [
+          "src/services/academic/courses.service.ts",
+          "src/services/academic/course-segments.service.ts",
+          "src/services/content/questions.service.ts"
+        ],
+        "blockedBy": ["agent-models"]
+      },
+      {
+        "id": "agent-controllers",
+        "model": "sonnet-4.5",
+        "role": "Controllers & Routes Specialist",
+        "description": "Implements API endpoints and route definitions",
+        "phaseAssignments": {
+          "phase3": [
+            "3.1 - modules.controller.ts + routes",
+            "3.2 - learning-units.controller.ts + routes",
+            "3.3 - assessments.controller.ts + routes",
+            "3.4 - assessment-attempts.controller.ts + routes",
+            "3.5 - module-access.controller.ts + routes",
+            "3.6 - questions.controller.ts update"
+          ]
+        },
+        "workingDirectories": [
+          "src/controllers/academic/",
+          "src/controllers/content/",
+          "src/controllers/progress/",
+          "src/routes/",
+          "tests/integration/"
+        ],
+        "contextFiles": [
+          "src/controllers/academic/courses.controller.ts",
+          "src/routes/courses.routes.ts",
+          "src/controllers/content/questions.controller.ts"
+        ],
+        "blockedBy": ["agent-services"]
+      },
+      {
+        "id": "agent-validators",
+        "model": "sonnet-4.5",
+        "role": "Validators & Contracts Specialist",
+        "description": "Creates request validators and API contracts",
+        "phaseAssignments": {
+          "phase4": [
+            "4.1 - module.validator.ts",
+            "4.2 - learning-unit.validator.ts",
+            "4.3 - assessment.validator.ts",
+            "4.4 - assessment-attempt.validator.ts",
+            "4.5 - API contracts"
+          ]
+        },
+        "workingDirectories": [
+          "src/validators/",
+          "contracts/api/"
+        ],
+        "contextFiles": [
+          "src/validators/course.validator.ts",
+          "contracts/api/courses.contract.ts"
+        ],
+        "canRunParallel": true,
+        "parallelWith": ["agent-services", "agent-controllers"]
+      },
+      {
+        "id": "agent-migrations",
+        "model": "sonnet-4.5",
+        "role": "Migration Specialist",
+        "description": "Creates database migrations and seed scripts",
+        "phaseAssignments": {
+          "phase5": [
+            "5.1 - create-default-modules.migration.ts",
+            "5.2 - add-question-bankids.migration.ts",
+            "5.3 - add-module-to-attempts.migration.ts"
+          ]
+        },
+        "workingDirectories": [
+          "src/migrations/",
+          "scripts/"
+        ],
+        "contextFiles": [
+          "src/migrations/migrate-globaladmin.ts",
+          "scripts/seed-admin.ts"
+        ],
+        "blockedBy": ["agent-models"]
+      },
+      {
+        "id": "agent-testing",
+        "model": "sonnet-4.5",
+        "role": "E2E Testing Specialist",
+        "description": "Creates integration and E2E tests",
+        "phaseAssignments": {
+          "phase6": [
+            "6.1 - module-e2e.test.ts",
+            "6.2 - assessment-e2e.test.ts",
+            "6.3 - module-access-e2e.test.ts"
+          ]
+        },
+        "workingDirectories": [
+          "tests/integration/",
+          "tests/e2e/"
+        ],
+        "contextFiles": [
+          "tests/integration/programs/include-subdepartments.test.ts",
+          "tests/setup.ts"
+        ],
+        "blockedBy": ["agent-controllers", "agent-migrations"]
+      }
+    ]
+  },
+  "sharedContext": {
+    "projectStructure": {
+      "models": "src/models/ - Mongoose schemas (academic/, content/, progress/)",
+      "services": "src/services/ - Business logic layer",
+      "controllers": "src/controllers/ - Express route handlers",
+      "routes": "src/routes/ - Express router definitions",
+      "validators": "src/validators/ - Joi validation schemas",
+      "contracts": "contracts/api/ - API contracts for UI team",
+      "migrations": "src/migrations/ - Database migrations",
+      "tests": "tests/ - Jest test suites"
+    },
+    "terminology": {
+      "Module": "Logical grouping of learning units within a course (formerly Chapter)",
+      "LearningUnit": "Single piece of content/activity (formerly CourseModule)",
+      "Assessment": "Quiz or exam configuration",
+      "ModuleAccess": "Learner engagement tracking at module level"
+    },
+    "conventions": {
+      "naming": {
+        "models": "PascalCase.model.ts",
+        "services": "kebab-case.service.ts",
+        "controllers": "kebab-case.controller.ts",
+        "routes": "kebab-case.routes.ts",
+        "validators": "kebab-case.validator.ts",
+        "tests": "*.test.ts"
+      },
+      "commits": "feat(learning-unit): <description>",
+      "coAuthor": "Co-Authored-By: Claude <noreply@anthropic.com>"
+    },
+    "existingPatterns": {
+      "courseSegments": "src/services/academic/course-segments.service.ts - current CourseContent handling",
+      "questionService": "src/services/content/questions.service.ts - question CRUD pattern",
+      "enrollmentTracking": "src/models/content/ContentAttempt.model.ts - attempt tracking pattern"
+    }
+  },
+  "phaseGates": {
+    "phase1": {
+      "name": "Models Complete",
+      "approver": "agent-qa-architect",
+      "criteria": [
+        "All model schemas compile",
+        "Unit tests written (TDD) and pass",
+        "Indexes created",
+        "TypeScript types exported"
+      ],
+      "requiredChecks": [
+        "npm test -- --testPathPattern=models",
+        "npx tsc --noEmit"
+      ],
+      "onPass": {
+        "commit": "feat(learning-unit): complete phase 1 - Models",
+        "notify": "QA/Architect for approval"
+      }
+    },
+    "phase2": {
+      "name": "Services Complete",
+      "approver": "agent-qa-architect",
+      "criteria": [
+        "All service methods implemented",
+        "Unit tests written (TDD) and pass with >80% coverage",
+        "No circular dependencies"
+      ],
+      "requiredChecks": [
+        "npm test -- --testPathPattern=services",
+        "npx tsc --noEmit"
+      ],
+      "onPass": {
+        "commit": "feat(learning-unit): complete phase 2 - Services",
+        "notify": "QA/Architect for approval"
+      }
+    },
+    "phase3": {
+      "name": "Controllers Complete",
+      "isMilestone": true,
+      "milestoneName": "API Layer Complete",
+      "approver": "agent-qa-architect",
+      "criteria": [
+        "All endpoints functional",
+        "Integration tests written (TDD) and pass",
+        "Error handling consistent"
+      ],
+      "requiredChecks": [
+        "npm run build",
+        "npm test",
+        "npx tsc --noEmit",
+        "npm run lint"
+      ],
+      "onPass": {
+        "commit": "feat(learning-unit): milestone - API Layer Complete",
+        "tag": "learning-unit-phase3-api-complete",
+        "notify": "QA/Architect for milestone approval"
+      }
+    },
+    "phase4": {
+      "name": "Validators & Contracts Complete",
+      "approver": "agent-qa-architect",
+      "criteria": [
+        "All validators created",
+        "Contracts match implementation",
+        "Ready for UI team export"
+      ],
+      "requiredChecks": [
+        "npm test -- --testPathPattern=validators",
+        "npx tsc --noEmit"
+      ],
+      "onPass": {
+        "commit": "feat(learning-unit): complete phase 4 - Validators & Contracts",
+        "notify": "QA/Architect for approval"
+      }
+    },
+    "phase5": {
+      "name": "Migrations Complete",
+      "approver": "agent-qa-architect",
+      "criteria": [
+        "Migrations run successfully",
+        "Existing data preserved",
+        "Rollback tested"
+      ],
+      "requiredChecks": [
+        "npm test -- --testPathPattern=migrations",
+        "npx tsc --noEmit"
+      ],
+      "onPass": {
+        "commit": "feat(learning-unit): complete phase 5 - Migrations",
+        "notify": "QA/Architect for approval"
+      }
+    },
+    "phase6": {
+      "name": "E2E Complete",
+      "isMilestone": true,
+      "milestoneName": "Feature Complete",
+      "approver": "agent-qa-architect",
+      "criteria": [
+        "All E2E tests pass",
+        "Full test suite passes",
+        "Performance acceptable",
+        "Ready for UI integration"
+      ],
+      "requiredChecks": [
+        "npm run build",
+        "npm test",
+        "npx tsc --noEmit",
+        "npm run lint"
+      ],
+      "onPass": {
+        "commit": "feat(learning-unit): milestone - Feature Complete",
+        "tag": "learning-unit-phase6-feature-complete",
+        "notify": "QA/Architect for final approval",
+        "exportContracts": true,
+        "notifyUITeam": true
+      }
+    }
+  },
+  "workflowRules": {
+    "commitFormat": "feat(learning-unit): <description>",
+    "minTestCoverage": 80,
+    "contractsFirst": false,
+    "modelsFirst": true,
+    "phaseSequencing": "Agents work in parallel within phases where possible, QA gate blocks next phase",
+    "uncertaintyThreshold": 55,
+    "uncertaintyAction": "Ask user for clarity when <55% confident"
+  },
+  "tddWorkflow": {
+    "enabled": true,
+    "description": "Test-Driven Development: Write tests first, then implement",
+    "steps": [
+      "1. Write failing test that defines expected behavior",
+      "2. Implement minimum code to make test pass",
+      "3. Refactor while keeping tests green",
+      "4. Repeat for each feature/method"
+    ],
+    "testFileNaming": {
+      "unit": "tests/unit/{domain}/{filename}.test.ts",
+      "integration": "tests/integration/{feature}/{filename}.test.ts",
+      "e2e": "tests/e2e/{feature}.e2e.test.ts"
+    }
+  },
+  "testingStrategy": {
+    "perTask": {
+      "description": "Run related tests after each task completion",
+      "command": "npm test -- --testPathPattern={relatedTestPath}",
+      "required": true,
+      "mustPass": true
+    },
+    "perPhase": {
+      "description": "Run all feature tests before phase gate approval",
+      "command": "npm test -- --testPathPattern=learning-unit",
+      "required": true,
+      "mustPass": true,
+      "blocksNextPhase": true
+    },
+    "perMilestone": {
+      "description": "Run full test suite on major milestones (Phase 3, Phase 6)",
+      "command": "npm run build && npm test",
+      "milestones": ["phase3", "phase6"],
+      "required": true,
+      "mustPass": true,
+      "additionalChecks": [
+        "npx tsc --noEmit",
+        "npm run lint"
+      ]
+    }
+  },
+  "gitWorkflow": {
+    "commitAfterTask": {
+      "enabled": true,
+      "format": "feat(learning-unit): {taskId} - {description}",
+      "example": "feat(learning-unit): 1.1 - Add Module model schema"
+    },
+    "commitAfterPhase": {
+      "enabled": true,
+      "required": true,
+      "format": "feat(learning-unit): complete phase {phaseNumber} - {phaseName}",
+      "example": "feat(learning-unit): complete phase 1 - Models",
+      "preCommitChecks": [
+        "npm test -- --testPathPattern=learning-unit",
+        "npx tsc --noEmit"
+      ]
+    },
+    "commitAfterMilestone": {
+      "enabled": true,
+      "required": true,
+      "milestones": ["phase3", "phase6"],
+      "format": "feat(learning-unit): milestone - {milestoneName}",
+      "example": "feat(learning-unit): milestone - API Layer Complete",
+      "preCommitChecks": [
+        "npm run build",
+        "npm test",
+        "npx tsc --noEmit"
+      ],
+      "createTag": true,
+      "tagFormat": "learning-unit-{milestone}"
+    },
+    "coAuthor": "Co-Authored-By: Claude <noreply@anthropic.com>",
+    "commitMessageTemplate": "$(cat <<'EOF'\n{message}\n\n{coAuthor}\nEOF\n)"
+  },
+  "parallelExecutionPlan": {
+    "wave1": {
+      "description": "Foundation - Models",
+      "agents": ["agent-models"],
+      "estimatedTasks": 6
+    },
+    "wave2": {
+      "description": "Business Logic + Validators (parallel)",
+      "agents": ["agent-services", "agent-validators"],
+      "estimatedTasks": 11
+    },
+    "wave3": {
+      "description": "API Layer + Migrations (parallel after services)",
+      "agents": ["agent-controllers", "agent-migrations"],
+      "estimatedTasks": 9
+    },
+    "wave4": {
+      "description": "Final Testing",
+      "agents": ["agent-testing"],
+      "estimatedTasks": 3
+    }
+  },
+  "agentInstructions": {
+    "startup": [
+      "1. Read ./agent_coms/dev_guidance/FEATURE_DEVELOPMENT_CHECKLIST.md",
+      "2. Read devdocs/plans/Learning_Unit_System_Implementation.md for task details",
+      "3. Review UI team request messages for requirements context",
+      "4. Check existing patterns in contextFiles before implementing",
+      "5. Review tddWorkflow and testingStrategy sections of this config"
+    ],
+    "beforeCoding": [
+      "Verify dependencies from other agents are complete",
+      "Check existing model/service patterns in the codebase",
+      "Never invent API values - verify or ask (P1-P3 from checklist)",
+      "TDD: Write failing test FIRST that defines expected behavior"
+    ],
+    "duringCoding": [
+      "TDD: Implement minimum code to make test pass",
+      "TDD: Refactor while keeping tests green",
+      "TDD: Repeat for each feature/method",
+      "Run tests frequently: npm test -- --testPathPattern={yourTestFile}"
+    ],
+    "afterTask": [
+      "Run npx tsc --noEmit to check TypeScript",
+      "Run related tests: npm test -- --testPathPattern={relatedTestPath}",
+      "All tests MUST pass before marking task complete",
+      "Commit task: git commit -m 'feat(learning-unit): {taskId} - {description}'"
+    ],
+    "afterPhase": [
+      "Run ALL feature tests: npm test -- --testPathPattern=learning-unit",
+      "All feature tests MUST pass before phase gate approval",
+      "Run TypeScript check: npx tsc --noEmit",
+      "Commit phase: git commit -m 'feat(learning-unit): complete phase {N} - {name}'",
+      "Report to QA/Architect for gate approval",
+      "DO NOT proceed to next phase until gate approved"
+    ],
+    "afterMilestone": [
+      "Milestones are Phase 3 (API Layer) and Phase 6 (E2E Complete)",
+      "Run FULL test suite: npm run build && npm test",
+      "Run TypeScript check: npx tsc --noEmit",
+      "Run linter: npm run lint",
+      "ALL checks MUST pass",
+      "Commit milestone: git commit -m 'feat(learning-unit): milestone - {name}'",
+      "Create git tag: git tag learning-unit-{milestone}"
+    ]
+  },
+  "crossTeamSync": {
+    "uiTeamMessagesDir": "agent_coms/messages/",
+    "contractsExportDir": "contracts/api/",
+    "responseFormat": "M1 format from FEATURE_DEVELOPMENT_CHECKLIST.md",
+    "notifyOnComplete": [
+      "Export contracts to contracts/api/",
+      "Create response message in agent_coms/messages/",
+      "Include endpoint documentation"
+    ]
+  }
+}
